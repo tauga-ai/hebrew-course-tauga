@@ -71,26 +71,33 @@ export default function TeacherDashboard() {
 
       <div className="grid gap-3">
         {stats.map(s => (
-          <div key={s.set_id} className="bg-white rounded-xl border border-gray-200 p-4">
+          <button
+            key={s.set_id}
+            onClick={() => router.push(`/teacher/sets/${s.set_id}`)}
+            className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
+          >
             <div className="flex justify-between items-center">
               <div>
                 <div className="font-semibold text-gray-800">סט {s.set_number}</div>
                 <div className="text-sm text-gray-500 mt-0.5">{s.topic}</div>
                 <div className="text-xs text-gray-400 mt-0.5">רמה {s.difficulty_level}</div>
               </div>
-              <div className="text-left space-y-1">
-                <div className="text-sm text-gray-600">
-                  <span className="font-bold text-gray-800">{s.student_count}</span> תלמידים השלימו
+              <div className="flex items-center gap-3">
+                <div className="text-left space-y-1">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-bold text-gray-800">{s.student_count}</span> תלמידים השלימו
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    ממוצע:{' '}
+                    <span className={`font-bold ${
+                      s.avg_score === null ? 'text-gray-400' :
+                      s.avg_score >= 70 ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      {s.avg_score === null ? '—' : `${Math.round(s.avg_score)}%`}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  ממוצע:{' '}
-                  <span className={`font-bold ${
-                    s.avg_score === null ? 'text-gray-400' :
-                    s.avg_score >= 70 ? 'text-green-600' : 'text-red-500'
-                  }`}>
-                    {s.avg_score === null ? '—' : `${Math.round(s.avg_score)}%`}
-                  </span>
-                </div>
+                <span className="text-blue-400 text-lg">←</span>
               </div>
             </div>
             {s.avg_score !== null && (
@@ -101,7 +108,7 @@ export default function TeacherDashboard() {
                 />
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>
