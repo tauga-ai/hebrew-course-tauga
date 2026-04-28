@@ -63,7 +63,19 @@ export default function Menu() {
         </button>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">בחר סט תרגול</h2>
+      {/* Interview banner */}
+      <button
+        onClick={() => router.push('/interview')}
+        className="w-full text-right bg-blue-600 rounded-xl p-4 mb-5 hover:bg-blue-700 transition flex items-center justify-between"
+      >
+        <div>
+          <div className="text-white font-bold">🗣️ ראיון אישי</div>
+          <div className="text-blue-100 text-xs mt-0.5">תרגול + סימולציית AI עם פידבק</div>
+        </div>
+        <span className="text-white text-lg">←</span>
+      </button>
+
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">סטי הבנת הנקרא</h2>
 
       <div className="grid gap-3">
         {sets.map(set => {
