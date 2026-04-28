@@ -121,15 +121,15 @@ const ADV: SentenceExercise[] = [
 ]
 
 export const SENTENCE_SETS: SentenceSet[] = [
-  { id: 1, title: 'בניית משפטים — רמה בסיסית א',  difficulty: 1, level_label: 'רמה 1', exercises: REG.slice(0, 10) },
-  { id: 2, title: 'בניית משפטים — רמה בסיסית ב',  difficulty: 1, level_label: 'רמה 1', exercises: REG.slice(10, 20) },
-  { id: 3, title: 'בניית משפטים — רמה בינונית א',  difficulty: 2, level_label: 'רמה 2', exercises: REG.slice(20, 30) },
-  { id: 4, title: 'בניית משפטים — רמה בינונית ב',  difficulty: 2, level_label: 'רמה 2', exercises: REG.slice(30, 40) },
-  { id: 5, title: 'בניית משפטים — רמה מורכבת',     difficulty: 3, level_label: 'רמה 3', exercises: REG.slice(40, 50) },
-  { id: 6, title: 'בניית משפטים — רמה מתקדמת א',  difficulty: 4, level_label: 'רמה 4', exercises: ADV.slice(0, 10) },
-  { id: 7, title: 'בניית משפטים — רמה מתקדמת ב',  difficulty: 4, level_label: 'רמה 4', exercises: ADV.slice(10, 20) },
-  { id: 8, title: 'בניית משפטים — רמה גבוהה א',   difficulty: 5, level_label: 'רמה 5', exercises: ADV.slice(20, 30) },
-  { id: 9, title: 'בניית משפטים — רמה גבוהה ב',   difficulty: 5, level_label: 'רמה 5', exercises: ADV.slice(30, 40) },
+  { id: 1, title: 'בניית משפטים — סט 1', difficulty: 1, level_label: 'רמה 1', exercises: REG.slice(0, 10) },
+  { id: 2, title: 'בניית משפטים — סט 2', difficulty: 1, level_label: 'רמה 1', exercises: REG.slice(10, 20) },
+  { id: 3, title: 'בניית משפטים — סט 3', difficulty: 2, level_label: 'רמה 2', exercises: REG.slice(20, 30) },
+  { id: 4, title: 'בניית משפטים — סט 4', difficulty: 2, level_label: 'רמה 2', exercises: REG.slice(30, 40) },
+  { id: 5, title: 'בניית משפטים — סט 5', difficulty: 3, level_label: 'רמה 3', exercises: REG.slice(40, 50) },
+  { id: 6, title: 'בניית משפטים — סט 6', difficulty: 4, level_label: 'רמה 4', exercises: ADV.slice(0, 10) },
+  { id: 7, title: 'בניית משפטים — סט 7', difficulty: 4, level_label: 'רמה 4', exercises: ADV.slice(10, 20) },
+  { id: 8, title: 'בניית משפטים — סט 8', difficulty: 5, level_label: 'רמה 5', exercises: ADV.slice(20, 30) },
+  { id: 9, title: 'בניית משפטים — סט 9', difficulty: 5, level_label: 'רמה 5', exercises: ADV.slice(30, 40) },
 ]
 
 export const DIFFICULTY_COLORS: Record<number, string> = {

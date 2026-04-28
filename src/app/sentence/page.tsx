@@ -16,7 +16,7 @@ export default function SentenceLanding() {
   }, [router])
 
   const difficultyLabel: Record<number, string> = {
-    1: 'בסיסי', 2: 'בינוני', 3: 'מורכב', 4: 'מתקדם', 5: 'גבוה',
+    1: 'רמה 1', 2: 'רמה 2', 3: 'רמה 3', 4: 'רמה 4', 5: 'רמה 5',
   }
 
   return (
@@ -44,7 +44,7 @@ export default function SentenceLanding() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-gray-800">{set.title}</span>
+                  <span className="font-bold text-gray-800">סט {set.id}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[set.difficulty]}`}>

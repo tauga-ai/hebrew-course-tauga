@@ -60,11 +60,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
+    const model = genAI.getGenerativeModel(
+      { model: 'gemini-1.5-flash' },
+    )
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text().trim()
-    const clean = text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim()
-    const feedback: SentenceFeedback = JSON.parse(clean)
+    const feedback: SentenceFeedback = JSON.parse(text)
     return NextResponse.json({ feedback })
   } catch (err) {
     console.error('Gemini sentence error:', err)
