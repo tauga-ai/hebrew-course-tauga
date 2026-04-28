@@ -54,12 +54,18 @@ export default function TeacherDashboard() {
           <h1 className="text-xl font-bold text-blue-700">לוח בקרה - מורה</h1>
           <p className="text-sm text-gray-500">{className} · {email}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button
             onClick={() => router.push('/teacher/students')}
             className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-100"
           >
-            ניתוח תלמידים
+            הבנת הנקרא
+          </button>
+          <button
+            onClick={() => router.push('/teacher/activity')}
+            className="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-100"
+          >
+            משפטים + ראיון
           </button>
           <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
             יציאה

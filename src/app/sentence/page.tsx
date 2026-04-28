@@ -28,10 +28,22 @@ export default function SentenceLanding() {
         <div className="text-sm text-gray-500">{session?.full_name}</div>
       </div>
 
-      <div className="text-center mb-8">
+      <div className="text-center mb-5">
         <div className="text-5xl mb-3">✍️</div>
         <h1 className="text-2xl font-bold text-blue-700 mb-2">בניית משפטים</h1>
-        <p className="text-gray-500 text-sm">בחר סט, קבל רשימת מילים, ובנה משפט. AI יעריך ויציע שיפורים.</p>
+      </div>
+
+      {/* How it works — at top */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-right">
+        <p className="font-semibold text-blue-800 mb-2">📌 איך זה עובד?</p>
+        <ol className="space-y-1 text-blue-700 list-decimal list-inside">
+          <li>בכל תרגיל מוצגות <strong>12 מילים</strong></li>
+          <li>מילים <strong className="text-blue-900">★ מסומנות בכחול — חובה</strong> להשתמש בהן</li>
+          <li>השתמש בלפחות <strong>6 מילים</strong> מהרשימה הכללית</li>
+          <li>כתוב את המשפט או הכתב בקול</li>
+          <li>תקבל ציון + משוב + גרסה מושלמת עם הקראה</li>
+        </ol>
+        <p className="text-blue-600 text-xs mt-2">💡 צורות שונות של מילה נספרות — למשל ״חברים״ וגם ״חבריי״</p>
       </div>
 
       <div className="grid gap-3">
@@ -59,10 +71,6 @@ export default function SentenceLanding() {
         ))}
       </div>
 
-      <div className="mt-6 bg-gray-50 rounded-xl p-4 text-sm text-gray-500 text-right">
-        <p className="font-medium text-gray-700 mb-1">📌 איך זה עובד?</p>
-        <p>בכל תרגיל תקבל 12 מילים. מילים <strong>מסומנות בכוכב</strong> הן חובה. בנה משפט שמשתמש בכולן ובלפחות 6 מילים מהרשימה. לבסוף תקבל ציון ומשוב.</p>
-      </div>
     </div>
   )
 }

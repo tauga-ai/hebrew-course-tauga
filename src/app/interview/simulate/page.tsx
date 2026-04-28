@@ -116,6 +116,14 @@ export default function SimulatePage() {
       const data = await res.json()
       setFeedback(data.feedback)
       setPhase('results')
+      // Save to DB (fire-and-forget)
+      if (session) {
+        fetch('/api/interview/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: session.id, score: data.feedback.score, level: data.feedback.level }),
+        }).catch(() => {})
+      }
     } catch {
       alert('שגיאה בעיבוד הפידבק. נסה שוב.')
       setPhase('intro')

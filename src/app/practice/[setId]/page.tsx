@@ -119,12 +119,12 @@ export default function PracticePage() {
       </div>
 
       {/* Options */}
-      <div className="space-y-3 mb-6">
+      <div key={`opts-${q?.id}`} className="space-y-3 mb-6">
         {options.map((opt, i) => {
           const selected = answers[q?.id] === opt.num
           return (
             <button
-              key={opt.num}
+              key={`${q?.id}-${opt.num}`}
               onClick={() => selectAnswer(q.id, opt.num)}
               className={`w-full text-right rounded-xl border p-4 transition flex items-center gap-3 ${
                 selected

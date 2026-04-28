@@ -6,8 +6,8 @@ export interface InterviewQuestion {
 
 export const MANDATORY_QUESTIONS: InterviewQuestion[] = [
   { id: 1, text: 'איך קוראים לך?', category: 'אישי' },
-  { id: 2, text: 'מאיפה אתה?', category: 'אישי' },
-  { id: 3, text: 'איפה אתה גר?', category: 'אישי' },
+  { id: 2, text: 'מאיפה אתה? (מה הכפר / העיר שנולדת בה?)', category: 'אישי' },
+  { id: 3, text: 'איפה אתה גר היום?', category: 'אישי' },
   { id: 4, text: 'בן כמה אתה?', category: 'אישי' },
   { id: 5, text: 'איך העברית שלך?', category: 'עברית' },
   { id: 6, text: 'אתה מדבר עברית בבית?', category: 'עברית' },
