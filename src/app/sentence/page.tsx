@@ -40,7 +40,7 @@ export default function SentenceLanding() {
           <li>בכל תרגיל מוצגות <strong>12 מילים</strong></li>
           <li>מילים <strong className="text-blue-900">★ מסומנות בכחול — חובה</strong> להשתמש בהן</li>
           <li>השתמש בלפחות <strong>6 מילים</strong> מהרשימה הכללית</li>
-          <li>כתוב את המשפט או הכתב בקול</li>
+          <li>כתוב את המשפט או הקלט את עצמך</li>
           <li>תקבל ציון + משוב + גרסה מושלמת עם הקראה</li>
         </ol>
         <p className="text-blue-600 text-xs mt-2">💡 צורות שונות של מילה נספרות — למשל ״חברים״ וגם ״חבריי״</p>

@@ -63,25 +63,40 @@ export default function Menu() {
         </button>
       </div>
 
-      {/* Quick access banners */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <button
-          onClick={() => router.push('/interview')}
-          className="text-right bg-blue-600 rounded-xl p-4 hover:bg-blue-700 transition flex items-center justify-between"
-        >
+      {/* Practice modes */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <button onClick={() => router.push('/interview')}
+          className="text-right bg-blue-600 rounded-xl p-4 hover:bg-blue-700 transition flex items-center justify-between">
           <div>
             <div className="text-white font-bold text-sm">🗣️ ראיון אישי</div>
-            <div className="text-blue-100 text-xs mt-0.5">סימולציית AI עם פידבק</div>
+            <div className="text-blue-100 text-xs mt-0.5">סימולציית AI</div>
           </div>
           <span className="text-white">←</span>
         </button>
-        <button
-          onClick={() => router.push('/sentence')}
-          className="text-right bg-purple-600 rounded-xl p-4 hover:bg-purple-700 transition flex items-center justify-between"
-        >
+        <button onClick={() => router.push('/sentence')}
+          className="text-right bg-purple-600 rounded-xl p-4 hover:bg-purple-700 transition flex items-center justify-between">
           <div>
             <div className="text-white font-bold text-sm">✍️ בניית משפטים</div>
             <div className="text-purple-100 text-xs mt-0.5">9 סטים · ציון + שיפור</div>
+          </div>
+          <span className="text-white">←</span>
+        </button>
+      </div>
+      {/* AI-generated practice */}
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <button onClick={() => router.push('/ai-practice/reading')}
+          className="text-right bg-emerald-600 rounded-xl p-4 hover:bg-emerald-700 transition flex items-center justify-between">
+          <div>
+            <div className="text-white font-bold text-sm">🤖 הבנת הנקרא</div>
+            <div className="text-emerald-100 text-xs mt-0.5">תרגול עם AI</div>
+          </div>
+          <span className="text-white">←</span>
+        </button>
+        <button onClick={() => router.push('/ai-practice/sentence')}
+          className="text-right bg-amber-600 rounded-xl p-4 hover:bg-amber-700 transition flex items-center justify-between">
+          <div>
+            <div className="text-white font-bold text-sm">🤖 בניית משפט</div>
+            <div className="text-amber-100 text-xs mt-0.5">תרגול עם AI</div>
           </div>
           <span className="text-white">←</span>
         </button>
