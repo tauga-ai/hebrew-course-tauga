@@ -63,17 +63,29 @@ export default function Menu() {
         </button>
       </div>
 
-      {/* Interview banner */}
-      <button
-        onClick={() => router.push('/interview')}
-        className="w-full text-right bg-blue-600 rounded-xl p-4 mb-5 hover:bg-blue-700 transition flex items-center justify-between"
-      >
-        <div>
-          <div className="text-white font-bold">🗣️ ראיון אישי</div>
-          <div className="text-blue-100 text-xs mt-0.5">תרגול + סימולציית AI עם פידבק</div>
-        </div>
-        <span className="text-white text-lg">←</span>
-      </button>
+      {/* Quick access banners */}
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <button
+          onClick={() => router.push('/interview')}
+          className="text-right bg-blue-600 rounded-xl p-4 hover:bg-blue-700 transition flex items-center justify-between"
+        >
+          <div>
+            <div className="text-white font-bold text-sm">🗣️ ראיון אישי</div>
+            <div className="text-blue-100 text-xs mt-0.5">סימולציית AI עם פידבק</div>
+          </div>
+          <span className="text-white">←</span>
+        </button>
+        <button
+          onClick={() => router.push('/sentence')}
+          className="text-right bg-purple-600 rounded-xl p-4 hover:bg-purple-700 transition flex items-center justify-between"
+        >
+          <div>
+            <div className="text-white font-bold text-sm">✍️ בניית משפטים</div>
+            <div className="text-purple-100 text-xs mt-0.5">9 סטים · ציון + שיפור</div>
+          </div>
+          <span className="text-white">←</span>
+        </button>
+      </div>
 
       <h2 className="text-lg font-semibold text-gray-800 mb-4">סטי הבנת הנקרא</h2>
 
