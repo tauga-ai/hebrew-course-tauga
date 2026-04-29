@@ -92,6 +92,16 @@ export default function Menu() {
           <span className="text-white">←</span>
         </button>
       </div>
+      {/* Psychotechnic */}
+      <button onClick={() => router.push('/psychotechnic')}
+        className="w-full text-right bg-teal-600 rounded-xl p-4 mb-3 hover:bg-teal-700 transition flex items-center justify-between">
+        <div>
+          <div className="text-white font-bold">🧠 פסיכוטכני — הזנת תשובות</div>
+          <div className="text-teal-100 text-xs mt-0.5">10 מקבצים · בדיקה מיידית · ציון + תיקון</div>
+        </div>
+        <span className="text-white text-xl">←</span>
+      </button>
+
       {/* AI-generated practice */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         <button onClick={() => router.push('/ai-practice/reading')}

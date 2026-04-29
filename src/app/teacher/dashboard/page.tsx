@@ -73,6 +73,12 @@ export default function TeacherDashboard() {
           >
             🏆 סימולציה
           </button>
+          <button
+            onClick={() => router.push('/teacher/psychotechnic')}
+            className="text-sm bg-teal-50 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-100"
+          >
+            🧠 פסיכוטכני
+          </button>
           <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
             יציאה
           </button>
