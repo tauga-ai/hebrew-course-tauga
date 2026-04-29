@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import type { StudentSession } from '@/lib/types'
+import { speakHebrew } from '@/lib/use-hebrew-tts'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -121,19 +122,9 @@ export default function SentenceSetPage() {
     setImprovedAudioLoading(true)
     setTtsError('')
     try {
-      const res = await fetch('/api/interview/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: feedback.improved_sentence }),
-      })
-      if (!res.ok) throw new Error(`TTS error: ${res.status}`)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
-      audioRef.current = new Audio(url)
-      await audioRef.current.play()
-    } catch (err) {
-      setTtsError('לא ניתן להשמיע כעת. בדוק את חיבור האינטרנט.')
+      await speakHebrew(feedback.improved_sentence)
+    } catch {
+      setTtsError('לא ניתן להשמיע כעת.')
     } finally {
       setImprovedAudioLoading(false)
     }

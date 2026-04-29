@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { AIWordList } from '@/app/api/ai-practice/sentence-words/route'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import type { StudentSession } from '@/lib/types'
+import { speakHebrew } from '@/lib/use-hebrew-tts'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'מילון יומיומי בסיסי — בית, משפחה, בית ספר',
@@ -120,17 +121,7 @@ export default function AISentencePage() {
     if (!feedback?.improved_sentence || ttsLoading) return
     setTtsLoading(true)
     try {
-      const res = await fetch('/api/interview/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: feedback.improved_sentence }),
-      })
-      if (!res.ok) throw new Error()
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      if (audioRef.current) audioRef.current.pause()
-      audioRef.current = new Audio(url)
-      audioRef.current.play()
+      await speakHebrew(feedback.improved_sentence)
     } finally { setTtsLoading(false) }
   }
 

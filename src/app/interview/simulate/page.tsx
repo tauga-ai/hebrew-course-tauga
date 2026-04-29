@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { buildSimulationQuestions, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
 import type { InterviewFeedback } from '@/app/api/interview/feedback/route'
 import type { StudentSession } from '@/lib/types'
+import { speakHebrew, stopSpeaking } from '@/lib/use-hebrew-tts'
 
 type Phase = 'intro' | 'question' | 'processing' | 'results'
 
@@ -23,7 +24,6 @@ export default function SimulatePage() {
   const [feedbackAudioLoading, setFeedbackAudioLoading] = useState(false)
 
   const recognitionRef = useRef<any>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const raw = localStorage.getItem('student_session')
@@ -32,22 +32,17 @@ export default function SimulatePage() {
     setQuestions(buildSimulationQuestions())
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     setSpeechSupported(!!SR)
+    // Pre-load voices
+    if (window.speechSynthesis) window.speechSynthesis.getVoices()
   }, [router])
 
   async function playAudio(text: string) {
     if (audioLoading) return
     setAudioLoading(true)
     try {
-      const res = await fetch('/api/interview/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      })
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
-      audioRef.current = new Audio(url)
-      audioRef.current.play()
+      await speakHebrew(text)
+    } catch {
+      // Silent fail — student can re-play manually
     } finally {
       setAudioLoading(false)
     }
@@ -89,7 +84,7 @@ export default function SimulatePage() {
     setAnswers(newAnswers)
     setCurrentAnswer('')
     stopListening()
-    if (audioRef.current) audioRef.current.pause()
+    stopSpeaking()
 
     if (idx + 1 >= questions.length) {
       // Done — send to Gemini
@@ -135,16 +130,7 @@ export default function SimulatePage() {
     setFeedbackAudioLoading(true)
     const text = `${feedback.summary}. ${feedback.strengths.length > 0 ? 'נקודות חוזק: ' + feedback.strengths.join(', ') + '.' : ''} ${feedback.improvements.length > 0 ? 'נקודות לשיפור: ' + feedback.improvements.join(', ') + '.' : ''} ${feedback.tips.length > 0 ? 'טיפים: ' + feedback.tips.join(', ') + '.' : ''}`
     try {
-      const res = await fetch('/api/interview/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      })
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      if (audioRef.current) audioRef.current.pause()
-      audioRef.current = new Audio(url)
-      audioRef.current.play()
+      await speakHebrew(text, 0.9)
     } finally {
       setFeedbackAudioLoading(false)
     }
