@@ -67,6 +67,12 @@ export default function TeacherDashboard() {
           >
             משפטים + ראיון
           </button>
+          <button
+            onClick={() => router.push('/teacher/simulation-report')}
+            className="text-sm bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-100"
+          >
+            🏆 סימולציה
+          </button>
           <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
             יציאה
           </button>

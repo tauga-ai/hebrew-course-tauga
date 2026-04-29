@@ -1,11 +1,13 @@
 'use client'
+import { shuffleWithSeed } from '@/lib/shuffle'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import type { StudentSession, Question, PracticeSet } from '@/lib/types'
 
 // Deterministic shuffle using question id as seed — same order every time for same question
-function shuffleWithSeed(arr: number[], seed: number): number[] {
+// moved to lib/shuffle.ts
+function shuffleWithSeed_old(arr: number[], seed: number): number[] {
   const a = [...arr]
   let s = seed
   for (let i = a.length - 1; i > 0; i--) {

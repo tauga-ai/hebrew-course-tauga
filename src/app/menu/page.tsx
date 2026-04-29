@@ -63,6 +63,16 @@ export default function Menu() {
         </button>
       </div>
 
+      {/* Simulation banner */}
+      <button onClick={() => router.push('/simulation')}
+        className="w-full text-right bg-gradient-to-l from-blue-700 to-blue-500 rounded-xl p-4 mb-3 hover:from-blue-800 hover:to-blue-600 transition flex items-center justify-between shadow-md">
+        <div>
+          <div className="text-white font-bold">🏆 סימולציה אמיתית</div>
+          <div className="text-blue-100 text-xs mt-0.5">חלק א+ב: הבנת הנקרא · חלק ג: משפטים · חלק ד: ראיון</div>
+        </div>
+        <span className="text-white text-xl">←</span>
+      </button>
+
       {/* Practice modes */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <button onClick={() => router.push('/interview')}
