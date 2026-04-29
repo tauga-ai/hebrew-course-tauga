@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ALL_PRACTICE_QUESTIONS, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
 import type { StudentSession } from '@/lib/types'
-import { speakHebrew, stopSpeaking } from '@/lib/use-hebrew-tts'
+import { stopSpeaking } from '@/lib/use-hebrew-tts'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -13,7 +13,6 @@ export default function PracticePage() {
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [isListening, setIsListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
-  const [audioLoading, setAudioLoading] = useState(false)
   const recognitionRef = useRef<any>(null)
 
   const q: InterviewQuestion = ALL_PRACTICE_QUESTIONS[idx]
@@ -27,16 +26,6 @@ export default function PracticePage() {
     setSpeechSupported(!!SR)
     if (window.speechSynthesis) window.speechSynthesis.getVoices()
   }, [router])
-
-  async function playQuestion() {
-    if (audioLoading) return
-    setAudioLoading(true)
-    try {
-      await speakHebrew(q.text)
-    } finally {
-      setAudioLoading(false)
-    }
-  }
 
   function startListening() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -100,15 +89,7 @@ export default function PracticePage() {
             {q.category}
           </span>
         </div>
-        <p className="text-xl font-semibold text-gray-800 mb-4 leading-relaxed">{q.text}</p>
-        <button
-          onClick={playQuestion}
-          disabled={audioLoading}
-          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-        >
-          <span>{audioLoading ? '⏳' : '🔊'}</span>
-          <span>{audioLoading ? 'טוען...' : 'שמע שאלה'}</span>
-        </button>
+        <p className="text-xl font-semibold text-gray-800 leading-relaxed">{q.text}</p>
       </div>
 
       {/* Answer area */}

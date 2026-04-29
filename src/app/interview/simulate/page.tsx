@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { buildSimulationQuestions, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
 import type { InterviewFeedback } from '@/app/api/interview/feedback/route'
 import type { StudentSession } from '@/lib/types'
-import { speakHebrew, stopSpeaking } from '@/lib/use-hebrew-tts'
 
 type Phase = 'intro' | 'question' | 'processing' | 'results'
 
@@ -19,9 +18,7 @@ export default function SimulatePage() {
   const [currentAnswer, setCurrentAnswer] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
-  const [audioLoading, setAudioLoading] = useState(false)
   const [feedback, setFeedback] = useState<InterviewFeedback | null>(null)
-  const [feedbackAudioLoading, setFeedbackAudioLoading] = useState(false)
 
   const recognitionRef = useRef<any>(null)
 
@@ -32,34 +29,21 @@ export default function SimulatePage() {
     setQuestions(buildSimulationQuestions())
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     setSpeechSupported(!!SR)
-    // Pre-load voices
-    if (window.speechSynthesis) window.speechSynthesis.getVoices()
   }, [router])
-
-  async function playAudio(text: string) {
-    if (audioLoading) return
-    setAudioLoading(true)
-    try {
-      await speakHebrew(text)
-    } catch {
-      // Silent fail — student can re-play manually
-    } finally {
-      setAudioLoading(false)
-    }
-  }
 
   function startListening() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
     const rec = new SR()
     rec.lang = 'he-IL'
-    rec.continuous = false
+    rec.continuous = true
     rec.interimResults = true
     recognitionRef.current = rec
     rec.onresult = (e: any) => {
       const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
       setCurrentAnswer(t)
     }
+    rec.onerror = () => setIsListening(false)
     rec.onend = () => setIsListening(false)
     rec.start()
     setIsListening(true)
@@ -75,24 +59,18 @@ export default function SimulatePage() {
     setIdx(0)
     setAnswers([])
     setCurrentAnswer('')
-    // Auto-play first question
-    setTimeout(() => playAudio(questions[0]?.text || ''), 300)
   }
 
   function submitAnswer() {
+    stopListening()
     const newAnswers = [...answers, currentAnswer]
     setAnswers(newAnswers)
     setCurrentAnswer('')
-    stopListening()
-    stopSpeaking()
 
     if (idx + 1 >= questions.length) {
-      // Done — send to Gemini
       submitForFeedback(newAnswers)
     } else {
-      const nextIdx = idx + 1
-      setIdx(nextIdx)
-      setTimeout(() => playAudio(questions[nextIdx]?.text || ''), 300)
+      setIdx(idx + 1)
     }
   }
 
@@ -111,7 +89,6 @@ export default function SimulatePage() {
       const data = await res.json()
       setFeedback(data.feedback)
       setPhase('results')
-      // Save to DB (fire-and-forget)
       if (session) {
         fetch('/api/interview/save', {
           method: 'POST',
@@ -125,19 +102,8 @@ export default function SimulatePage() {
     }
   }
 
-  async function playFeedbackAudio() {
-    if (!feedback || feedbackAudioLoading) return
-    setFeedbackAudioLoading(true)
-    const text = `${feedback.summary}. ${feedback.strengths.length > 0 ? 'נקודות חוזק: ' + feedback.strengths.join(', ') + '.' : ''} ${feedback.improvements.length > 0 ? 'נקודות לשיפור: ' + feedback.improvements.join(', ') + '.' : ''} ${feedback.tips.length > 0 ? 'טיפים: ' + feedback.tips.join(', ') + '.' : ''}`
-    try {
-      await speakHebrew(text, 0.9)
-    } finally {
-      setFeedbackAudioLoading(false)
-    }
-  }
-
   const q = questions[idx]
-  const progress = questions.length > 0 ? ((idx) / questions.length) * 100 : 0
+  const progress = questions.length > 0 ? (idx / questions.length) * 100 : 0
 
   // ── INTRO ──────────────────────────────────────────────────────────────────
   if (phase === 'intro') return (
@@ -148,18 +114,15 @@ export default function SimulatePage() {
         <p className="text-gray-500 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
         <p className="text-gray-600 mb-6 text-sm leading-relaxed">
           תענה על <strong>15 שאלות</strong> — 6 חובה + 9 רנדומליות.<br />
-          המראיין ישאל אותך בקול ובכתב.<br />
-          בסוף תקבל ציון ופידבק מפורט.
+          בסוף תקבל ציון ופידבק מפורט מ-Gemini.
         </p>
         <div className="bg-blue-50 rounded-xl p-4 mb-6 text-right space-y-1 text-sm text-gray-600">
-          <p>✅ ענה בקול (🎤) או בכתב</p>
-          <p>✅ אפשר לשמוע את השאלה שוב בכל עת</p>
+          <p>✅ ענה בכתב או הקלט את קולך (🎤)</p>
+          <p>✅ אפשר לדלג על שאלה</p>
           <p>✅ אחרי 15 שאלות — Gemini מנתח ונותן פידבק</p>
         </div>
-        <button
-          onClick={startInterview}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg"
-        >
+        <button onClick={startInterview}
+          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg">
           התחל ראיון
         </button>
         <button onClick={() => router.push('/interview')} className="mt-3 text-sm text-gray-400 hover:text-gray-600">
@@ -189,7 +152,6 @@ export default function SimulatePage() {
   if (phase === 'results' && feedback) {
     const scoreColor = feedback.score >= 80 ? 'text-green-600' : feedback.score >= 60 ? 'text-yellow-600' : 'text-red-500'
     const scoreBg = feedback.score >= 80 ? 'bg-green-50 border-green-200' : feedback.score >= 60 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
-
     return (
       <div className="min-h-screen p-4 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mt-4 mb-6">
@@ -198,58 +160,39 @@ export default function SimulatePage() {
           <button onClick={() => { setPhase('intro'); setFeedback(null) }} className="text-sm text-blue-500 hover:text-blue-700">נסה שוב</button>
         </div>
 
-        {/* Score */}
         <div className={`rounded-2xl border p-6 text-center mb-4 ${scoreBg}`}>
           <div className={`text-6xl font-bold ${scoreColor}`}>{feedback.score}</div>
           <div className="text-gray-500 text-sm">מתוך 100</div>
           <div className={`text-lg font-semibold mt-1 ${scoreColor}`}>{feedback.level}</div>
         </div>
 
-        {/* Audio + Summary */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-semibold text-gray-800">סיכום</h2>
-            <button
-              onClick={playFeedbackAudio}
-              disabled={feedbackAudioLoading}
-              className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-            >
-              <span>{feedbackAudioLoading ? '⏳' : '🔊'}</span>
-              <span>{feedbackAudioLoading ? 'טוען...' : 'שמע פידבק'}</span>
-            </button>
-          </div>
+          <h2 className="font-semibold text-gray-800 mb-2">סיכום</h2>
           <p className="text-gray-700 text-sm leading-relaxed">{feedback.summary}</p>
         </div>
 
-        {/* Strengths */}
         {feedback.strengths.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4">
             <h2 className="font-semibold text-green-800 mb-3">✅ נקודות חוזק</h2>
             <ul className="space-y-1.5">
               {feedback.strengths.map((s, i) => (
-                <li key={i} className="text-sm text-green-700 flex gap-2">
-                  <span>•</span><span>{s}</span>
-                </li>
+                <li key={i} className="text-sm text-green-700 flex gap-2"><span>•</span><span>{s}</span></li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* Improvements */}
         {feedback.improvements.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-4">
             <h2 className="font-semibold text-orange-800 mb-3">💡 נקודות לשיפור</h2>
             <ul className="space-y-1.5">
               {feedback.improvements.map((s, i) => (
-                <li key={i} className="text-sm text-orange-700 flex gap-2">
-                  <span>•</span><span>{s}</span>
-                </li>
+                <li key={i} className="text-sm text-orange-700 flex gap-2"><span>•</span><span>{s}</span></li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* Corrections */}
         {feedback.corrections.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-4">
             <h2 className="font-semibold text-red-800 mb-3">✏️ תיקוני עברית</h2>
@@ -265,24 +208,19 @@ export default function SimulatePage() {
           </div>
         )}
 
-        {/* Tips */}
         {feedback.tips.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
             <h2 className="font-semibold text-blue-800 mb-3">🎯 טיפים לשיפור</h2>
             <ul className="space-y-1.5">
               {feedback.tips.map((t, i) => (
-                <li key={i} className="text-sm text-blue-700 flex gap-2">
-                  <span>•</span><span>{t}</span>
-                </li>
+                <li key={i} className="text-sm text-blue-700 flex gap-2"><span>•</span><span>{t}</span></li>
               ))}
             </ul>
           </div>
         )}
 
-        <button
-          onClick={() => router.push('/menu')}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition"
-        >
+        <button onClick={() => router.push('/menu')}
+          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
           חזור לתפריט הראשי
         </button>
       </div>
@@ -292,39 +230,25 @@ export default function SimulatePage() {
   // ── QUESTION ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="flex justify-between items-center mt-4 mb-4">
         <span className="text-sm text-gray-500">ראיון אישי</span>
         <span className="text-sm font-semibold text-gray-700">שאלה {idx + 1} / {questions.length}</span>
       </div>
 
-      {/* Progress */}
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
         <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Question */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
         <div className="flex justify-between items-start mb-4">
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${q ? CATEGORY_COLORS[q.category] : ''}`}>
             {q?.category}
           </span>
-          {idx < 6 && (
-            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">חובה</span>
-          )}
+          {idx < 6 && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">חובה</span>}
         </div>
-        <p className="text-2xl font-semibold text-gray-800 leading-relaxed mb-5">{q?.text}</p>
-        <button
-          onClick={() => q && playAudio(q.text)}
-          disabled={audioLoading}
-          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 bg-blue-50 px-3 py-1.5 rounded-lg"
-        >
-          <span>{audioLoading ? '⏳' : '🔊'}</span>
-          <span>{audioLoading ? 'טוען קול...' : 'שמע שאלה שוב'}</span>
-        </button>
+        <p className="text-2xl font-semibold text-gray-800 leading-relaxed">{q?.text}</p>
       </div>
 
-      {/* Answer */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4">
         <div className="flex justify-between items-center mb-3">
           <span className="text-sm font-medium text-gray-700">התשובה שלי</span>
@@ -332,38 +256,28 @@ export default function SimulatePage() {
             <button
               onClick={isListening ? stopListening : startListening}
               className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition font-medium ${
-                isListening
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
               }`}
             >
-              <span>{isListening ? '⏹ עצור' : '🎤 הקלט'}</span>
+              {isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
             </button>
           )}
         </div>
         <textarea
           value={currentAnswer}
           onChange={e => setCurrentAnswer(e.target.value)}
-          placeholder="כתוב את תשובתך כאן, או לחץ על 🎤 לדיבור..."
+          placeholder="כתוב את תשובתך כאן, או הקלט את עצמך..."
           rows={5}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 text-base"
         />
-        {isListening && (
-          <p className="text-xs text-red-500 mt-1 animate-pulse">🎤 מקליט... דבר בעברית</p>
-        )}
+        {isListening && <p className="text-xs text-red-500 mt-1 animate-pulse">🎤 מקליט... לחץ ״עצור״ כשתסיים</p>}
       </div>
 
-      <button
-        onClick={submitAnswer}
-        className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition text-lg"
-      >
+      <button onClick={submitAnswer}
+        className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition text-lg">
         {idx + 1 === questions.length ? 'סיים ושלח לניתוח' : `שאלה הבאה (${idx + 2}/${questions.length})`}
       </button>
-
-      <button
-        onClick={() => submitAnswer()}
-        className="w-full mt-2 text-sm text-gray-400 hover:text-gray-500 py-1"
-      >
+      <button onClick={submitAnswer} className="w-full mt-2 text-sm text-gray-400 hover:text-gray-500 py-1">
         דלג על שאלה זו
       </button>
     </div>
