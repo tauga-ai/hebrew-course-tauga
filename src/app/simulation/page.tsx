@@ -67,6 +67,7 @@ export default function SimulationPage() {
   const [speechSupported, setSpeechSupported] = useState(false)
   const recognitionRef = useRef<any>(null)
   const baseTextRef = useRef('')
+  const acceptSpeechRef = useRef(true)
 
   // Results
   const [results, setResults] = useState<any>(null)
@@ -143,11 +144,13 @@ export default function SimulationPage() {
   function startListening() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
+    acceptSpeechRef.current = true
     baseTextRef.current = sentenceInput.trim()
     const rec = new SR()
     rec.lang = 'he-IL'; rec.continuous = true; rec.interimResults = true
     recognitionRef.current = rec
     rec.onresult = (e: any) => {
+      if (!acceptSpeechRef.current) return
       const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
       setSentenceInput(baseTextRef.current ? baseTextRef.current + ' ' + t : t)
     }
@@ -155,7 +158,7 @@ export default function SimulationPage() {
     rec.onend = () => setIsListening(false)
     rec.start(); setIsListening(true)
   }
-  function stopListening() { recognitionRef.current?.stop(); setIsListening(false) }
+  function stopListening() { acceptSpeechRef.current = false; recognitionRef.current?.stop(); setIsListening(false) }
 
   async function submitSentence() {
     const ex = partC[currentEx]
@@ -213,11 +216,13 @@ export default function SimulationPage() {
   function interviewStartListening() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
+    acceptSpeechRef.current = true
     baseTextRef.current = interviewCurrentAnswer.trim()
     const rec = new SR()
     rec.lang = 'he-IL'; rec.continuous = true; rec.interimResults = true
     recognitionRef.current = rec
     rec.onresult = (e: any) => {
+      if (!acceptSpeechRef.current) return
       const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
       setInterviewCurrentAnswer(baseTextRef.current ? baseTextRef.current + ' ' + t : t)
     }
@@ -227,10 +232,10 @@ export default function SimulationPage() {
   }
 
   function interviewNextQuestion() {
-    stopListening()
+    stopListening()                          // sets acceptSpeechRef=false
     const newAnswers = [...interviewAnswers, interviewCurrentAnswer]
     setInterviewAnswers(newAnswers)
-    setInterviewCurrentAnswer('')
+    setInterviewCurrentAnswer('')           // safe — recognition is blocked
 
     if (interviewIdx + 1 >= interviewQuestions.length) {
       finishInterview(newAnswers)

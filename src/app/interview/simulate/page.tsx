@@ -21,6 +21,8 @@ export default function SimulatePage() {
   const [feedback, setFeedback] = useState<InterviewFeedback | null>(null)
 
   const recognitionRef = useRef<any>(null)
+  // Prevents stale recognition results from overwriting answer after navigating
+  const acceptSpeechRef = useRef(true)
 
   useEffect(() => {
     const raw = localStorage.getItem('student_session')
@@ -34,12 +36,14 @@ export default function SimulatePage() {
   function startListening() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
+    acceptSpeechRef.current = true
     const rec = new SR()
     rec.lang = 'he-IL'
     rec.continuous = true
     rec.interimResults = true
     recognitionRef.current = rec
     rec.onresult = (e: any) => {
+      if (!acceptSpeechRef.current) return
       const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
       setCurrentAnswer(t)
     }
@@ -50,6 +54,7 @@ export default function SimulatePage() {
   }
 
   function stopListening() {
+    acceptSpeechRef.current = false
     recognitionRef.current?.stop()
     setIsListening(false)
   }
@@ -65,7 +70,7 @@ export default function SimulatePage() {
     stopListening()
     const newAnswers = [...answers, currentAnswer]
     setAnswers(newAnswers)
-    setCurrentAnswer('')
+    setCurrentAnswer('')   // reset for next question
 
     if (idx + 1 >= questions.length) {
       submitForFeedback(newAnswers)
