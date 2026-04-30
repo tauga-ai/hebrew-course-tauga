@@ -55,7 +55,13 @@ export default function SimulatePage() {
 
   function stopListening() {
     acceptSpeechRef.current = false
-    recognitionRef.current?.stop()
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null  // detach callback so no stale results fire
+      recognitionRef.current.onerror = null
+      recognitionRef.current.onend = null
+      try { recognitionRef.current.stop() } catch {}
+      recognitionRef.current = null
+    }
     setIsListening(false)
   }
 
@@ -67,10 +73,10 @@ export default function SimulatePage() {
   }
 
   function submitAnswer() {
-    stopListening()
+    stopListening()                        // fully kill recognition first
     const newAnswers = [...answers, currentAnswer]
     setAnswers(newAnswers)
-    setCurrentAnswer('')   // reset for next question
+    setCurrentAnswer('')                  // now safe to clear
 
     if (idx + 1 >= questions.length) {
       submitForFeedback(newAnswers)

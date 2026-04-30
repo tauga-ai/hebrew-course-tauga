@@ -158,7 +158,17 @@ export default function SimulationPage() {
     rec.onend = () => setIsListening(false)
     rec.start(); setIsListening(true)
   }
-  function stopListening() { acceptSpeechRef.current = false; recognitionRef.current?.stop(); setIsListening(false) }
+  function stopListening() {
+    acceptSpeechRef.current = false
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null
+      recognitionRef.current.onerror = null
+      recognitionRef.current.onend = null
+      try { recognitionRef.current.stop() } catch {}
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+  }
 
   async function submitSentence() {
     const ex = partC[currentEx]
