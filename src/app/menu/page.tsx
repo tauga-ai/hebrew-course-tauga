@@ -63,6 +63,16 @@ export default function Menu() {
         </button>
       </div>
 
+      {/* DPR Simulation */}
+      <button onClick={() => router.push('/dapar')}
+        className="w-full text-right bg-slate-700 rounded-xl p-4 mb-3 hover:bg-slate-800 transition flex items-center justify-between">
+        <div>
+          <div className="text-white font-bold">📝 סימולציית דפ"ר</div>
+          <div className="text-slate-300 text-xs mt-0.5">הזנת תשובות לשאלות 1–50</div>
+        </div>
+        <span className="text-white text-xl">←</span>
+      </button>
+
       {/* Simulation banner */}
       <button onClick={() => router.push('/simulation')}
         className="w-full text-right bg-gradient-to-l from-blue-700 to-blue-500 rounded-xl p-4 mb-3 hover:from-blue-800 hover:to-blue-600 transition flex items-center justify-between shadow-md">
