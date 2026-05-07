@@ -79,6 +79,12 @@ export default function TeacherDashboard() {
           >
             🧠 פסיכוטכני
           </button>
+          <button
+            onClick={() => router.push('/teacher/dapar')}
+            className="text-sm bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100"
+          >
+            📋 דפ&quot;ר
+          </button>
           <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
             יציאה
           </button>
