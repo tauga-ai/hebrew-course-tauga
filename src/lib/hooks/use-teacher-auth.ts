@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * Checks the Supabase auth session on mount.
@@ -16,6 +16,7 @@ export function useTeacherAuth() {
 
   useEffect(() => {
     async function check() {
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.replace('/teacher/login')

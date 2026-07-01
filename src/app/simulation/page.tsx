@@ -82,11 +82,7 @@ export default function SimulationPage() {
   async function startSimulation() {
     if (!session) return
     setPhase('starting')
-    const res = await fetch('/api/simulation/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ student_id: session.id, class_id: session.class_id }),
-    })
+    const res = await fetch('/api/simulation/start', { method: 'POST' })
     const data = await res.json()
     setSimSessionId(data.session_id)
     setPartA(data.part_a)

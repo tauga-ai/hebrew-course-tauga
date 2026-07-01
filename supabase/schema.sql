@@ -2,7 +2,8 @@
 CREATE TABLE classes (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL,
-  teacher_email VARCHAR(255) NOT NULL
+  teacher_email VARCHAR(255) NOT NULL,
+  join_code TEXT UNIQUE NOT NULL -- added by migration_student_auth_v2.sql
 );
 
 -- Practice Sets
@@ -32,7 +33,8 @@ CREATE TABLE students (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   full_name VARCHAR(255) NOT NULL,
   class_id INTEGER REFERENCES classes(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  auth_user_id UUID UNIQUE REFERENCES auth.users(id) -- added by migration_student_auth_v2.sql; nullable (legacy rows), see plan for why
 );
 
 -- Submissions (unique per student + practice set)

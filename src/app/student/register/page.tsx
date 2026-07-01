@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 // Google icon, inline so no extra asset/dependency is needed.
@@ -16,13 +16,13 @@ function GoogleIcon() {
   )
 }
 
-// Login only — registration lives at /student/register. Google is the
-// primary path (most students have Gmail and it's already verified);
-// email+password is the fallback for the few who don't.
-export default function StudentLogin() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [classCode, setClassCode] = useState(searchParams.get('class_code') || '')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
@@ -31,10 +31,13 @@ export default function StudentLogin() {
     setGoogleLoading(true)
     setError('')
     const supabase = createClient()
+    const next = classCode.trim()
+      ? `/student/complete-profile?class_code=${encodeURIComponent(classCode.trim())}`
+      : '/student/complete-profile'
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/student/complete-profile`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
     if (oauthError) {
@@ -45,32 +48,56 @@ export default function StudentLogin() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim() || !password) return
+    if (!fullName.trim() || !email.trim() || !password || !classCode.trim()) return
     setLoading(true)
     setError('')
 
     const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
     })
 
-    if (signInError) {
-      setError('אימייל או סיסמה שגויים. אם נרשמת עם Google — יש להשתמש בכפתור Google.')
+    if (signUpError) {
+      setError(
+        signUpError.message.toLowerCase().includes('already registered')
+          ? 'כתובת המייל הזו כבר רשומה — נסה/י להתחבר'
+          : 'שגיאה בהרשמה'
+      )
       setLoading(false)
       return
     }
 
-    // If this account has no `students` row yet, /menu's session hook
-    // redirects further to /student/complete-profile — no need to check here.
-    router.push('/menu')
+    // Email confirmation is OFF for this project, so signUp should return a
+    // session immediately. If it doesn't, Supabase project settings changed
+    // out from under us — surface that instead of silently failing.
+    if (!data.session) {
+      setError('ההרשמה בוצעה אך לא נוצר חיבור. נסה/י להתחבר.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/student/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName.trim(), class_code: classCode.trim() }),
+      })
+      const profileData = await res.json()
+      if (!res.ok) throw new Error(profileData.error || 'שגיאה')
+      router.push('/menu')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'שגיאה ביצירת הפרופיל')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">תרגול ניצנים</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">הבנת הנקרא</p>
+        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">הרשמה</h1>
+        <p className="text-center text-gray-500 mb-8 text-sm">תרגול ניצנים — הבנת הנקרא</p>
 
         <button
           type="button"
@@ -79,7 +106,7 @@ export default function StudentLogin() {
           className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 mb-4"
         >
           <GoogleIcon />
-          {googleLoading ? 'מעביר ל-Google...' : 'התחברות עם Google'}
+          {googleLoading ? 'מעביר ל-Google...' : 'הרשמה עם Google'}
         </button>
 
         <div className="flex items-center gap-3 my-5">
@@ -89,6 +116,18 @@ export default function StudentLogin() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">שם מלא</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="הכנס/י את שמך המלא"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
             <input
@@ -102,18 +141,26 @@ export default function StudentLogin() {
           </div>
 
           <div>
-            <div className="flex justify-between items-baseline mb-1">
-              <label className="block text-sm font-medium text-gray-700">סיסמה</label>
-              <a href="/student/forgot-password" className="text-xs text-blue-600 hover:text-blue-700">
-                שכחת סיסמה?
-              </a>
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="סיסמה"
+              placeholder="לפחות 6 תווים"
+              minLength={6}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
+            <input
+              type="text"
+              value={classCode}
+              onChange={e => setClassCode(e.target.value.toUpperCase())}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="קוד שקיבלת מהמורה"
               required
             />
           </div>
@@ -125,19 +172,24 @@ export default function StudentLogin() {
             disabled={loading}
             className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {loading ? 'מתחבר/ת...' : 'התחברות'}
+            {loading ? 'נרשם/ת...' : 'הרשמה'}
           </button>
         </form>
 
-        <div className="mt-6 text-center space-y-2">
-          <a href="/student/register" className="block text-sm text-blue-600 hover:text-blue-700">
-            אין לך חשבון? הרשמה
-          </a>
-          <a href="/teacher/login" className="block text-xs text-gray-400 hover:text-gray-600">
-            כניסה למורה
+        <div className="mt-6 text-center">
+          <a href="/student" className="text-sm text-blue-600 hover:text-blue-700">
+            יש לך כבר חשבון? התחבר/י
           </a>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function StudentRegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }

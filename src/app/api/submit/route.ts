@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getStudentFromSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { student_id, practice_set_id, answers } = await req.json()
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  const student_id = session.student.id
 
-  if (!student_id || !practice_set_id || !answers?.length) {
+  const { practice_set_id, answers } = await req.json()
+
+  if (!practice_set_id || !answers?.length) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
 

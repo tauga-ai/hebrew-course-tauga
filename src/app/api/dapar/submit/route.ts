@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getStudentFromSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { student_id, class_id, answers } = await req.json()
-  if (!student_id || !class_id || !answers) {
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
+  const { answers } = await req.json()
+  if (!answers) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
   const db = createServiceClient()
-  const { error } = await db.from('dapar_submissions').insert({ student_id, class_id, answers })
+  const { error } = await db.from('dapar_submissions').insert({
+    student_id: session.student.id,
+    class_id: session.student.class_id,
+    answers,
+  })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

@@ -27,7 +27,7 @@ export default function StudentsPage() {
   useEffect(() => {
     if (!email) return
     async function load() {
-      const res = await fetch(`/api/teacher/students?email=${encodeURIComponent(email)}`)
+      const res = await fetch('/api/teacher/students')
       const data = await res.json()
       if (!res.ok) { router.replace('/teacher/login'); return }
       setClassName(data.class_name)

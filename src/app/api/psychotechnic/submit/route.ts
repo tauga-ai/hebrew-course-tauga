@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { getSetById, gradeAnswers } from '@/lib/psychotechnic'
+import { getStudentFromSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { student_id, class_id, set_id, answers } = await req.json()
-  if (!student_id || !class_id || !set_id || !answers) {
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
+  const { set_id, answers } = await req.json()
+  if (!set_id || !answers) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
 
@@ -15,8 +21,10 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
   const { error } = await db.from('psychotechnic_submissions').insert({
-    student_id, class_id, set_id,
-    answers: answers,
+    student_id: session.student.id,
+    class_id: session.student.class_id,
+    set_id,
+    answers,
     score, total,
   })
 

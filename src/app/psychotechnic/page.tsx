@@ -54,8 +54,6 @@ export default function PsychotechnicPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        student_id: session.id,
-        class_id: session.class_id,
         set_id: selectedSetId,
         answers,
       }),

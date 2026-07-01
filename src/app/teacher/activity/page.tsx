@@ -23,7 +23,7 @@ export default function ActivityPage() {
   useEffect(() => {
     if (!email) return
     async function load() {
-      const res = await fetch(`/api/teacher/activity?email=${encodeURIComponent(email)}`)
+      const res = await fetch('/api/teacher/activity')
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
       setSentenceStats(data.sentence_stats)

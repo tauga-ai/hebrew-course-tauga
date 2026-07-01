@@ -29,7 +29,7 @@ export default function PsychotechnicTeacherPage() {
   const [tab, setTab] = useState<'sets' | 'students' | 'questions'>('sets')
 
   async function loadData(setId: number | null) {
-    const url = `/api/teacher/psychotechnic?email=${encodeURIComponent(email)}${setId ? `&set_id=${setId}` : ''}`
+    const url = `/api/teacher/psychotechnic${setId ? `?set_id=${setId}` : ''}`
     const res = await fetch(url)
     if (!res.ok) return
     const data = await res.json()
@@ -42,7 +42,7 @@ export default function PsychotechnicTeacherPage() {
   useEffect(() => {
     if (!email) return
     async function init() {
-      const res = await fetch(`/api/teacher/psychotechnic?email=${encodeURIComponent(email)}`)
+      const res = await fetch('/api/teacher/psychotechnic')
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
       setClassName(data.class_name)

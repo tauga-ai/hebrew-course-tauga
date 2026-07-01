@@ -67,7 +67,6 @@ export default function PracticePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          student_id: session.id,
           practice_set_id: setId,
           answers: Object.entries(answers).map(([qId, ans]) => ({
             question_id: parseInt(qId),

@@ -66,7 +66,7 @@ export default function SimulatePage() {
         fetch('/api/interview/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_id: session.id, score: data.feedback.score, level: data.feedback.level }),
+          body: JSON.stringify({ score: data.feedback.score, level: data.feedback.level }),
         }).catch(() => {})
       }
     } catch {

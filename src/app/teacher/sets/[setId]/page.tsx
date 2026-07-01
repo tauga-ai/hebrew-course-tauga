@@ -37,9 +37,7 @@ export default function SetAnalyticsPage() {
   useEffect(() => {
     if (!email) return
     async function load() {
-      const res = await fetch(
-        `/api/teacher/sets/${setId}?email=${encodeURIComponent(email)}`
-      )
+      const res = await fetch(`/api/teacher/sets/${setId}`)
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const d = await res.json()
       setData(d)

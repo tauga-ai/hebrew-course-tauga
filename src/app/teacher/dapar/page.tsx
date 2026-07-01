@@ -35,7 +35,7 @@ export default function TeacherDaparPage() {
     if (!email) return
     async function init() {
       try {
-        const res = await fetch(`/api/teacher/dapar?email=${encodeURIComponent(email)}`)
+        const res = await fetch('/api/teacher/dapar')
         if (!res.ok) { router.replace('/teacher/dashboard'); return }
         const data = await res.json()
         setClassName(data.class_name)

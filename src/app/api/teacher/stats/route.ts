@@ -1,15 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { getClassAndStudents } from '@/lib/teacher-data'
+import { requireTeacher } from '@/lib/auth'
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const email = searchParams.get('email')
-  if (!email) return NextResponse.json({ error: 'מייל חסר' }, { status: 400 })
+export async function GET() {
+  const teacher = await requireTeacher()
+  if (teacher.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
 
   const db = createServiceClient()
 
-  const result = await getClassAndStudents(db, email)
+  const result = await getClassAndStudents(db, teacher.email)
   if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
   const { cls, studentIds } = result
 
@@ -35,5 +37,5 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  return NextResponse.json({ class_name: cls.name, stats })
+  return NextResponse.json({ class_name: cls.name, join_code: cls.join_code, stats })
 }

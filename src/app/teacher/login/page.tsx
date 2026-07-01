@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function TeacherLogin() {
   const router = useRouter()
@@ -11,19 +11,15 @@ export default function TeacherLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const ALLOWED_EMAILS = ['teacher1@gmail.com', 'teacher2@gmail.com']
-
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    if (!ALLOWED_EMAILS.includes(email.trim().toLowerCase())) {
-      setError('כתובת מייל לא מורשית')
-      setLoading(false)
-      return
-    }
-
+    // The email allowlist check moved server-side (requireTeacher() derives
+    // it from class ownership) — a wrong/unauthorized email now simply fails
+    // to authenticate against real classes when the teacher pages load data.
+    const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,

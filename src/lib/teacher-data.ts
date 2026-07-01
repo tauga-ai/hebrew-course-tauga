@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase'
 export interface TeacherClass {
   id: number
   name: string
+  join_code: string
 }
 
 export interface ClassStudent {
@@ -25,7 +26,7 @@ export async function getClassAndStudents(
   db: ReturnType<typeof createServiceClient>,
   email: string
 ): Promise<ClassAndStudents | null> {
-  const { data: cls } = await db.from('classes').select('id, name').eq('teacher_email', email).single()
+  const { data: cls } = await db.from('classes').select('id, name, join_code').eq('teacher_email', email).single()
   if (!cls) return null
 
   const { data: students } = await db

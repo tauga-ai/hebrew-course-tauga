@@ -1,22 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getStudentFromSession } from '@/lib/auth'
 
-export async function POST(req: NextRequest) {
-  const { student_id, class_id } = await req.json()
-  if (!student_id || !class_id) {
-    return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
+export async function POST() {
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
   const db = createServiceClient()
 
   // Create session
-  const { data: session, error } = await db
+  const { data: simSession, error } = await db
     .from('simulation_sessions')
-    .insert({ student_id, class_id })
+    .insert({ student_id: session.student.id, class_id: session.student.class_id })
     .select('id')
     .single()
 
-  if (error || !session) {
+  if (error || !simSession) {
     return NextResponse.json({ error: error?.message || 'שגיאה' }, { status: 500 })
   }
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   ])
 
   return NextResponse.json({
-    session_id: session.id,
+    session_id: simSession.id,
     part_a: qRes.data?.filter(q => q.part === 1) || [],
     part_b: qRes.data?.filter(q => q.part === 2) || [],
     part_c: exRes.data || [],

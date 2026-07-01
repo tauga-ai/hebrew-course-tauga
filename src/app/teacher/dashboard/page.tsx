@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface SetStats {
@@ -18,23 +18,33 @@ export default function TeacherDashboard() {
   const router = useRouter()
   const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
+  const [joinCode, setJoinCode] = useState('')
   const [stats, setStats] = useState<SetStats[]>([])
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!email) return
     async function load() {
-      const res = await fetch(`/api/teacher/stats?email=${encodeURIComponent(email)}`)
+      const res = await fetch('/api/teacher/stats')
       const data = await res.json()
       if (!res.ok) { router.replace('/teacher/login'); return }
       setClassName(data.class_name)
+      setJoinCode(data.join_code)
       setStats(data.stats)
       setLoading(false)
     }
     load()
   }, [email, router])
 
+  function handleCopyCode() {
+    navigator.clipboard.writeText(joinCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   async function handleLogout() {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.replace('/teacher/login')
   }
@@ -87,6 +97,19 @@ export default function TeacherDashboard() {
             יציאה
           </button>
         </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-blue-600 mb-1">קוד הצטרפות לכיתה — לשלוח לתלמידים חדשים</p>
+          <p className="text-2xl font-bold text-blue-800 tracking-widest">{joinCode}</p>
+        </div>
+        <button
+          onClick={handleCopyCode}
+          className="text-sm bg-white border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+        >
+          {copied ? 'הועתק!' : 'העתק'}
+        </button>
       </div>
 
       <h2 className="text-lg font-semibold text-gray-800 mb-4">סיכום סטים</h2>

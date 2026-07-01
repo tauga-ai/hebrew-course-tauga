@@ -27,7 +27,7 @@ export default function DaparPage() {
 
       // 2. Check DB for an existing submission
       try {
-        const res = await fetch(`/api/dapar/my-submission?student_id=${s.id}`)
+        const res = await fetch('/api/dapar/my-submission')
         const data = await res.json()
         if (data.submission?.answers) {
           const dbAnswers = data.submission.answers as number[]
@@ -69,7 +69,7 @@ export default function DaparPage() {
       const res = await fetch('/api/dapar/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: session.id, class_id: session.class_id, answers }),
+        body: JSON.stringify({ answers }),
       })
       if (!res.ok) throw new Error('submit failed')
       localStorage.setItem(`dapar_results_${session.id}`, JSON.stringify(answers))

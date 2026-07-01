@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { getSetById, PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { getClassAndStudents } from '@/lib/teacher-data'
+import { requireTeacher } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
+  const teacher = await requireTeacher()
+  if (teacher.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
-  const email = searchParams.get('email')
   const setId = searchParams.get('set_id') ? Number(searchParams.get('set_id')) : null
-  if (!email) return NextResponse.json({ error: 'מייל חסר' }, { status: 400 })
 
   const db = createServiceClient()
-  const result = await getClassAndStudents(db, email)
+  const result = await getClassAndStudents(db, teacher.email)
   if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
   const { cls, students, studentIds } = result
 
@@ -44,7 +48,14 @@ export async function GET(req: NextRequest) {
   }))
 
   // Per-question stats for a specific set
-  let questionStats: any[] = []
+  let questionStats: {
+    question: number
+    correct_answer: number
+    total_answers: number
+    correct_count: number
+    success_pct: number | null
+    distribution: Record<number, number>
+  }[] = []
   if (setId) {
     const set = getSetById(setId)
     const setSubmissions = rows.filter(r => r.set_id === setId)
