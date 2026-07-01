@@ -1,18 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { StudentSession } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 export default function InterviewLanding() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-  }, [router])
+  const { session } = useStudentSession()
 
   return (
     <div className="min-h-screen p-4 max-w-lg mx-auto">

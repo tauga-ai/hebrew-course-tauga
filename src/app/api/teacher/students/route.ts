@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getClassAndStudents } from '@/lib/teacher-data'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -8,13 +9,12 @@ export async function GET(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const { data: cls } = await db.from('classes').select('*').eq('teacher_email', email).single()
-  if (!cls) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const result = await getClassAndStudents(db, email)
+  if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const { cls, students, studentIds } = result
 
-  const { data: students } = await db.from('students').select('*').eq('class_id', cls.id).order('full_name')
   const { data: sets } = await db.from('practice_sets').select('*').order('set_number')
 
-  const studentIds = students?.map(s => s.id) || []
   const { data: submissions } = studentIds.length > 0
     ? await db.from('submissions').select('*').in('student_id', studentIds)
     : { data: [] }

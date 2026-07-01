@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
-import type { StudentSession } from '@/lib/types'
 import { speakHebrew } from '@/lib/use-hebrew-tts'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -15,29 +16,19 @@ export default function SentenceSetPage() {
   const setId = Number(params.setId)
   const set = SENTENCE_SETS.find(s => s.id === setId)
 
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [exerciseIdx, setExerciseIdx] = useState(0)
   const [phase, setPhase] = useState<Phase>('input')
   const [sentence, setSentence] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const [speechSupported, setSpeechSupported] = useState(false)
   const [feedback, setFeedback] = useState<SentenceFeedback | null>(null)
   const [ttsError, setTtsError] = useState('')
   const [improvedAudioLoading, setImprovedAudioLoading] = useState(false)
   const [scores, setScores] = useState<number[]>([])
 
-  const recognitionRef = useRef<any>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  // Preserve text before recording so we don't erase what was typed
-  const baseTextRef = useRef('')
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    setSpeechSupported(!!SR)
-  }, [router])
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    appendMode: true,
+    onTranscript: setSentence,
+  })
 
   if (!set) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -49,38 +40,6 @@ export default function SentenceSetPage() {
   const starredWords = exercise.words.filter(w => w.starred).map(w => w.text)
   const allWords = exercise.words.map(w => w.text)
   const isLast = exerciseIdx === set.exercises.length - 1
-
-  function startListening() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return
-
-    // Save whatever is already typed so we can append new speech to it
-    baseTextRef.current = sentence.trim()
-
-    const rec = new SR()
-    rec.lang = 'he-IL'
-    rec.continuous = true        // keep recording beyond 5 seconds
-    rec.interimResults = true
-    recognitionRef.current = rec
-
-    rec.onresult = (e: any) => {
-      const newSpeech = Array.from(e.results)
-        .map((r: any) => r[0].transcript)
-        .join('')
-      const base = baseTextRef.current
-      setSentence(base ? base + ' ' + newSpeech : newSpeech)
-    }
-
-    rec.onerror = () => setIsListening(false)
-    rec.onend = () => setIsListening(false)
-    rec.start()
-    setIsListening(true)
-  }
-
-  function stopListening() {
-    recognitionRef.current?.stop()
-    setIsListening(false)
-  }
 
   async function submitSentence() {
     if (!sentence.trim()) return
@@ -102,13 +61,11 @@ export default function SentenceSetPage() {
       setScores(prev => [...prev, data.feedback.score])
       setPhase('result')
       // Save to DB (fire-and-forget)
-      const raw = localStorage.getItem('student_session')
-      if (raw) {
-        const s = JSON.parse(raw)
+      if (session) {
         fetch('/api/sentence/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_id: s.id, set_id: setId, exercise_idx: exerciseIdx, score: data.feedback.score }),
+          body: JSON.stringify({ student_id: session.id, set_id: setId, exercise_idx: exerciseIdx, score: data.feedback.score }),
         }).catch(() => {})
       }
     } catch (err) {
@@ -224,7 +181,7 @@ export default function SentenceSetPage() {
                 )}
                 {speechSupported && (
                   <button
-                    onClick={isListening ? stopListening : startListening}
+                    onClick={() => isListening ? stopListening() : startListening(sentence)}
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
                       isListening
                         ? 'bg-red-500 text-white animate-pulse'

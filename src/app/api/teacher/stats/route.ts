@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getClassAndStudents } from '@/lib/teacher-data'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -8,13 +9,9 @@ export async function GET(req: NextRequest) {
 
   const db = createServiceClient()
 
-  // Get class for this teacher
-  const { data: cls } = await db.from('classes').select('*').eq('teacher_email', email).single()
-  if (!cls) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
-
-  // Get all students in this class
-  const { data: students } = await db.from('students').select('id').eq('class_id', cls.id)
-  const studentIds = students?.map(s => s.id) || []
+  const result = await getClassAndStudents(db, email)
+  if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const { cls, studentIds } = result
 
   // Get all practice sets
   const { data: sets } = await db.from('practice_sets').select('*').order('set_number')

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface QuestionAnalytics {
   id: number
@@ -29,17 +29,16 @@ export default function SetAnalyticsPage() {
   const router = useRouter()
   const params = useParams()
   const setId = params.setId as string
+  const { email } = useTeacherAuth()
 
   const [data, setData] = useState<SetData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!email) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-
       const res = await fetch(
-        `/api/teacher/sets/${setId}?email=${encodeURIComponent(user.email || '')}`
+        `/api/teacher/sets/${setId}?email=${encodeURIComponent(email)}`
       )
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const d = await res.json()
@@ -47,7 +46,7 @@ export default function SetAnalyticsPage() {
       setLoading(false)
     }
     load()
-  }, [setId, router])
+  }, [setId, email, router])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">

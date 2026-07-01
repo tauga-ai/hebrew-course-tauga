@@ -57,7 +57,3 @@ export function stopSpeaking() {
     window.speechSynthesis.cancel()
   }
 }
-
-export function isTTSSupported(): boolean {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window
-}

@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AIWordList } from '@/app/api/ai-practice/sentence-words/route'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
-import type { StudentSession } from '@/lib/types'
 import { speakHebrew } from '@/lib/use-hebrew-tts'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'מילון יומיומי בסיסי — בית, משפחה, בית ספר',
@@ -27,29 +28,20 @@ type Phase = 'pick' | 'gen-loading' | 'input' | 'eval-loading' | 'result'
 
 export default function AISentencePage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [wordList, setWordList] = useState<AIWordList | null>(null)
   const [sentence, setSentence] = useState('')
   const [feedback, setFeedback] = useState<SentenceFeedback | null>(null)
-  const [isListening, setIsListening] = useState(false)
-  const [speechSupported, setSpeechSupported] = useState(false)
   const [ttsLoading, setTtsLoading] = useState(false)
   const [scores, setScores] = useState<number[]>([])
   const [error, setError] = useState('')
 
-  const recognitionRef = useRef<any>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const baseTextRef = useRef('')
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    setSpeechSupported(!!SR)
-  }, [router])
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    appendMode: true,
+    onTranscript: setSentence,
+  })
 
   async function generateExercise(lvl: number) {
     setLevel(lvl)
@@ -72,28 +64,6 @@ export default function AISentencePage() {
       setPhase('pick')
     }
   }
-
-  function startListening() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return
-    baseTextRef.current = sentence.trim()
-    const rec = new SR()
-    rec.lang = 'he-IL'
-    rec.continuous = true
-    rec.interimResults = true
-    recognitionRef.current = rec
-    rec.onresult = (e: any) => {
-      const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
-      const base = baseTextRef.current
-      setSentence(base ? base + ' ' + t : t)
-    }
-    rec.onerror = () => setIsListening(false)
-    rec.onend = () => setIsListening(false)
-    rec.start()
-    setIsListening(true)
-  }
-
-  function stopListening() { recognitionRef.current?.stop(); setIsListening(false) }
 
   async function submitSentence() {
     if (!sentence.trim() || !wordList) return
@@ -206,7 +176,7 @@ export default function AISentencePage() {
                     className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded">נקה</button>
                 )}
                 {speechSupported && (
-                  <button onClick={isListening ? stopListening : startListening}
+                  <button onClick={() => isListening ? stopListening() : startListening(sentence)}
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
                       isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                     }`}>

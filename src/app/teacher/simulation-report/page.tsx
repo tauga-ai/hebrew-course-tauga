@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface SessionRow {
   session_id: string; student_name: string; status: string
@@ -18,6 +18,7 @@ interface QuestionStat {
 
 export default function SimulationReportPage() {
   const router = useRouter()
+  const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
@@ -25,10 +26,9 @@ export default function SimulationReportPage() {
   const [activeTab, setActiveTab] = useState<'students' | 'questions'>('students')
 
   useEffect(() => {
+    if (!email) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-      const res = await fetch(`/api/teacher/simulation-report?email=${encodeURIComponent(user.email || '')}`)
+      const res = await fetch(`/api/teacher/simulation-report?email=${encodeURIComponent(email)}`)
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
       setClassName(data.class_name)
@@ -37,7 +37,7 @@ export default function SimulationReportPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [email, router])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">טוען...</p></div>
 

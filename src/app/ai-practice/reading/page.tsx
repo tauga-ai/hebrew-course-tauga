@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AIReadingQuestion } from '@/app/api/ai-practice/reading/route'
-import type { StudentSession } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'משפטים פשוטים — מי, מה, איפה',
@@ -27,19 +27,13 @@ type Phase = 'pick' | 'loading' | 'question' | 'result'
 
 export default function AIReadingPage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [question, setQuestion] = useState<AIReadingQuestion | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [stats, setStats] = useState({ correct: 0, total: 0 })
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-  }, [router])
 
   async function generateQuestion(lvl: number) {
     setLevel(lvl)

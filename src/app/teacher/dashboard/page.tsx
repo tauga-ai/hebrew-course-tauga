@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface SetStats {
   set_id: number
@@ -15,18 +16,15 @@ interface SetStats {
 
 export default function TeacherDashboard() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
   const [stats, setStats] = useState<SetStats[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!email) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-      setEmail(user.email || '')
-
-      const res = await fetch(`/api/teacher/stats?email=${encodeURIComponent(user.email || '')}`)
+      const res = await fetch(`/api/teacher/stats?email=${encodeURIComponent(email)}`)
       const data = await res.json()
       if (!res.ok) { router.replace('/teacher/login'); return }
       setClassName(data.class_name)
@@ -34,7 +32,7 @@ export default function TeacherDashboard() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [email, router])
 
   async function handleLogout() {
     await supabase.auth.signOut()

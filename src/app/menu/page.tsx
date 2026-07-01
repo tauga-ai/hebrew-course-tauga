@@ -2,26 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { StudentSession, PracticeSet, Submission } from '@/lib/types'
+import type { PracticeSet, Submission } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 export default function Menu() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [sets, setSets] = useState<PracticeSet[]>([])
   const [completedSetIds, setCompletedSetIds] = useState<Set<number>>(new Set())
   const [submissions, setSubmissions] = useState<Record<number, Submission>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    const s: StudentSession = JSON.parse(raw)
-    setSession(s)
+    if (!session) return
 
     async function load() {
       const [setsRes, subsRes] = await Promise.all([
         fetch('/api/practice-sets'),
-        fetch(`/api/student/${s.id}/submissions`),
+        fetch(`/api/student/${session!.id}/submissions`),
       ])
       const setsData = await setsRes.json()
       const subsData = await subsRes.json()
@@ -38,7 +36,7 @@ export default function Menu() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [session])
 
   function handleLogout() {
     localStorage.removeItem('student_session')

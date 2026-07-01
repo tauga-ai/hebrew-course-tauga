@@ -3,27 +3,15 @@ import { shuffleWithSeed } from '@/lib/shuffle'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import type { StudentSession, Question, PracticeSet } from '@/lib/types'
-
-// Deterministic shuffle using question id as seed — same order every time for same question
-// moved to lib/shuffle.ts
-function shuffleWithSeed_old(arr: number[], seed: number): number[] {
-  const a = [...arr]
-  let s = seed
-  for (let i = a.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) & 0xffffffff
-    const j = Math.abs(s) % (i + 1);
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
+import type { Question, PracticeSet } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 export default function PracticePage() {
   const router = useRouter()
   const params = useParams()
   const setId = Number(params.setId)
+  const { session } = useStudentSession()
 
-  const [session, setSession] = useState<StudentSession | null>(null)
   const [practiceSet, setPracticeSet] = useState<PracticeSet | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<Record<number, number>>({})
@@ -33,9 +21,7 @@ export default function PracticePage() {
   const [currentIdx, setCurrentIdx] = useState(0)
 
   useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
+    if (!session) return
     async function load() {
       const res = await fetch(`/api/practice-sets/${setId}`)
       const data = await res.json()
@@ -45,7 +31,7 @@ export default function PracticePage() {
       setLoading(false)
     }
     load()
-  }, [setId, router])
+  }, [setId, session, router])
 
   const q = questions[currentIdx]
   const total = questions.length

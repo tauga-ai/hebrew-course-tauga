@@ -75,6 +75,19 @@ export function buildSimulationQuestions(): InterviewQuestion[] {
   return [...MANDATORY_QUESTIONS, ...shuffled.slice(0, 9)]
 }
 
+// Fixed question set for the full 4-part simulation's interview step (Part D).
+// Deliberately not randomized, unlike buildSimulationQuestions() — kept as a
+// separate hardcoded list so more questions can be appended over time.
+export const SIMULATION_INTERVIEW_QUESTIONS: string[] = [
+  'איך קוראים לך?', 'מאיפה אתה? (מה הכפר/העיר שנולדת בה?)', 'איפה אתה גר היום?',
+  'בן כמה אתה?', 'איך העברית שלך?', 'אתה מדבר עברית בבית?',
+  'מה אתה רוצה לעשות בצבא?', 'למה אתה רוצה את התפקיד הזה?',
+  'אתה מוכן לשירות צבאי?', 'מה לדעתך האתגר הכי גדול שלך בעברית?',
+  'ספר לי על המשפחה שלך', 'איך הולך לך בלימודים?',
+  'מה אתה עושה בזמן הפנוי?', 'יש לך חברים שמדברים עברית?',
+  'איפה למדת עברית?', 'מה לדעתך חשוב יותר — לעבוד קשה או להיות מוכשר?',
+]
+
 export const CATEGORY_COLORS: Record<string, string> = {
   'אישי':    'bg-blue-100 text-blue-700',
   'עברית':   'bg-purple-100 text-purple-700',

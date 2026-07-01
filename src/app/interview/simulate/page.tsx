@@ -1,69 +1,31 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { buildSimulationQuestions, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
 import type { InterviewFeedback } from '@/app/api/interview/feedback/route'
-import type { StudentSession } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 
 type Phase = 'intro' | 'question' | 'processing' | 'results'
 
 export default function SimulatePage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [phase, setPhase] = useState<Phase>('intro')
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState<string[]>([])
   const [currentAnswer, setCurrentAnswer] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const [speechSupported, setSpeechSupported] = useState(false)
   const [feedback, setFeedback] = useState<InterviewFeedback | null>(null)
 
-  const recognitionRef = useRef<any>(null)
-  // Prevents stale recognition results from overwriting answer after navigating
-  const acceptSpeechRef = useRef(true)
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    onTranscript: setCurrentAnswer,
+  })
 
   useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
     setQuestions(buildSimulationQuestions())
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    setSpeechSupported(!!SR)
-  }, [router])
-
-  function startListening() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return
-    acceptSpeechRef.current = true
-    const rec = new SR()
-    rec.lang = 'he-IL'
-    rec.continuous = true
-    rec.interimResults = true
-    recognitionRef.current = rec
-    rec.onresult = (e: any) => {
-      if (!acceptSpeechRef.current) return
-      const t = Array.from(e.results).map((r: any) => r[0].transcript).join('')
-      setCurrentAnswer(t)
-    }
-    rec.onerror = () => setIsListening(false)
-    rec.onend = () => setIsListening(false)
-    rec.start()
-    setIsListening(true)
-  }
-
-  function stopListening() {
-    acceptSpeechRef.current = false
-    if (recognitionRef.current) {
-      recognitionRef.current.onresult = null  // detach callback so no stale results fire
-      recognitionRef.current.onerror = null
-      recognitionRef.current.onend = null
-      try { recognitionRef.current.stop() } catch {}
-      recognitionRef.current = null
-    }
-    setIsListening(false)
-  }
+  }, [])
 
   function startInterview() {
     setPhase('question')
@@ -265,7 +227,7 @@ export default function SimulatePage() {
           <span className="text-sm font-medium text-gray-700">התשובה שלי</span>
           {speechSupported && (
             <button
-              onClick={isListening ? stopListening : startListening}
+              onClick={() => isListening ? stopListening() : startListening()}
               className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition font-medium ${
                 isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
               }`}

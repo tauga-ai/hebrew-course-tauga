@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { DAPAR_CORRECT_ANSWERS, DAPAR_SECTIONS, DAPAR_TOTAL } from '@/lib/dapar'
+import { DAPAR_SECTIONS, DAPAR_TOTAL, gradeDaparAnswers } from '@/lib/dapar'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface Submission {
   id: string; student_name: string; student_id: string
@@ -22,6 +22,7 @@ type Tab = 'sections' | 'students' | 'questions'
 
 export default function TeacherDaparPage() {
   const router = useRouter()
+  const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
@@ -31,11 +32,10 @@ export default function TeacherDaparPage() {
   const [tab, setTab] = useState<Tab>('sections')
 
   useEffect(() => {
+    if (!email) return
     async function init() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { router.replace('/teacher/login'); return }
-        const res = await fetch(`/api/teacher/dapar?email=${encodeURIComponent(user.email || '')}`)
+        const res = await fetch(`/api/teacher/dapar?email=${encodeURIComponent(email)}`)
         if (!res.ok) { router.replace('/teacher/dashboard'); return }
         const data = await res.json()
         setClassName(data.class_name)
@@ -43,14 +43,14 @@ export default function TeacherDaparPage() {
         setQuestionStats(data.question_stats)
         setSectionStats(data.section_stats)
       } catch {
-        // auth or network error — go back to dashboard
+        // network error — go back to dashboard
         router.replace('/teacher/dashboard')
       } finally {
         setLoading(false)
       }
     }
     init()
-  }, [router])
+  }, [email, router])
 
   const scoreColor = (v: number | null) => {
     if (v === null) return 'text-gray-300'
@@ -127,11 +127,7 @@ export default function TeacherDaparPage() {
         ) : (
           <div className="space-y-3">
             {submissions.map(s => {
-              const sectionScores = DAPAR_SECTIONS.map(sec => {
-                const correct = s.answers.slice(sec.from - 1, sec.to)
-                  .filter((a, j) => a === DAPAR_CORRECT_ANSWERS[sec.from - 1 + j]).length
-                return { label: sec.label, correct, pct: Math.round((correct / 10) * 100) }
-              })
+              const sectionScores = gradeDaparAnswers(s.answers).perSection
               return (
                 <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-4">
                   <div className="flex justify-between items-start mb-3">

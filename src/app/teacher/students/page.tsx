@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface StudentRow {
   student_id: string
@@ -18,17 +18,16 @@ interface SetHeader {
 
 export default function StudentsPage() {
   const router = useRouter()
+  const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
   const [students, setStudents] = useState<StudentRow[]>([])
   const [setHeaders, setSetHeaders] = useState<SetHeader[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!email) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-
-      const res = await fetch(`/api/teacher/students?email=${encodeURIComponent(user.email || '')}`)
+      const res = await fetch(`/api/teacher/students?email=${encodeURIComponent(email)}`)
       const data = await res.json()
       if (!res.ok) { router.replace('/teacher/login'); return }
       setClassName(data.class_name)
@@ -37,7 +36,7 @@ export default function StudentsPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [email, router])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">

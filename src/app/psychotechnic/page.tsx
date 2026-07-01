@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
-import type { StudentSession } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 type Phase = 'select' | 'input' | 'result'
 
@@ -16,18 +16,12 @@ const ANSWER_COLORS = ['', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purp
 
 export default function PsychotechnicPage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [phase, setPhase] = useState<Phase>('select')
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
   const [answers, setAnswers] = useState<number[]>([])
   const [results, setResults] = useState<{ results: QuestionResult[]; score: number; total: number } | null>(null)
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-  }, [router])
 
   const selectedSet = PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)
   const numQuestions = selectedSet?.answers.length || 0

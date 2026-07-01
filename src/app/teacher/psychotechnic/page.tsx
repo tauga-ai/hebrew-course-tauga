@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface Submission {
   id: string; student_name: string; student_id: string
@@ -19,13 +19,13 @@ interface SetSummary { set_id: number; set_name: string; submissions_count: numb
 
 export default function PsychotechnicTeacherPage() {
   const router = useRouter()
+  const { email } = useTeacherAuth()
   const [className, setClassName] = useState('')
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
   const [setsSummary, setSetsSummary] = useState<SetSummary[]>([])
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [email, setEmail] = useState('')
   const [tab, setTab] = useState<'sets' | 'students' | 'questions'>('sets')
 
   async function loadData(setId: number | null) {
@@ -40,11 +40,9 @@ export default function PsychotechnicTeacherPage() {
   }
 
   useEffect(() => {
+    if (!email) return
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-      setEmail(user.email || '')
-      const res = await fetch(`/api/teacher/psychotechnic?email=${encodeURIComponent(user.email || '')}`)
+      const res = await fetch(`/api/teacher/psychotechnic?email=${encodeURIComponent(email)}`)
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
       setClassName(data.class_name)
@@ -54,7 +52,7 @@ export default function PsychotechnicTeacherPage() {
       setLoading(false)
     }
     init()
-  }, [router])
+  }, [email, router])
 
   async function handleSetSelect(id: number | null) {
     setSelectedSetId(id)

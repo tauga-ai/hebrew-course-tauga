@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { StudentSession } from '@/lib/types'
-import { DAPAR_CORRECT_ANSWERS, DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL as TOTAL } from '@/lib/dapar'
+import { DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL as TOTAL, gradeDaparAnswers } from '@/lib/dapar'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 export default function DaparPage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
-  const sessionIdRef = useRef<string>('')
+  const { session } = useStudentSession()
   const [answers, setAnswers] = useState<number[]>(new Array(TOTAL).fill(0))
   const [submitting, setSubmitting] = useState(false)
   const [results, setResults] = useState<number[] | null>(null)
@@ -16,13 +15,8 @@ export default function DaparPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function init() {
-      const raw = localStorage.getItem('student_session')
-      if (!raw) { router.replace('/student'); return }
-      const s = JSON.parse(raw)
-      setSession(s)
-      sessionIdRef.current = s.id
-
+    if (!session) return
+    async function init(s: NonNullable<typeof session>) {
       // 1. Check localStorage for saved results first (fastest)
       const savedResults = localStorage.getItem(`dapar_results_${s.id}`)
       if (savedResults) {
@@ -49,15 +43,15 @@ export default function DaparPage() {
       if (savedAnswers) setAnswers(JSON.parse(savedAnswers))
       setLoading(false)
     }
-    init()
-  }, [router])
+    init(session)
+  }, [session])
 
   function setAnswer(idx: number, val: number) {
     setAnswers(prev => {
       const next = [...prev]
       next[idx] = val
-      if (sessionIdRef.current) {
-        localStorage.setItem(`dapar_answers_${sessionIdRef.current}`, JSON.stringify(next))
+      if (session) {
+        localStorage.setItem(`dapar_answers_${session.id}`, JSON.stringify(next))
       }
       return next
     })
@@ -95,9 +89,8 @@ export default function DaparPage() {
 
   // ── RESULTS SCREEN ──────────────────────────────────────────────────────────
   if (results) {
-    const totalCorrect = results.filter((a, i) => a === DAPAR_CORRECT_ANSWERS[i]).length
-    const pct = Math.round((totalCorrect / TOTAL) * 100)
-    const scoreColor = pct >= 70 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-red-500'
+    const grade = gradeDaparAnswers(results)
+    const scoreColor = grade.pct >= 70 ? 'text-green-600' : grade.pct >= 50 ? 'text-yellow-600' : 'text-red-500'
 
     return (
       <div className="min-h-screen p-4 max-w-3xl mx-auto pb-12">
@@ -105,23 +98,20 @@ export default function DaparPage() {
           <div className="text-5xl mb-2">🏆</div>
           <h1 className="text-2xl font-bold text-blue-700">תוצאות הסימולציה</h1>
           <p className="text-gray-500 text-sm">{session?.full_name}</p>
-          <div className={`text-5xl font-bold mt-3 ${scoreColor}`}>{pct}%</div>
-          <p className="text-gray-500 text-sm mt-1">{totalCorrect} נכון מתוך {TOTAL}</p>
+          <div className={`text-5xl font-bold mt-3 ${scoreColor}`}>{grade.pct}%</div>
+          <p className="text-gray-500 text-sm mt-1">{grade.totalCorrect} נכון מתוך {TOTAL}</p>
         </div>
 
         {/* Per-section summary */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          {SECTIONS.map(section => {
-            const sectionAnswers = results.slice(section.from - 1, section.to)
-            const correct = sectionAnswers.filter((a, j) => a === DAPAR_CORRECT_ANSWERS[section.from - 1 + j]).length
-            const sPct = Math.round((correct / 10) * 100)
-            const color = sPct >= 70 ? 'bg-green-50 border-green-200' : sPct >= 50 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
-            const textColor = sPct >= 70 ? 'text-green-700' : sPct >= 50 ? 'text-yellow-700' : 'text-red-600'
+          {grade.perSection.map(section => {
+            const color = section.pct >= 70 ? 'bg-green-50 border-green-200' : section.pct >= 50 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+            const textColor = section.pct >= 70 ? 'text-green-700' : section.pct >= 50 ? 'text-yellow-700' : 'text-red-600'
             return (
               <div key={section.label} className={`rounded-xl border p-3 text-center ${color}`}>
-                <div className={`text-2xl font-bold ${textColor}`}>{sPct}%</div>
+                <div className={`text-2xl font-bold ${textColor}`}>{section.pct}%</div>
                 <div className="text-xs text-gray-600 mt-0.5">{section.label}</div>
-                <div className="text-xs text-gray-400">{correct}/10</div>
+                <div className="text-xs text-gray-400">{section.correct}/10</div>
               </div>
             )
           })}
@@ -133,26 +123,22 @@ export default function DaparPage() {
             <div key={section.label}>
               <h3 className="text-sm font-bold text-blue-700 mb-2 px-1">{section.label}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Array.from({ length: 10 }, (_, j) => {
-                  const i = section.from - 1 + j
-                  const selected = results[i]
-                  const correct = DAPAR_CORRECT_ANSWERS[i]
-                  const isCorrect = selected === correct
-                  const unanswered = selected === 0
+                {grade.perQuestion.slice(section.from - 1, section.to).map(q => {
+                  const unanswered = q.selected === 0
                   return (
-                    <div key={i} className={`flex items-center gap-3 rounded-xl border p-3 ${
+                    <div key={q.q} className={`flex items-center gap-3 rounded-xl border p-3 ${
                       unanswered ? 'bg-gray-50 border-gray-200' :
-                      isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                      q.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                     }`}>
-                      <span className="text-sm font-bold text-gray-500 w-6 text-center flex-shrink-0">{i + 1}</span>
+                      <span className="text-sm font-bold text-gray-500 w-6 text-center flex-shrink-0">{q.q}</span>
                       <div className="flex-1 text-sm">
                         {unanswered ? (
                           <span className="text-gray-400">לא נענתה</span>
-                        ) : isCorrect ? (
-                          <span className="text-green-700 font-semibold">✓ תשובה {selected}</span>
+                        ) : q.isCorrect ? (
+                          <span className="text-green-700 font-semibold">✓ תשובה {q.selected}</span>
                         ) : (
                           <span className="text-red-600">
-                            ✗ ענית <strong>{selected}</strong> · נכון: <strong>{correct}</strong>
+                            ✗ ענית <strong>{q.selected}</strong> · נכון: <strong>{q.correct}</strong>
                           </span>
                         )}
                       </div>

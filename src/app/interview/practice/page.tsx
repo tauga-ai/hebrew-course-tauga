@@ -1,62 +1,33 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ALL_PRACTICE_QUESTIONS, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
-import type { StudentSession } from '@/lib/types'
 import { stopSpeaking } from '@/lib/use-hebrew-tts'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 
 export default function PracticePage() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
+  const { session } = useStudentSession()
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
-  const [isListening, setIsListening] = useState(false)
-  const [speechSupported, setSpeechSupported] = useState(false)
-  const recognitionRef = useRef<any>(null)
 
   const q: InterviewQuestion = ALL_PRACTICE_QUESTIONS[idx]
   const total = ALL_PRACTICE_QUESTIONS.length
 
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    continuous: false,
+    onTranscript: text => setAnswers(prev => ({ ...prev, [q.id]: text })),
+  })
+
   useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    setSpeechSupported(!!SR)
     if (window.speechSynthesis) window.speechSynthesis.getVoices()
-  }, [router])
-
-  function startListening() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return
-    const rec = new SR()
-    rec.lang = 'he-IL'
-    rec.continuous = false
-    rec.interimResults = true
-    recognitionRef.current = rec
-
-    rec.onresult = (e: any) => {
-      const transcript = Array.from(e.results)
-        .map((r: any) => r[0].transcript)
-        .join('')
-      setAnswers(prev => ({ ...prev, [q.id]: transcript }))
-    }
-
-    rec.onend = () => setIsListening(false)
-    rec.start()
-    setIsListening(true)
-  }
-
-  function stopListening() {
-    recognitionRef.current?.stop()
-    setIsListening(false)
-  }
+  }, [])
 
   function go(dir: number) {
     stopSpeaking()
-    recognitionRef.current?.stop()
-    setIsListening(false)
+    stopListening()
     setIdx(i => Math.max(0, Math.min(total - 1, i + dir)))
   }
 
@@ -98,7 +69,7 @@ export default function PracticePage() {
           <label className="text-sm font-medium text-gray-700">התשובה שלי</label>
           {speechSupported && (
             <button
-              onClick={isListening ? stopListening : startListening}
+              onClick={() => isListening ? stopListening() : startListening()}
               className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition ${
                 isListening
                   ? 'bg-red-100 text-red-600 animate-pulse'

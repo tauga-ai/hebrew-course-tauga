@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getClassAndStudents } from '@/lib/teacher-data'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ setId: string }> }) {
   const { setId } = await params
@@ -10,8 +11,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ setI
   const db = createServiceClient()
 
   // Verify teacher owns this class
-  const { data: cls } = await db.from('classes').select('id, name').eq('teacher_email', email).single()
-  if (!cls) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const result = await getClassAndStudents(db, email)
+  if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const { cls, studentIds } = result
 
   // Get practice set info
   const { data: practiceSet } = await db
@@ -27,13 +29,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ setI
     .select('*')
     .eq('practice_set_id', setId)
     .order('question_order')
-
-  // Get all students in this class
-  const { data: students } = await db
-    .from('students')
-    .select('id')
-    .eq('class_id', cls.id)
-  const studentIds = students?.map(s => s.id) || []
 
   // Get all submissions for this set from class students
   const { data: submissions } = studentIds.length > 0

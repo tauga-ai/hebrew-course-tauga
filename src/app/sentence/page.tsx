@@ -1,19 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
-import type { StudentSession } from '@/lib/types'
+import { useStudentSession } from '@/lib/hooks/use-student-session'
 
 export default function SentenceLanding() {
   const router = useRouter()
-  const [session, setSession] = useState<StudentSession | null>(null)
-
-  useEffect(() => {
-    const raw = localStorage.getItem('student_session')
-    if (!raw) { router.replace('/student'); return }
-    setSession(JSON.parse(raw))
-  }, [router])
+  const { session } = useStudentSession()
 
   const difficultyLabel: Record<number, string> = {
     1: 'רמה 1', 2: 'רמה 2', 3: 'רמה 3', 4: 'רמה 4', 5: 'רמה 5',

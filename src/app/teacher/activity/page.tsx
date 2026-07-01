@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 
 interface SentenceStat { set_id: number; attempts: number; avg_score: number | null }
 interface InterviewStat { total: number; avg_score: number | null }
@@ -14,17 +14,16 @@ interface StudentRow {
 
 export default function ActivityPage() {
   const router = useRouter()
+  const { email } = useTeacherAuth()
   const [sentenceStats, setSentenceStats] = useState<SentenceStat[]>([])
   const [interviewStats, setInterviewStats] = useState<InterviewStat | null>(null)
   const [students, setStudents] = useState<StudentRow[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!email) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/teacher/login'); return }
-
-      const res = await fetch(`/api/teacher/activity?email=${encodeURIComponent(user.email || '')}`)
+      const res = await fetch(`/api/teacher/activity?email=${encodeURIComponent(email)}`)
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
       setSentenceStats(data.sentence_stats)
@@ -33,7 +32,7 @@ export default function ActivityPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [email, router])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
-import { DAPAR_CORRECT_ANSWERS, DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL } from '@/lib/dapar'
+import { DAPAR_CORRECT_ANSWERS, DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL, gradeDaparAnswers } from '@/lib/dapar'
+import { getClassAndStudents } from '@/lib/teacher-data'
 
 const TOTAL = DAPAR_TOTAL
 
@@ -10,11 +11,9 @@ export async function GET(req: NextRequest) {
   if (!email) return NextResponse.json({ error: 'מייל חסר' }, { status: 400 })
 
   const db = createServiceClient()
-  const { data: cls } = await db.from('classes').select('id, name').eq('teacher_email', email).single()
-  if (!cls) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
-
-  const { data: students } = await db.from('students').select('id, full_name').eq('class_id', cls.id)
-  const studentIds = students?.map(s => s.id) || []
+  const result = await getClassAndStudents(db, email)
+  if (!result) return NextResponse.json({ error: 'כיתה לא נמצאה' }, { status: 404 })
+  const { cls, students, studentIds } = result
 
   if (studentIds.length === 0) {
     return NextResponse.json({ class_name: cls.name, submissions: [], question_stats: [], section_stats: [] })
@@ -29,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const rows = (subs || []).map(s => {
     const answers = s.answers as number[]
-    const score = answers.filter((a: number, i: number) => a === DAPAR_CORRECT_ANSWERS[i]).length
+    const score = gradeDaparAnswers(answers).totalCorrect
     return {
       id: s.id,
       student_name: studentMap[s.student_id] || '—',
