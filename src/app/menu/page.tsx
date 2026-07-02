@@ -65,7 +65,7 @@ export default function Menu() {
       <button onClick={() => router.push('/dapar')}
         className="w-full text-right bg-slate-700 rounded-xl p-4 mb-3 hover:bg-slate-800 transition flex items-center justify-between">
         <div>
-          <div className="text-white font-bold">📝 סימולציית דפ"ר</div>
+          <div className="text-white font-bold">📝 סימולציית דפ&quot;ר</div>
           <div className="text-slate-300 text-xs mt-0.5">הזנת תשובות לשאלות 1–50</div>
         </div>
         <span className="text-white text-xl">←</span>

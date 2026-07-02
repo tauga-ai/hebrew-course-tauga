@@ -11,9 +11,6 @@ interface QuestionResult {
   q: number; correct: number; student: number; isCorrect: boolean
 }
 
-const ANSWER_LABELS = ['', 'א', 'ב', 'ג', 'ד']
-const ANSWER_COLORS = ['', 'bg-blue-100 text-blue-800', 'bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800', 'bg-green-100 text-green-800']
-
 export default function PsychotechnicPage() {
   const router = useRouter()
   const { session } = useStudentSession()

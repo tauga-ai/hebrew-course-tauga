@@ -126,12 +126,6 @@ export default function SetAnalyticsPage() {
                   const count = q.answer_distribution[optNum] || 0
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0
                   const isCorrect = optNum === q.correct_answer_number
-                  const isMostWrong = !isCorrect && count > 0 && count === Math.max(
-                    ...q.options.map((_, j) => {
-                      const n = j + 1
-                      return n !== q.correct_answer_number ? (q.answer_distribution[n] || 0) : 0
-                    })
-                  )
 
                   return (
                     <div key={optNum} className={`rounded-xl border p-3 ${

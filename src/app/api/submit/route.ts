@@ -9,7 +9,12 @@ export async function POST(req: NextRequest) {
   }
   const student_id = session.student.id
 
-  const { practice_set_id, answers } = await req.json()
+  let practice_set_id, answers
+  try {
+    ({ practice_set_id, answers } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
+  }
 
   if (!practice_set_id || !answers?.length) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })

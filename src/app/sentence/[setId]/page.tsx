@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
+import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import { speakHebrew } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
@@ -68,7 +68,7 @@ export default function SentenceSetPage() {
           body: JSON.stringify({ set_id: setId, exercise_idx: exerciseIdx, score: data.feedback.score }),
         }).catch(() => {})
       }
-    } catch (err) {
+    } catch {
       alert('שגיאה בקבלת המשוב. נסה שוב.')
       setPhase('input')
     }

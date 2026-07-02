@@ -21,12 +21,17 @@ interface SentencePhaseProps {
   sentenceSpeech: ReturnType<typeof useSpeechToText>
   onSubmitSentence: () => void
   onNextSentence: () => void
+  /** True while the final (last-exercise) submission is in flight. */
+  submitting?: boolean
+  /** Shown when the last submit attempt failed. */
+  errorBanner?: ReactNode
 }
 
 /** Part C — sentence-building exercises, one at a time with AI feedback. */
 export function SentencePhase({
   stepHeader, progressBar, partC, currentEx, sentenceInput, setSentenceInput,
   evalLoading, currentFeedback, sentenceSpeech, onSubmitSentence, onNextSentence,
+  submitting, errorBanner,
 }: SentencePhaseProps) {
   const ex = partC[currentEx]
   const words = ex?.words_json || []
@@ -35,6 +40,7 @@ export function SentencePhase({
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       {stepHeader}
       {progressBar}
+      {errorBanner}
       <div className="text-sm text-gray-500 mb-4">תרגיל {currentEx + 1} / {partC.length}</div>
 
       {!currentFeedback ? (
@@ -89,9 +95,9 @@ export function SentencePhase({
             <p className="text-xs text-green-600 font-semibold mb-1">✨ גרסה מושלמת</p>
             <p className="text-green-800 text-sm font-medium">{currentFeedback.improved_sentence}</p>
           </div>
-          <button onClick={onNextSentence}
-            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
-            {currentEx + 1 >= partC.length ? 'עבור לראיון →' : `תרגיל הבא (${currentEx + 2}/${partC.length}) →`}
+          <button onClick={onNextSentence} disabled={submitting}
+            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 disabled:opacity-40 transition">
+            {submitting ? 'שולח...' : currentEx + 1 >= partC.length ? 'עבור לראיון →' : `תרגיל הבא (${currentEx + 2}/${partC.length}) →`}
           </button>
         </>
       )}

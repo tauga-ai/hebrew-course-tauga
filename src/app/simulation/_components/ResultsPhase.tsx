@@ -1,13 +1,7 @@
 'use client'
 
 import type { StudentSession } from '@/lib/types'
-
-interface SimulationResults {
-  part_a: { correct: number; total: number; pct: number }
-  part_b: { correct: number; total: number; pct: number }
-  part_c: { avg: string; results: unknown[] }
-  part_d: { score: number; level: string; summary: string }
-}
+import type { SimulationResults } from '../page'
 
 interface ResultsPhaseProps {
   session: StudentSession | null

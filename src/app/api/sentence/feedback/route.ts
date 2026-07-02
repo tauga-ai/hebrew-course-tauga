@@ -12,10 +12,11 @@ export interface SentenceFeedback {
 }
 
 export async function POST(req: NextRequest) {
-  const { sentence, starred_words, all_words } = await req.json() as {
-    sentence: string
-    starred_words: string[]
-    all_words: string[]
+  let sentence: string, starred_words: string[], all_words: string[]
+  try {
+    ({ sentence, starred_words, all_words } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
   }
 
   if (!sentence?.trim()) {

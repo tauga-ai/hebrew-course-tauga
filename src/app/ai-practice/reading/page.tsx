@@ -27,7 +27,7 @@ type Phase = 'pick' | 'loading' | 'question' | 'result'
 
 export default function AIReadingPage() {
   const router = useRouter()
-  const { session } = useStudentSession()
+  useStudentSession() // guards this page; redirects unauthenticated users
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [question, setQuestion] = useState<AIReadingQuestion | null>(null)

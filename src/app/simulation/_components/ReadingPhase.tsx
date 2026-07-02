@@ -27,6 +27,10 @@ interface ReadingPhaseProps {
   showUnansweredWarning: boolean
   finishLabel: string
   onFinish: () => void
+  /** True while the finish-part submission is in flight — disables the finish button. */
+  submitting?: boolean
+  /** Shown above the questions when the last submit attempt failed. */
+  errorBanner?: ReactNode
 }
 
 /** Shared UI for Parts A and B — multiple-choice reading comprehension questions. */
@@ -34,6 +38,7 @@ export function ReadingPhase({
   stepHeader, progressBar, keyPrefix, questions, currentQ, setCurrentQ,
   readingAnswers, setReadingAnswers, getShuffledOptions,
   groupByPassage, showUnansweredWarning, finishLabel, onFinish,
+  submitting, errorBanner,
 }: ReadingPhaseProps) {
   const q = questions[currentQ]
   const opts = q ? getShuffledOptions(q) : []
@@ -44,6 +49,7 @@ export function ReadingPhase({
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       {stepHeader}
       {progressBar}
+      {errorBanner}
       <div className="flex justify-between text-sm text-gray-500 mb-4">
         <span>שאלה {currentQ + 1} / {questions.length}</span>
         <span>{answered} נענו</span>
@@ -71,8 +77,8 @@ export function ReadingPhase({
           className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-30 hover:bg-gray-50">← הקודמת</button>
         {currentQ < questions.length - 1
           ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">הבאה →</button>
-          : <button onClick={onFinish} disabled={answered < questions.length}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-blue-700">{finishLabel}</button>
+          : <button onClick={onFinish} disabled={answered < questions.length || submitting}
+              className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-blue-700">{submitting ? 'שולח...' : finishLabel}</button>
         }
       </div>
       {showUnansweredWarning && answered < questions.length && currentQ === questions.length - 1 && (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { buildSimulationQuestions, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
 import type { InterviewFeedback } from '@/app/api/interview/feedback/route'
@@ -12,7 +12,8 @@ type Phase = 'intro' | 'question' | 'processing' | 'results'
 export default function SimulatePage() {
   const router = useRouter()
   const { session } = useStudentSession()
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  // Lazy initial state: picked once on first render, no need for a separate effect.
+  const [questions] = useState<InterviewQuestion[]>(buildSimulationQuestions)
   const [phase, setPhase] = useState<Phase>('intro')
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState<string[]>([])
@@ -22,10 +23,6 @@ export default function SimulatePage() {
   const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
     onTranscript: setCurrentAnswer,
   })
-
-  useEffect(() => {
-    setQuestions(buildSimulationQuestions())
-  }, [])
 
   function startInterview() {
     setPhase('question')

@@ -24,6 +24,21 @@ interface SimExercise {
   words_json: { text: string; starred: boolean }[]
 }
 
+export interface SentenceResult {
+  ex_order: number
+  sentence: string
+  score: number
+  feedback: string
+  improved_sentence: string
+}
+
+export interface SimulationResults {
+  part_a: { correct: number; total: number; pct: number }
+  part_b: { correct: number; total: number; pct: number }
+  part_c: { avg: string; results: SentenceResult[] }
+  part_d: { score: number; level: string; summary: string }
+}
+
 type Phase = 'intro' | 'starting' | 'a' | 'b' | 'c' | 'd_intro' | 'd' | 'results'
 
 const STEPS = [
@@ -52,7 +67,7 @@ export default function SimulationPage() {
   const [currentEx, setCurrentEx] = useState(0)
   const [sentenceInput, setSentenceInput] = useState('')
   const [evalLoading, setEvalLoading] = useState(false)
-  const [sentenceResults, setSentenceResults] = useState<any[]>([])
+  const [sentenceResults, setSentenceResults] = useState<SentenceResult[]>([])
   const [currentFeedback, setCurrentFeedback] = useState<SentenceFeedback | null>(null)
 
   // Part D (interview) state
@@ -63,7 +78,11 @@ export default function SimulationPage() {
   const [interviewProcessing, setInterviewProcessing] = useState(false)
 
   // Results
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<SimulationResults | null>(null)
+
+  // Submit-in-flight / failure state, shared across finishPartA/finishPartB/nextSentence
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const sentenceSpeech = useSpeechToText({ appendMode: true, onTranscript: setSentenceInput })
   const interviewSpeech = useSpeechToText({ appendMode: true, onTranscript: setInterviewCurrentAnswer })
@@ -101,26 +120,43 @@ export default function SimulationPage() {
       selected_answer: readingAnswers[q.id] || 0,
       is_correct: readingAnswers[q.id] === q.correct_answer,
     }))
-    await fetch('/api/simulation/submit', {
+    const res = await fetch('/api/simulation/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: simSessionId, type, answers }),
     })
+    if (!res.ok) throw new Error(`submitReading(${type}) failed`)
   }
 
-  function finishPartA() {
-    submitReading('reading_a', partA)
-    setCurrentQ(0)
-    setPhase('b')
+  async function finishPartA() {
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitReading('reading_a', partA)
+      setCurrentQ(0)
+      setPhase('b')
+    } catch {
+      setSubmitError('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  function finishPartB() {
-    submitReading('reading_b', partB)
-    setCurrentEx(0)
-    setSentenceInput('')
-    setSentenceResults([])
-    setCurrentFeedback(null)
-    setPhase('c')
+  async function finishPartB() {
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitReading('reading_b', partB)
+      setCurrentEx(0)
+      setSentenceInput('')
+      setSentenceResults([])
+      setCurrentFeedback(null)
+      setPhase('c')
+    } catch {
+      setSubmitError('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // ── SENTENCES (Part C) ─────────────────────────────────────────────────────
@@ -141,7 +177,16 @@ export default function SimulationPage() {
     setEvalLoading(false)
   }
 
-  function nextSentence() {
+  async function submitSentenceResults(resultsToSubmit: typeof sentenceResults) {
+    const res = await fetch('/api/simulation/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: simSessionId, type: 'sentences', results: resultsToSubmit }),
+    })
+    if (!res.ok) throw new Error('submitSentenceResults failed')
+  }
+
+  async function nextSentence() {
     const ex = partC[currentEx]
     const newResult = {
       ex_order: ex.ex_order,
@@ -157,15 +202,31 @@ export default function SimulationPage() {
     sentenceSpeech.stop()
 
     if (currentEx + 1 >= partC.length) {
-      // Submit all sentence results and move to interview
-      fetch('/api/simulation/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: simSessionId, type: 'sentences', results: newResults }),
-      })
-      setPhase('d_intro')
+      setSubmitting(true)
+      setSubmitError(null)
+      try {
+        await submitSentenceResults(newResults)
+        setPhase('d_intro')
+      } catch {
+        setSubmitError('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.')
+      } finally {
+        setSubmitting(false)
+      }
     } else {
       setCurrentEx(i => i + 1)
+    }
+  }
+
+  async function retrySentenceSubmit() {
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitSentenceResults(sentenceResults)
+      setPhase('d_intro')
+    } catch {
+      setSubmitError('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -243,6 +304,13 @@ export default function SimulationPage() {
     </div>
   )
 
+  const errorBanner = (onRetry: () => void) => submitError && (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700 flex items-center justify-between gap-3">
+      <span>{submitError}</span>
+      <button onClick={onRetry} disabled={submitting} className="text-red-700 font-semibold underline flex-shrink-0 disabled:opacity-40">נסה שוב</button>
+    </div>
+  )
+
   // ── PHASE: INTRO ───────────────────────────────────────────────────────────
   if (phase === 'intro') return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -298,6 +366,8 @@ export default function SimulationPage() {
         showUnansweredWarning={true}
         finishLabel="סיים חלק א →"
         onFinish={finishPartA}
+        submitting={submitting}
+        errorBanner={errorBanner(finishPartA)}
       />
     )
   }
@@ -319,6 +389,8 @@ export default function SimulationPage() {
         showUnansweredWarning={false}
         finishLabel="סיים חלק ב →"
         onFinish={finishPartB}
+        submitting={submitting}
+        errorBanner={errorBanner(finishPartB)}
       />
     )
   }
@@ -338,6 +410,8 @@ export default function SimulationPage() {
         sentenceSpeech={sentenceSpeech}
         onSubmitSentence={submitSentence}
         onNextSentence={nextSentence}
+        submitting={submitting}
+        errorBanner={errorBanner(retrySentenceSubmit)}
       />
     )
   }

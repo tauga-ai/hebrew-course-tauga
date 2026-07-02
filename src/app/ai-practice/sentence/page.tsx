@@ -28,7 +28,7 @@ type Phase = 'pick' | 'gen-loading' | 'input' | 'eval-loading' | 'result'
 
 export default function AISentencePage() {
   const router = useRouter()
-  const { session } = useStudentSession()
+  useStudentSession() // guards this page; redirects unauthenticated users
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
   const [wordList, setWordList] = useState<AIWordList | null>(null)

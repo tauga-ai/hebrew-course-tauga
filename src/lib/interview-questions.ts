@@ -1,3 +1,5 @@
+import { shuffle } from '@/lib/shuffle'
+
 export interface InterviewQuestion {
   id: number
   text: string
@@ -71,7 +73,7 @@ export const ALL_PRACTICE_QUESTIONS: InterviewQuestion[] = [
 
 export function buildSimulationQuestions(): InterviewQuestion[] {
   const pool = [...ADDITIONAL_QUESTIONS, ...HARD_QUESTIONS]
-  const shuffled = pool.sort(() => Math.random() - 0.5)
+  const shuffled = shuffle(pool)
   return [...MANDATORY_QUESTIONS, ...shuffled.slice(0, 9)]
 }
 

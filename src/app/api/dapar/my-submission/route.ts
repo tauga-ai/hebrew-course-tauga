@@ -7,13 +7,18 @@ export async function GET() {
   if (session.status !== 'ok') return NextResponse.json({ submission: null })
 
   const db = createServiceClient()
-  const { data } = await db
+  const { data, error } = await db
     .from('dapar_submissions')
     .select('answers, submitted_at')
     .eq('student_id', session.student.id)
     .order('submitted_at', { ascending: false })
     .limit(1)
     .single()
+
+  // PGRST116 = no rows found, expected when the student hasn't submitted yet
+  if (error && error.code !== 'PGRST116') {
+    console.error('dapar my-submission query failed:', error.message)
+  }
 
   return NextResponse.json({ submission: data ?? null })
 }

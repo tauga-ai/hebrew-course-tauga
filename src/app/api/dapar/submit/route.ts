@@ -8,7 +8,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { answers } = await req.json()
+  let answers
+  try {
+    ({ answers } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
+  }
   if (!answers) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }

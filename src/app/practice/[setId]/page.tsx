@@ -42,7 +42,7 @@ export default function PracticePage() {
   const shuffledOrder = useMemo(() => {
     if (!q) return [1, 2, 3, 4]
     return shuffleWithSeed([1, 2, 3, 4], q.id)
-  }, [q?.id])
+  }, [q])
 
   const options = q ? shuffledOrder.map(num => ({
     num,
