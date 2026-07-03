@@ -376,7 +376,7 @@ export default function SimulationPage() {
   const progressBar = (current: number) => (
     <div className="flex gap-1 mb-6">
       {STEPS.map((s, i) => (
-        <div key={i} className={`flex-1 h-1.5 rounded-full ${i < current ? 'bg-blue-500' : i === current ? 'bg-blue-300' : 'bg-gray-200'}`} />
+        <div key={i} className={`flex-1 h-1.5 rounded-full ${i < current ? 'bg-primary-500' : i === current ? 'bg-primary-300' : 'bg-gray-200'}`} />
       ))}
     </div>
   )
@@ -399,12 +399,12 @@ export default function SimulationPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">⏸️</div>
-        <h1 className="text-2xl font-bold text-blue-700 mb-2">נמצאה סימולציה פעילה</h1>
+        <h1 className="text-2xl font-bold text-primary-700 mb-2">נמצאה סימולציה פעילה</h1>
         <p className="text-gray-600 mb-6 text-sm leading-relaxed">
           נראה שהתחלת סימולציה ולא סיימת אותה. אפשר להמשיך מאיפה שעצרת, או להתחיל מחדש.
         </p>
         <button onClick={resumeDraft}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg mb-3">
+          className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg mb-3">
           המשך מאיפה שעצרתי
         </button>
         <button onClick={discardDraftAndStartOver}
@@ -419,7 +419,7 @@ export default function SimulationPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">🏆</div>
-        <h1 className="text-2xl font-bold text-blue-700 mb-2">סימולציה אמיתית</h1>
+        <h1 className="text-2xl font-bold text-primary-700 mb-2">סימולציה אמיתית</h1>
         <p className="text-gray-500 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
         <p className="text-gray-600 mb-6 text-sm leading-relaxed">
           סימולציה מקיפה בת 4 חלקים המדמה תנאי בחינה אמיתיים.
@@ -436,7 +436,7 @@ export default function SimulationPage() {
           ⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.
         </div>
         <button onClick={startSimulation}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg">
+          className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
           התחל סימולציה
         </button>
         <button onClick={() => router.push('/menu')} className="mt-3 text-sm text-gray-400 hover:text-gray-600">חזרה</button>

@@ -7,6 +7,7 @@ import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import { speakHebrew } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { PageHeader } from '@/components/PageHeader'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -105,17 +106,12 @@ export default function SentenceSetPage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mt-4 mb-4">
-        <button onClick={() => router.push('/sentence')} className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <div className="text-xs font-medium text-gray-500">{set.title}</div>
-        <div className="text-sm text-gray-500">{exerciseIdx + 1}/{set.exercises.length}</div>
-      </div>
+      <PageHeader backHref="/sentence" subtitle={set.title} right={`${exerciseIdx + 1}/${set.exercises.length}`} />
 
       {/* Progress */}
       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-6">
         <div
-          className="bg-blue-500 h-1.5 rounded-full transition-all"
+          className="bg-primary-500 h-1.5 rounded-full transition-all"
           style={{ width: `${((exerciseIdx + (phase === 'result' ? 1 : 0)) / set.exercises.length) * 100}%` }}
         />
       </div>
@@ -127,7 +123,7 @@ export default function SentenceSetPage() {
           <p className="text-gray-500">בודק את המשפט שלך...</p>
           <div className="flex gap-2">
             {[0,1,2].map(i => (
-              <div key={i} className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
+              <div key={i} className="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
             ))}
           </div>
         </div>
@@ -137,12 +133,12 @@ export default function SentenceSetPage() {
       {phase === 'input' && (
         <>
           {/* Rules reminder */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-800">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-4 text-sm text-primary-800">
             <p>
               השתמש בכל המילים <strong>המסומנות בכוכב ★</strong> (חובה)
               ובלפחות <strong>6 מילים</strong> מהרשימה הכללית.
             </p>
-            <p className="text-blue-600 text-xs mt-1">
+            <p className="text-primary-600 text-xs mt-1">
               💡 צורות שונות של מילה נספרות — למשל ״חברים״ וגם ״חבריי״
             </p>
           </div>
@@ -156,7 +152,7 @@ export default function SentenceSetPage() {
                   key={i}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
                     w.starred
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
                       : 'bg-gray-100 text-gray-700 border-gray-200'
                   }`}
                 >
@@ -185,7 +181,7 @@ export default function SentenceSetPage() {
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
                       isListening
                         ? 'bg-red-500 text-white animate-pulse'
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
                     }`}
                   >
                     {isListening ? '⏹ עצור' : '🎤 הקלט'}
@@ -198,7 +194,7 @@ export default function SentenceSetPage() {
               onChange={e => setSentence(e.target.value)}
               placeholder="כתוב כאן את המשפט שלך בעברית, או לחץ על 🎤..."
               rows={4}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 text-base"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-800 text-base"
             />
             {isListening && (
               <p className="text-xs text-red-500 mt-1.5 animate-pulse">
@@ -215,7 +211,7 @@ export default function SentenceSetPage() {
           <button
             onClick={submitSentence}
             disabled={!sentence.trim()}
-            className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition disabled:opacity-40 text-lg"
+            className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg"
           >
             שלח לבדיקה
           </button>
@@ -280,7 +276,7 @@ export default function SentenceSetPage() {
 
           <button
             onClick={nextExercise}
-            className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition text-lg"
+            className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition text-lg"
           >
             {isLast ? 'סיים סט' : `תרגיל הבא (${exerciseIdx + 2}/${set.exercises.length})`}
           </button>

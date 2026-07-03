@@ -6,6 +6,7 @@ import { ALL_PRACTICE_QUESTIONS, CATEGORY_COLORS, type InterviewQuestion } from 
 import { stopSpeaking } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -35,21 +36,11 @@ export default function PracticePage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/interview')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← חזרה
-        </button>
-        <div className="text-center">
-          <div className="font-bold text-blue-700">תרגול שאלות ראיון</div>
-          <div className="text-xs text-gray-500">{session?.full_name}</div>
-        </div>
-        <div className="text-sm text-gray-500">{answered}/{total} נענו</div>
-      </div>
+      <PageHeader backHref="/interview" title="תרגול שאלות ראיון" subtitle={session?.full_name} right={`${answered}/${total} נענו`} />
 
       {/* Progress */}
       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-6">
-        <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
+        <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
       </div>
 
       {/* Question card */}
@@ -66,7 +57,7 @@ export default function PracticePage() {
       {/* Answer area */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4 shadow-sm">
         <div className="flex justify-between items-center mb-3">
-          <label className="text-sm font-medium text-gray-700">התשובה שלי</label>
+          <label htmlFor="answer" className="text-sm font-medium text-gray-700">התשובה שלי</label>
           {speechSupported && (
             <button
               onClick={() => isListening ? stopListening() : startListening()}
@@ -82,11 +73,12 @@ export default function PracticePage() {
           )}
         </div>
         <textarea
+          id="answer"
           value={answers[q.id] || ''}
           onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
           placeholder="כתוב את תשובתך כאן..."
           rows={4}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-800"
         />
         {isListening && (
           <p className="text-xs text-red-500 mt-1 animate-pulse">🎤 מקליט... דבר בעברית</p>
@@ -110,7 +102,7 @@ export default function PracticePage() {
               key={qq.id}
               onClick={() => { stopSpeaking(); setIdx(i) }}
               className={`w-2 h-2 rounded-full transition ${
-                i === idx ? 'bg-blue-600 scale-125' : answers[qq.id] ? 'bg-blue-300' : 'bg-gray-200'
+                i === idx ? 'bg-primary-600 scale-125' : answers[qq.id] ? 'bg-primary-300' : 'bg-gray-200'
               }`}
             />
           ))}

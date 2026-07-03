@@ -56,14 +56,10 @@ export default function SimulationReportPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/teacher/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <div className="text-center">
-          <h1 className="font-bold text-blue-700">דוח סימולציה</h1>
-          <p className="text-xs text-gray-500">{className}</p>
-        </div>
-        <div />
+    <>
+      <div className="mb-6">
+        <h1 className="font-bold text-primary-700">דוח סימולציה</h1>
+        <p className="text-xs text-gray-500">{className}</p>
       </div>
 
       {/* Summary cards */}
@@ -89,11 +85,11 @@ export default function SimulationReportPage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-4">
         <button onClick={() => setActiveTab('students')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'students' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'students' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           תלמידים ({sessions.length})
         </button>
         <button onClick={() => setActiveTab('questions')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'questions' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'questions' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           ניתוח שאלות ({questionStats.length})
         </button>
       </div>
@@ -185,6 +181,6 @@ export default function SimulationReportPage() {
           </div>
         )
       )}
-    </div>
+    </>
   )
 }

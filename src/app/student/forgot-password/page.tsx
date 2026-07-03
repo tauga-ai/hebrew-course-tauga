@@ -38,7 +38,7 @@ function ForgotPasswordForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">שכחת סיסמה?</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">שכחת סיסמה?</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">נשלח לך לינק לאיפוס במייל</p>
 
         {linkExpired && (
@@ -59,12 +59,13 @@ function ForgotPasswordForm() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="name@example.com"
                 required
               />
@@ -75,7 +76,7 @@ function ForgotPasswordForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
             >
               {loading ? 'שולח/ת...' : 'שלח/י קישור לאיפוס'}
             </button>
@@ -83,7 +84,7 @@ function ForgotPasswordForm() {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-sm text-blue-600 hover:text-blue-700">
+          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700">
             חזרה להתחברות
           </a>
         </div>

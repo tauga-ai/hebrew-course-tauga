@@ -68,31 +68,33 @@ function CompleteProfileForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">כמעט סיימנו</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">כמעט סיימנו</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">רק עוד שני פרטים לפני שמתחילים</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
               שם מלא בעברית — כפי שהמורה מכיר/ה אותך
             </label>
             <input
+              id="fullName"
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="שם מלא"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
+            <label htmlFor="classCode" className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
             <input
+              id="classCode"
               type="text"
               value={classCode}
               onChange={e => setClassCode(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="קוד שקיבלת מהמורה"
               required
             />
@@ -103,7 +105,7 @@ function CompleteProfileForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'שומר/ת...' : 'המשך'}
           </button>

@@ -65,8 +65,8 @@ export function ReadingPhase({
           return (
             <button key={`${q?.id}-${opt.num}`}
               onClick={() => setReadingAnswers(prev => ({ ...prev, [q.id]: opt.num }))}
-              className={`w-full text-right rounded-xl border p-3.5 transition flex items-center gap-3 ${sel ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
-              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{HEBREW[i]}</span>
+              className={`w-full text-right rounded-xl border p-3.5 transition flex items-center gap-3 ${sel ? 'bg-primary-50 border-primary-400' : 'bg-white border-gray-200 hover:border-primary-300'}`}>
+              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{HEBREW[i]}</span>
               <span className="text-sm">{opt.text}</span>
             </button>
           )
@@ -78,7 +78,7 @@ export function ReadingPhase({
         {currentQ < questions.length - 1
           ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">הבאה →</button>
           : <button onClick={onFinish} disabled={answered < questions.length || submitting}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-blue-700">{submitting ? 'שולח...' : finishLabel}</button>
+              className="px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-primary-700">{submitting ? 'שולח...' : finishLabel}</button>
         }
       </div>
       {showUnansweredWarning && answered < questions.length && currentQ === questions.length - 1 && (

@@ -42,15 +42,10 @@ export default function StudentsPage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen p-4 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-blue-700">ניתוח תלמידים</h1>
-          <p className="text-sm text-gray-500">{className}</p>
-        </div>
-        <button onClick={() => router.push('/teacher/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← חזרה
-        </button>
+    <>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-primary-700">ניתוח תלמידים</h1>
+        <p className="text-sm text-gray-500">{className}</p>
       </div>
 
       {students.length === 0 ? (
@@ -102,6 +97,6 @@ export default function StudentsPage() {
           </table>
         </div>
       )}
-    </div>
+    </>
   )
 }

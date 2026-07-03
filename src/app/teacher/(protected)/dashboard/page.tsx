@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 
@@ -44,66 +43,23 @@ export default function TeacherDashboard() {
     setTimeout(() => setCopied(false), 1500)
   }
 
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.replace('/teacher/login')
-  }
-
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen p-4 max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-blue-700">לוח בקרה - מורה</h1>
-          <p className="text-sm text-gray-500">{className} · {email}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => router.push('/teacher/students')}
-            className="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-100"
-          >
-            הבנת הנקרא
-          </button>
-          <button
-            onClick={() => router.push('/teacher/activity')}
-            className="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-100"
-          >
-            משפטים + ראיון
-          </button>
-          <button
-            onClick={() => router.push('/teacher/simulation-report')}
-            className="text-sm bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-100"
-          >
-            🏆 סימולציה
-          </button>
-          <button
-            onClick={() => router.push('/teacher/psychotechnic')}
-            className="text-sm bg-teal-50 text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-100"
-          >
-            🧠 פסיכוטכני
-          </button>
-          <button
-            onClick={() => router.push('/teacher/dapar')}
-            className="text-sm bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100"
-          >
-            📋 דפ&quot;ר
-          </button>
-          <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
-            יציאה
-          </button>
-        </div>
+    <>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-primary-700">לוח בקרה - מורה</h1>
+        <p className="text-sm text-gray-500">{className} · {email}</p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6 flex items-center justify-between">
         <div>
-          <p className="text-xs text-blue-600 mb-1">קוד הצטרפות לכיתה — לשלוח לתלמידים חדשים</p>
-          <p className="text-2xl font-bold text-blue-800 tracking-widest">{joinCode}</p>
+          <p className="text-xs text-primary-600 mb-1">קוד הצטרפות לכיתה — לשלוח לתלמידים חדשים</p>
+          <p className="text-2xl font-bold text-primary-800 tracking-widest">{joinCode}</p>
         </div>
         <button
           onClick={handleCopyCode}
-          className="text-sm bg-white border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+          className="text-sm bg-white border border-primary-300 text-primary-700 px-3 py-1.5 rounded-lg hover:bg-primary-100"
         >
           {copied ? 'הועתק!' : 'העתק'}
         </button>
@@ -116,7 +72,7 @@ export default function TeacherDashboard() {
           <button
             key={s.set_id}
             onClick={() => router.push(`/teacher/sets/${s.set_id}`)}
-            className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
+            className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-300 hover:shadow-sm transition cursor-pointer"
           >
             <div className="flex justify-between items-center">
               <div>
@@ -139,7 +95,7 @@ export default function TeacherDashboard() {
                     </span>
                   </div>
                 </div>
-                <span className="text-blue-400 text-lg">←</span>
+                <span className="text-primary-400 text-lg">←</span>
               </div>
             </div>
             {s.avg_score !== null && (
@@ -153,6 +109,6 @@ export default function TeacherDashboard() {
           </button>
         ))}
       </div>
-    </div>
+    </>
   )
 }

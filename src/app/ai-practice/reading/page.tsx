@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { AIReadingQuestion } from '@/app/api/ai-practice/reading/route'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { PageHeader } from '@/components/PageHeader'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'משפטים פשוטים — מי, מה, איפה',
@@ -15,7 +15,7 @@ const LEVEL_LABELS: Record<number, string> = {
 
 const LEVEL_COLORS: Record<number, string> = {
   1: 'border-green-300 bg-green-50 text-green-700',
-  2: 'border-blue-300 bg-blue-50 text-blue-700',
+  2: 'border-primary-300 bg-primary-50 text-primary-700',
   3: 'border-yellow-300 bg-yellow-50 text-yellow-700',
   4: 'border-orange-300 bg-orange-50 text-orange-700',
   5: 'border-red-300 bg-red-50 text-red-700',
@@ -26,7 +26,6 @@ const HEBREW = ['א', 'ב', 'ג', 'ד']
 type Phase = 'pick' | 'loading' | 'question' | 'result'
 
 export default function AIReadingPage() {
-  const router = useRouter()
   useStudentSession() // guards this page; redirects unauthenticated users
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
@@ -67,16 +66,13 @@ export default function AIReadingPage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/menu')} className="text-sm text-gray-400 hover:text-gray-600">← תפריט</button>
-        <div className="text-center">
-          <h1 className="font-bold text-blue-700">הבנת הנקרא עם AI</h1>
-          {level && <div className="text-xs text-gray-500">רמה {level}</div>}
-        </div>
-        {stats.total > 0 ? (
-          <div className="text-sm text-gray-500">{stats.correct}/{stats.total} ✓</div>
-        ) : <div />}
-      </div>
+      <PageHeader
+        backHref="/menu"
+        backLabel="← תפריט"
+        title="הבנת הנקרא עם AI"
+        subtitle={level ? `רמה ${level}` : undefined}
+        right={stats.total > 0 ? `${stats.correct}/${stats.total} ✓` : undefined}
+      />
 
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
@@ -139,12 +135,12 @@ export default function AIReadingPage() {
                 onClick={() => setSelected(i)}
                 className={`w-full text-right rounded-xl border p-4 transition flex items-center gap-3 ${
                   selected === i
-                    ? 'bg-blue-50 border-blue-400 text-blue-800'
-                    : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
+                    ? 'bg-primary-50 border-primary-400 text-primary-800'
+                    : 'bg-white border-gray-200 hover:border-primary-300 text-gray-800'
                 }`}
               >
                 <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  selected === i ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                  selected === i ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'
                 }`}>
                   {HEBREW[i]}
                 </span>
@@ -156,7 +152,7 @@ export default function AIReadingPage() {
           <button
             onClick={submitAnswer}
             disabled={selected === null}
-            className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition disabled:opacity-40 text-lg"
+            className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg"
           >
             בדוק תשובה
           </button>
@@ -213,20 +209,20 @@ export default function AIReadingPage() {
 
           {/* Explanation */}
           {question.explanation && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 text-sm text-blue-800">
+            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-4 text-sm text-primary-800">
               <strong>הסבר: </strong>{question.explanation}
             </div>
           )}
 
           <button
             onClick={() => { setPhase('pick'); setQuestion(null); setSelected(null) }}
-            className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition text-lg"
+            className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition text-lg"
           >
             צור תרגיל נוסף
           </button>
           <button
             onClick={() => generateQuestion(level!)}
-            className="w-full mt-2 text-sm text-blue-500 hover:text-blue-700 py-2"
+            className="w-full mt-2 text-sm text-primary-500 hover:text-primary-700 py-2"
           >
             תרגיל נוסף באותה רמה ({level})
           </button>

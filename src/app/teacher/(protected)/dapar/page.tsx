@@ -68,21 +68,17 @@ export default function TeacherDaparPage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen p-4 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/teacher/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <div className="text-center">
-          <h1 className="font-bold text-blue-700">סימולציית דפ&quot;ר</h1>
-          <p className="text-xs text-gray-500">{className} · {submissions.length} הגשות</p>
-        </div>
-        <div />
+    <>
+      <div className="mb-6">
+        <h1 className="font-bold text-primary-700">סימולציית דפ&quot;ר</h1>
+        <p className="text-xs text-gray-500">{className} · {submissions.length} הגשות</p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4 flex-wrap">
         {(['sections', 'students', 'questions'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {t === 'sections' ? 'סיכום יחידות' : t === 'students' ? `לפי תלמיד (${submissions.length})` : 'ניתוח שאלות'}
           </button>
         ))}
@@ -96,7 +92,7 @@ export default function TeacherDaparPage() {
           <div className="grid gap-3">
             {sectionStats.map((s, idx) => (
               <button key={s.label} onClick={() => { setSelectedSection(idx); setTab('questions') }}
-                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition">
+                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-300 hover:shadow-sm transition">
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-semibold text-gray-800">{s.label}</div>
@@ -162,12 +158,12 @@ export default function TeacherDaparPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setSelectedSection(null)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${selectedSection === null ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${selectedSection === null ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 כל השאלות
               </button>
               {DAPAR_SECTIONS.map((s, i) => (
                 <button key={s.label} onClick={() => setSelectedSection(i)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium ${selectedSection === i ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium ${selectedSection === i ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                   {s.label}
                 </button>
               ))}
@@ -215,6 +211,6 @@ export default function TeacherDaparPage() {
           )}
         </>
       )}
-    </div>
+    </>
   )
 }

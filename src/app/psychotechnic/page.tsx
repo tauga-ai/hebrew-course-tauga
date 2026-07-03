@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
+import { PageHeader } from '@/components/PageHeader'
 
 type Phase = 'select' | 'input' | 'result'
 
@@ -105,17 +106,16 @@ export default function PsychotechnicPage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => phase === 'input' ? setPhase('select') : router.push('/menu')}
-          className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <h1 className="font-bold text-blue-700">פסיכוטכני — הזנת תשובות</h1>
-        <div className="text-sm text-gray-500">{session?.full_name}</div>
-      </div>
+      <PageHeader
+        onBack={() => phase === 'input' ? setPhase('select') : router.push('/menu')}
+        title="פסיכוטכני — הזנת תשובות"
+        right={session?.full_name}
+      />
 
       {/* ── SELECT SET ── */}
       {phase === 'select' && (
         <>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-800 text-right">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-5 text-sm text-primary-800 text-right">
             <p className="font-semibold mb-1">📋 איך זה עובד?</p>
             <p>ענית על מקבץ פסיכוטכני בדף הכתוב. בחר כאן את שם המקבץ שענית עליו, הכנס את התשובות שסימנת, ותקבל מיד את הציון שלך.</p>
           </div>
@@ -123,12 +123,12 @@ export default function PsychotechnicPage() {
           <div className="grid gap-2">
             {PSYCHOTECHNIC_SETS.map(set => (
               <button key={set.id} onClick={() => selectSet(set.id)}
-                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-400 hover:shadow-sm transition flex justify-between items-center group">
+                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-400 hover:shadow-sm transition flex justify-between items-center group">
                 <div>
                   <div className="font-semibold text-gray-800">{set.name}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{set.answers.length} שאלות</div>
                 </div>
-                <span className="text-blue-400 group-hover:translate-x-1 transition-transform">←</span>
+                <span className="text-primary-400 group-hover:translate-x-1 transition-transform">←</span>
               </button>
             ))}
           </div>
@@ -144,7 +144,7 @@ export default function PsychotechnicPage() {
               <span className="text-sm text-gray-500">{answeredCount}/{numQuestions} הוזנו</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
-              <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${(answeredCount / numQuestions) * 100}%` }} />
+              <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${(answeredCount / numQuestions) * 100}%` }} />
             </div>
           </div>
 
@@ -159,8 +159,8 @@ export default function PsychotechnicPage() {
                       onClick={() => setAnswer(i, opt)}
                       className={`py-3 rounded-xl text-base font-bold transition border-2 ${
                         answers[i] === opt
-                          ? 'border-blue-500 bg-blue-500 text-white shadow-md scale-105'
-                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                          ? 'border-primary-500 bg-primary-500 text-white shadow-md scale-105'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-primary-300 hover:bg-primary-50'
                       }`}
                     >
                       {opt}
@@ -172,7 +172,7 @@ export default function PsychotechnicPage() {
           </div>
 
           <button onClick={handleSubmit} disabled={submitting || answeredCount < numQuestions}
-            className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition disabled:opacity-40 text-lg">
+            className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg">
             {submitting ? 'שולח...' : `הגש (${answeredCount}/${numQuestions})`}
           </button>
           {answeredCount < numQuestions && (
@@ -217,7 +217,7 @@ export default function PsychotechnicPage() {
 
           <div className="flex gap-3">
             <button onClick={() => { setPhase('select'); setResults(null) }}
-              className="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
+              className="flex-1 bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition">
               מקבץ נוסף
             </button>
             <button onClick={() => router.push('/menu')}

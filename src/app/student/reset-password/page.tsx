@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
           </p>
           <a
             href="/student/forgot-password"
-            className="inline-block bg-blue-600 text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition"
+            className="inline-block bg-primary-600 text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-primary-700 transition"
           >
             בקש/י קישור חדש
           </a>
@@ -76,17 +76,18 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">סיסמה חדשה</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">סיסמה חדשה</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">בחר/י סיסמה חדשה לחשבון שלך</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה חדשה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">סיסמה חדשה</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="לפחות 6 תווים"
               minLength={6}
               required
@@ -94,12 +95,13 @@ export default function ResetPasswordPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">אימות סיסמה</label>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">אימות סיסמה</label>
             <input
+              id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="הכנס/י שוב את הסיסמה"
               minLength={6}
               required
@@ -111,7 +113,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'מעדכן/ת...' : 'עדכון סיסמה'}
           </button>

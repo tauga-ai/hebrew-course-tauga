@@ -45,13 +45,13 @@ export function SentencePhase({
 
       {!currentFeedback ? (
         <>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-800">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-4 text-sm text-primary-800">
             השתמש בכל המילים <strong>★ המסומנות בכחול</strong> ובלפחות 6 מילים מהרשימה.
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
             <div className="flex flex-wrap gap-2">
               {words.map((w, i) => (
-                <span key={i} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${w.starred ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                <span key={i} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${w.starred ? 'bg-primary-600 text-white border-primary-600' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                   {w.starred ? '★ ' : ''}{w.text}
                 </span>
               ))}
@@ -64,7 +64,7 @@ export function SentencePhase({
                 {sentenceInput && <button onClick={() => setSentenceInput('')} className="text-xs text-gray-400 hover:text-red-400 px-2 py-1">נקה</button>}
                 {sentenceSpeech.supported && (
                   <button onClick={() => sentenceSpeech.isListening ? sentenceSpeech.stop() : sentenceSpeech.start(sentenceInput)}
-                    className={`text-sm px-3 py-1.5 rounded-lg font-medium ${sentenceSpeech.isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
+                    className={`text-sm px-3 py-1.5 rounded-lg font-medium ${sentenceSpeech.isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'}`}>
                     {sentenceSpeech.isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
                   </button>
                 )}
@@ -72,10 +72,10 @@ export function SentencePhase({
             </div>
             <textarea value={sentenceInput} onChange={e => setSentenceInput(e.target.value)}
               placeholder="כתוב את המשפט שלך כאן..." rows={4}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800" />
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-800" />
           </div>
           <button onClick={onSubmitSentence} disabled={!sentenceInput.trim() || evalLoading}
-            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 disabled:opacity-40 transition">
+            className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 disabled:opacity-40 transition">
             {evalLoading ? 'בודק...' : 'שלח לבדיקה'}
           </button>
         </>
@@ -96,7 +96,7 @@ export function SentencePhase({
             <p className="text-green-800 text-sm font-medium">{currentFeedback.improved_sentence}</p>
           </div>
           <button onClick={onNextSentence} disabled={submitting}
-            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 disabled:opacity-40 transition">
+            className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 disabled:opacity-40 transition">
             {submitting ? 'שולח...' : currentEx + 1 >= partC.length ? 'עבור לראיון →' : `תרגיל הבא (${currentEx + 2}/${partC.length}) →`}
           </button>
         </>

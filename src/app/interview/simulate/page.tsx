@@ -80,19 +80,19 @@ export default function SimulatePage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">🎤</div>
-        <h1 className="text-2xl font-bold text-blue-700 mb-2">סימולציית ראיון</h1>
+        <h1 className="text-2xl font-bold text-primary-700 mb-2">סימולציית ראיון</h1>
         <p className="text-gray-500 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
         <p className="text-gray-600 mb-6 text-sm leading-relaxed">
           תענה על <strong>15 שאלות</strong> — 6 חובה + 9 רנדומליות.<br />
           בסוף תקבל ציון ופידבק מפורט מ-Gemini.
         </p>
-        <div className="bg-blue-50 rounded-xl p-4 mb-6 text-right space-y-1 text-sm text-gray-600">
+        <div className="bg-primary-50 rounded-xl p-4 mb-6 text-right space-y-1 text-sm text-gray-600">
           <p>✅ ענה בכתב או הקלט את קולך (🎤)</p>
           <p>✅ אפשר לדלג על שאלה</p>
           <p>✅ אחרי 15 שאלות — Gemini מנתח ונותן פידבק</p>
         </div>
         <button onClick={startInterview}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg">
+          className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
           התחל ראיון
         </button>
         <button onClick={() => router.push('/interview')} className="mt-3 text-sm text-gray-400 hover:text-gray-600">
@@ -107,11 +107,11 @@ export default function SimulatePage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="text-center">
         <div className="text-5xl mb-4 animate-bounce">🤖</div>
-        <h2 className="text-xl font-bold text-blue-700 mb-2">מנתח את הראיון...</h2>
+        <h2 className="text-xl font-bold text-primary-700 mb-2">מנתח את הראיון...</h2>
         <p className="text-gray-500 text-sm">Gemini בודק את תשובותיך ומכין פידבק מפורט</p>
         <div className="mt-6 flex gap-2 justify-center">
           {[0,1,2].map(i => (
-            <div key={i} className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+            <div key={i} className="w-3 h-3 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
       </div>
@@ -126,8 +126,8 @@ export default function SimulatePage() {
       <div className="min-h-screen p-4 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mt-4 mb-6">
           <button onClick={() => router.push('/interview')} className="text-sm text-gray-400 hover:text-gray-600">← תפריט</button>
-          <h1 className="font-bold text-blue-700">תוצאות הראיון</h1>
-          <button onClick={() => { setPhase('intro'); setFeedback(null) }} className="text-sm text-blue-500 hover:text-blue-700">נסה שוב</button>
+          <h1 className="font-bold text-primary-700">תוצאות הראיון</h1>
+          <button onClick={() => { setPhase('intro'); setFeedback(null) }} className="text-sm text-primary-500 hover:text-primary-700">נסה שוב</button>
         </div>
 
         <div className={`rounded-2xl border p-6 text-center mb-4 ${scoreBg}`}>
@@ -179,18 +179,18 @@ export default function SimulatePage() {
         )}
 
         {feedback.tips.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
-            <h2 className="font-semibold text-blue-800 mb-3">🎯 טיפים לשיפור</h2>
+          <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5 mb-6">
+            <h2 className="font-semibold text-primary-800 mb-3">🎯 טיפים לשיפור</h2>
             <ul className="space-y-1.5">
               {feedback.tips.map((t, i) => (
-                <li key={i} className="text-sm text-blue-700 flex gap-2"><span>•</span><span>{t}</span></li>
+                <li key={i} className="text-sm text-primary-700 flex gap-2"><span>•</span><span>{t}</span></li>
               ))}
             </ul>
           </div>
         )}
 
         <button onClick={() => router.push('/menu')}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
+          className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition">
           חזור לתפריט הראשי
         </button>
       </div>
@@ -206,7 +206,7 @@ export default function SimulatePage() {
       </div>
 
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-        <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="bg-primary-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
@@ -226,7 +226,7 @@ export default function SimulatePage() {
             <button
               onClick={() => isListening ? stopListening() : startListening()}
               className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition font-medium ${
-                isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
               }`}
             >
               {isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
@@ -238,13 +238,13 @@ export default function SimulatePage() {
           onChange={e => setCurrentAnswer(e.target.value)}
           placeholder="כתוב את תשובתך כאן, או הקלט את עצמך..."
           rows={5}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 text-base"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-800 text-base"
         />
         {isListening && <p className="text-xs text-red-500 mt-1 animate-pulse">🎤 מקליט... לחץ ״עצור״ כשתסיים</p>}
       </div>
 
       <button onClick={submitAnswer}
-        className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition text-lg">
+        className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition text-lg">
         {idx + 1 === questions.length ? 'סיים ושלח לניתוח' : `שאלה הבאה (${idx + 2}/${questions.length})`}
       </button>
       <button onClick={submitAnswer} className="w-full mt-2 text-sm text-gray-400 hover:text-gray-500 py-1">

@@ -19,15 +19,15 @@ export function ResultsPhase({ session, results, onBackToMenu }: ResultsPhasePro
     <div className="min-h-screen p-4 max-w-2xl mx-auto pb-12">
       <div className="text-center mt-6 mb-6">
         <div className="text-5xl mb-2">🏆</div>
-        <h1 className="text-2xl font-bold text-blue-700">סיימת את הסימולציה!</h1>
+        <h1 className="text-2xl font-bold text-primary-700">סיימת את הסימולציה!</h1>
         <p className="text-gray-500 text-sm">{session?.full_name}</p>
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
-          <div className="text-3xl font-bold text-blue-700">{readingPct}%</div>
-          <div className="text-xs text-blue-600 mt-1">הבנת הנקרא (א+ב)<br/>{readingCorrect}/{readingTotal}</div>
+        <div className="bg-primary-50 border border-primary-200 rounded-2xl p-4 text-center">
+          <div className="text-3xl font-bold text-primary-700">{readingPct}%</div>
+          <div className="text-xs text-primary-600 mt-1">הבנת הנקרא (א+ב)<br/>{readingCorrect}/{readingTotal}</div>
         </div>
         <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 text-center">
           <div className="text-3xl font-bold text-purple-700">{results.part_c.avg}/10</div>
@@ -51,7 +51,7 @@ export function ResultsPhase({ session, results, onBackToMenu }: ResultsPhasePro
       </div>
 
       <button onClick={onBackToMenu}
-        className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
+        className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition">
         חזור לתפריט
       </button>
     </div>

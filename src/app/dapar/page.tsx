@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL as TOTAL, gradeDaparAnswers } from '@/lib/dapar'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function DaparPage() {
   const router = useRouter()
@@ -93,7 +94,7 @@ export default function DaparPage() {
       <div className="min-h-screen p-4 max-w-3xl mx-auto pb-12">
         <div className="text-center mt-6 mb-6">
           <div className="text-5xl mb-2">🏆</div>
-          <h1 className="text-2xl font-bold text-blue-700">תוצאות הסימולציה</h1>
+          <h1 className="text-2xl font-bold text-primary-700">תוצאות הסימולציה</h1>
           <p className="text-gray-500 text-sm">{session?.full_name}</p>
           <div className={`text-5xl font-bold mt-3 ${scoreColor}`}>{grade.pct}%</div>
           <p className="text-gray-500 text-sm mt-1">{grade.totalCorrect} נכון מתוך {TOTAL}</p>
@@ -118,7 +119,7 @@ export default function DaparPage() {
         <div className="space-y-5 mb-6">
           {SECTIONS.map(section => (
             <div key={section.label}>
-              <h3 className="text-sm font-bold text-blue-700 mb-2 px-1">{section.label}</h3>
+              <h3 className="text-sm font-bold text-primary-700 mb-2 px-1">{section.label}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {grade.perQuestion.slice(section.from - 1, section.to).map(q => {
                   const unanswered = q.selected === 0
@@ -149,7 +150,7 @@ export default function DaparPage() {
 
         {/* Note: results stay in localStorage so student can return and see them */}
         <button onClick={() => router.push('/menu')}
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">
+          className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition">
           חזור לתפריט
         </button>
       </div>
@@ -159,20 +160,13 @@ export default function DaparPage() {
   // ── INPUT SCREEN ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen p-4 max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-5">
-        <button onClick={() => router.push('/menu')} className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <div className="text-center">
-          <h1 className="font-bold text-blue-700">סימולציית דפ&quot;ר</h1>
-          <p className="text-xs text-gray-500">{session?.full_name}</p>
-        </div>
-        <div className="text-sm font-medium text-gray-600">{answered}/{TOTAL}</div>
-      </div>
+      <PageHeader backHref="/menu" title={'סימולציית דפ"ר'} subtitle={session?.full_name} right={`${answered}/${TOTAL}`} />
 
       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-5">
-        <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${(answered / TOTAL) * 100}%` }} />
+        <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${(answered / TOTAL) * 100}%` }} />
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-5 text-sm text-blue-800 text-right">
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-5 text-sm text-primary-800 text-right">
         לכל שאלה — לחץ על המספר שסימנת בטופס שלך (1 / 2 / 3 / 4)
       </div>
 
@@ -188,14 +182,14 @@ export default function DaparPage() {
           return (
             <div key={section.label}>
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-sm font-bold text-blue-700">{section.label}</span>
+                <span className="text-sm font-bold text-primary-700">{section.label}</span>
                 <span className="text-xs text-gray-400">{sectionAnswered}/10</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Array.from({ length: section.to - section.from + 1 }, (_, j) => {
                   const i = section.from - 1 + j
                   return (
-                    <div key={i} className={`flex items-center gap-3 bg-white rounded-xl border p-3 ${answers[i] > 0 ? 'border-blue-300' : 'border-gray-200'}`}>
+                    <div key={i} className={`flex items-center gap-3 bg-white rounded-xl border p-3 ${answers[i] > 0 ? 'border-primary-300' : 'border-gray-200'}`}>
                       <span className="text-sm font-bold text-gray-500 w-6 text-center flex-shrink-0">{i + 1}</span>
                       <div className="grid grid-cols-4 gap-1.5 flex-1">
                         {[1, 2, 3, 4].map(opt => (
@@ -204,8 +198,8 @@ export default function DaparPage() {
                             onClick={() => setAnswer(i, opt)}
                             className={`py-2 rounded-lg text-sm font-bold transition border ${
                               answers[i] === opt
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-400 hover:bg-primary-50'
                             }`}
                           >
                             {opt}
@@ -213,7 +207,7 @@ export default function DaparPage() {
                         ))}
                       </div>
                       {answers[i] > 0 && (
-                        <button onClick={() => setAnswer(i, 0)} className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">✕</button>
+                        <button onClick={() => setAnswer(i, 0)} aria-label="נקה תשובה" className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">✕</button>
                       )}
                     </div>
                   )
@@ -227,7 +221,7 @@ export default function DaparPage() {
       <button
         onClick={handleSubmit}
         disabled={submitting || answered === 0}
-        className="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition disabled:opacity-40 text-lg sticky bottom-4"
+        className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg sticky bottom-4"
       >
         {submitting ? 'שולח...' : `הגש (${answered}/${TOTAL} הוזנו)`}
       </button>

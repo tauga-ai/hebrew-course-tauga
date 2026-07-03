@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function InterviewLanding() {
   const router = useRouter()
@@ -9,16 +10,11 @@ export default function InterviewLanding() {
 
   return (
     <div className="min-h-screen p-4 max-w-lg mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-8">
-        <button onClick={() => router.push('/menu')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← חזרה לתפריט
-        </button>
-        <div className="text-sm text-gray-500">{session?.full_name}</div>
-      </div>
+      <PageHeader backHref="/menu" backLabel="← חזרה לתפריט" right={session?.full_name} />
 
       <div className="text-center mb-10">
         <div className="text-5xl mb-3">🗣️</div>
-        <h1 className="text-2xl font-bold text-blue-700 mb-2">ראיון אישי</h1>
+        <h1 className="text-2xl font-bold text-primary-700 mb-2">ראיון אישי</h1>
         <p className="text-gray-500 text-sm">תרגול לראיון אישי בעברית לקראת השירות הצבאי</p>
       </div>
 
@@ -26,35 +22,35 @@ export default function InterviewLanding() {
         {/* Practice */}
         <button
           onClick={() => router.push('/interview/practice')}
-          className="w-full text-right bg-white rounded-2xl border border-gray-200 p-6 hover:border-blue-400 hover:shadow-md transition group"
+          className="w-full text-right bg-white rounded-2xl border border-gray-200 p-6 hover:border-primary-400 hover:shadow-md transition group"
         >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl mb-2">📋</div>
-              <h2 className="font-bold text-gray-800 text-lg group-hover:text-blue-700">תרגול שאלות</h2>
+              <h2 className="font-bold text-gray-800 text-lg group-hover:text-primary-700">תרגול שאלות</h2>
               <p className="text-sm text-gray-500 mt-1 leading-relaxed">
                 50 שאלות ראיון, שאלה אחר שאלה.<br />
                 כתוב או הקלט את התשובות שלך.<br />
                 <span className="text-gray-400">ללא ניקוד — לתרגול עצמאי</span>
               </p>
             </div>
-            <span className="text-blue-400 text-2xl group-hover:translate-x-1 transition-transform">←</span>
+            <span className="text-primary-400 text-2xl group-hover:translate-x-1 transition-transform">←</span>
           </div>
         </button>
 
         {/* Simulation */}
         <button
           onClick={() => router.push('/interview/simulate')}
-          className="w-full text-right bg-blue-600 rounded-2xl border border-blue-600 p-6 hover:bg-blue-700 transition group shadow-lg"
+          className="w-full text-right bg-primary-600 rounded-2xl border border-primary-600 p-6 hover:bg-primary-700 transition group shadow-lg"
         >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl mb-2">🤖</div>
               <h2 className="font-bold text-white text-lg">סימולציית ראיון עם AI</h2>
-              <p className="text-sm text-blue-100 mt-1 leading-relaxed">
+              <p className="text-sm text-primary-100 mt-1 leading-relaxed">
                 15 שאלות עם מראיין AI.<br />
                 קול + טקסט, ניתוח בסוף.<br />
-                <span className="text-blue-200">ציון + פידבק מפורט מ-Gemini</span>
+                <span className="text-primary-200">ציון + פידבק מפורט מ-Gemini</span>
               </p>
             </div>
             <span className="text-white text-2xl group-hover:translate-x-1 transition-transform">←</span>

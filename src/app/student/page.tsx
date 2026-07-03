@@ -69,7 +69,7 @@ export default function StudentLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">תרגול ניצנים</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">תרגול ניצנים</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">הבנת הנקרא</p>
 
         <button
@@ -90,12 +90,13 @@ export default function StudentLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="name@example.com"
               required
             />
@@ -103,16 +104,17 @@ export default function StudentLogin() {
 
           <div>
             <div className="flex justify-between items-baseline mb-1">
-              <label className="block text-sm font-medium text-gray-700">סיסמה</label>
-              <a href="/student/forgot-password" className="text-xs text-blue-600 hover:text-blue-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">סיסמה</label>
+              <a href="/student/forgot-password" className="text-xs text-primary-600 hover:text-primary-700">
                 שכחת סיסמה?
               </a>
             </div>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="סיסמה"
               required
             />
@@ -123,14 +125,14 @@ export default function StudentLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'מתחבר/ת...' : 'התחברות'}
           </button>
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <a href="/student/register" className="block text-sm text-blue-600 hover:text-blue-700">
+          <a href="/student/register" className="block text-sm text-primary-600 hover:text-primary-700">
             אין לך חשבון? הרשמה
           </a>
           <a href="/teacher/login" className="block text-xs text-gray-400 hover:text-gray-600">

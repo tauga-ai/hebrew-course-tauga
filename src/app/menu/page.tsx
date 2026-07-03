@@ -50,7 +50,7 @@ export default function Menu() {
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6 mt-4">
         <div>
-          <h1 className="text-xl font-bold text-blue-700">תרגול ניצנים</h1>
+          <h1 className="text-xl font-bold text-primary-700">תרגול ניצנים</h1>
           <p className="text-sm text-gray-500">{session?.full_name} · {session?.class_name}</p>
         </div>
         <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
@@ -70,10 +70,10 @@ export default function Menu() {
 
       {/* Simulation banner */}
       <button onClick={() => router.push('/simulation')}
-        className="w-full text-right bg-gradient-to-l from-blue-700 to-blue-500 rounded-xl p-4 mb-3 hover:from-blue-800 hover:to-blue-600 transition flex items-center justify-between shadow-md">
+        className="w-full text-right bg-gradient-to-l from-primary-700 to-primary-500 rounded-xl p-4 mb-3 hover:from-primary-800 hover:to-primary-600 transition flex items-center justify-between shadow-md">
         <div>
           <div className="text-white font-bold">🏆 סימולציה אמיתית</div>
-          <div className="text-blue-100 text-xs mt-0.5">חלק א+ב: הבנת הנקרא · חלק ג: משפטים · חלק ד: ראיון</div>
+          <div className="text-primary-100 text-xs mt-0.5">חלק א+ב: הבנת הנקרא · חלק ג: משפטים · חלק ד: ראיון</div>
         </div>
         <span className="text-white text-xl">←</span>
       </button>
@@ -81,10 +81,10 @@ export default function Menu() {
       {/* Practice modes */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <button onClick={() => router.push('/interview')}
-          className="text-right bg-blue-600 rounded-xl p-4 hover:bg-blue-700 transition flex items-center justify-between">
+          className="text-right bg-primary-600 rounded-xl p-4 hover:bg-primary-700 transition flex items-center justify-between">
           <div>
             <div className="text-white font-bold text-sm">🗣️ ראיון אישי</div>
-            <div className="text-blue-100 text-xs mt-0.5">סימולציית AI</div>
+            <div className="text-primary-100 text-xs mt-0.5">סימולציית AI</div>
           </div>
           <span className="text-white">←</span>
         </button>
@@ -140,7 +140,7 @@ export default function Menu() {
               className={`w-full text-right rounded-xl border p-4 transition ${
                 done
                   ? 'bg-green-50 border-green-200 cursor-default'
-                  : 'bg-white border-gray-200 hover:border-blue-400 hover:shadow-sm cursor-pointer'
+                  : 'bg-white border-gray-200 hover:border-primary-400 hover:shadow-sm cursor-pointer'
               }`}
             >
               <div className="flex justify-between items-center">
@@ -160,7 +160,7 @@ export default function Menu() {
                       <span className="text-xs text-green-500">הושלם</span>
                     </div>
                   ) : (
-                    <span className="text-blue-500 text-sm font-medium">התחל ←</span>
+                    <span className="text-primary-500 text-sm font-medium">התחל ←</span>
                   )}
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation'
 import type { Question, PracticeSet } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -88,17 +89,10 @@ export default function PracticePage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/menu')} className="text-sm text-gray-400 hover:text-gray-600">← חזרה</button>
-        <div className="text-center">
-          <div className="font-bold text-blue-700">סט {practiceSet?.set_number}</div>
-          <div className="text-xs text-gray-500">{practiceSet?.topic}</div>
-        </div>
-        <div className="text-sm text-gray-500">{answered}/{total}</div>
-      </div>
+      <PageHeader backHref="/menu" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} right={`${answered}/${total}`} />
 
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-        <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${(answered / total) * 100}%` }} />
+        <div className="bg-primary-500 h-2 rounded-full transition-all" style={{ width: `${(answered / total) * 100}%` }} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
@@ -114,11 +108,11 @@ export default function PracticePage() {
               key={`${q?.id}-${opt.num}`}
               onClick={() => selectAnswer(q.id, opt.num)}
               className={`w-full text-right rounded-xl border p-4 transition flex items-center gap-3 ${
-                selected ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
+                selected ? 'bg-primary-50 border-primary-400 text-primary-800' : 'bg-white border-gray-200 hover:border-primary-300 text-gray-800'
               }`}
             >
               <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                selected ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'
               }`}>
                 {hebrewLabels[i]}
               </span>
@@ -136,7 +130,7 @@ export default function PracticePage() {
         <div className="flex gap-1.5">
           {questions.map((qx, i) => (
             <button key={qx.id} onClick={() => setCurrentIdx(i)}
-              className={`w-2.5 h-2.5 rounded-full transition ${i === currentIdx ? 'bg-blue-600' : answers[qx.id] ? 'bg-blue-300' : 'bg-gray-200'}`}
+              className={`w-2.5 h-2.5 rounded-full transition ${i === currentIdx ? 'bg-primary-600' : answers[qx.id] ? 'bg-primary-300' : 'bg-gray-200'}`}
             />
           ))}
         </div>

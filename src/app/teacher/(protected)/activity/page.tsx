@@ -43,14 +43,8 @@ export default function ActivityPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/teacher/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">
-          ← חזרה לדשבורד
-        </button>
-        <h1 className="font-bold text-blue-700">פעילות תלמידים</h1>
-        <div />
-      </div>
+    <>
+      <h1 className="font-bold text-primary-700 mb-6">פעילות תלמידים</h1>
 
       {/* Interview summary */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
@@ -121,6 +115,6 @@ export default function ActivityPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }

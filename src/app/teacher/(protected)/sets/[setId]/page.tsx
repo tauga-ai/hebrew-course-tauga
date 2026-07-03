@@ -51,19 +51,9 @@ export default function SetAnalyticsPage() {
   if (!data) return null
 
   return (
-    <div className="min-h-screen p-4 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center mt-4 mb-2">
-        <button
-          onClick={() => router.push('/teacher/dashboard')}
-          className="text-sm text-gray-400 hover:text-gray-600"
-        >
-          ← חזרה לדשבורד
-        </button>
-      </div>
-
+    <>
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
-        <h1 className="text-xl font-bold text-blue-700">
+        <h1 className="text-xl font-bold text-primary-700">
           סט {data.practice_set.set_number} — ניתוח שאלות
         </h1>
         <p className="text-sm text-gray-500 mt-1">{data.practice_set.topic} · רמה {data.practice_set.difficulty_level} · {data.class_name}</p>
@@ -174,6 +164,6 @@ export default function SetAnalyticsPage() {
           )
         })}
       </div>
-    </div>
+    </>
   )
 }

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { AIWordList } from '@/app/api/ai-practice/sentence-words/route'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import { speakHebrew } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { PageHeader } from '@/components/PageHeader'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'מילון יומיומי בסיסי — בית, משפחה, בית ספר',
@@ -18,7 +18,7 @@ const LEVEL_LABELS: Record<number, string> = {
 
 const LEVEL_COLORS: Record<number, string> = {
   1: 'border-green-300 bg-green-50 text-green-700',
-  2: 'border-blue-300 bg-blue-50 text-blue-700',
+  2: 'border-primary-300 bg-primary-50 text-primary-700',
   3: 'border-yellow-300 bg-yellow-50 text-yellow-700',
   4: 'border-orange-300 bg-orange-50 text-orange-700',
   5: 'border-red-300 bg-red-50 text-red-700',
@@ -27,7 +27,6 @@ const LEVEL_COLORS: Record<number, string> = {
 type Phase = 'pick' | 'gen-loading' | 'input' | 'eval-loading' | 'result'
 
 export default function AISentencePage() {
-  const router = useRouter()
   useStudentSession() // guards this page; redirects unauthenticated users
   const [level, setLevel] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('pick')
@@ -100,16 +99,14 @@ export default function AISentencePage() {
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <button onClick={() => router.push('/menu')} className="text-sm text-gray-400 hover:text-gray-600">← תפריט</button>
-        <div className="text-center">
-          <h1 className="font-bold text-purple-700">בניית משפטים עם AI</h1>
-          {level && <div className="text-xs text-gray-500">רמה {level}</div>}
-        </div>
-        {scores.length > 0 ? (
-          <div className="text-sm text-gray-500">{(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10</div>
-        ) : <div />}
-      </div>
+      <PageHeader
+        backHref="/menu"
+        backLabel="← תפריט"
+        title="בניית משפטים עם AI"
+        titleColorClass="text-purple-700"
+        subtitle={level ? `רמה ${level}` : undefined}
+        right={scores.length > 0 ? `${(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10` : undefined}
+      />
 
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
@@ -149,9 +146,9 @@ export default function AISentencePage() {
       {/* ── INPUT ── */}
       {phase === 'input' && wordList && (
         <>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-800">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-4 text-sm text-primary-800">
             <p>השתמש בכל המילים <strong>★ המסומנות בכחול</strong> ובלפחות <strong>6 מילים</strong> מהרשימה.</p>
-            <p className="text-xs text-blue-600 mt-0.5">נושא: {wordList.theme}</p>
+            <p className="text-xs text-primary-600 mt-0.5">נושא: {wordList.theme}</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
@@ -159,7 +156,7 @@ export default function AISentencePage() {
             <div className="flex flex-wrap gap-2">
               {wordList.words.map((w, i) => (
                 <span key={i} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
-                  w.starred ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-gray-100 text-gray-700 border-gray-200'
+                  w.starred ? 'bg-primary-600 text-white border-primary-600 shadow-sm' : 'bg-gray-100 text-gray-700 border-gray-200'
                 }`}>
                   {w.starred ? '★ ' : ''}{w.text}
                 </span>
@@ -178,7 +175,7 @@ export default function AISentencePage() {
                 {speechSupported && (
                   <button onClick={() => isListening ? stopListening() : startListening(sentence)}
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
-                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
                     }`}>
                     {isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
                   </button>

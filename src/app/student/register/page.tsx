@@ -96,7 +96,7 @@ function RegisterForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">הרשמה</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">הרשמה</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">תרגול ניצנים — הבנת הנקרא</p>
 
         <button
@@ -117,36 +117,39 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">שם מלא</label>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">שם מלא</label>
             <input
+              id="fullName"
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="הכנס/י את שמך המלא"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="name@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="לפחות 6 תווים"
               minLength={6}
               required
@@ -154,12 +157,13 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
+            <label htmlFor="classCode" className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
             <input
+              id="classCode"
               type="text"
               value={classCode}
               onChange={e => setClassCode(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="קוד שקיבלת מהמורה"
               required
             />
@@ -170,14 +174,14 @@ function RegisterForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'נרשם/ת...' : 'הרשמה'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-sm text-blue-600 hover:text-blue-700">
+          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700">
             יש לך כבר חשבון? התחבר/י
           </a>
         </div>
