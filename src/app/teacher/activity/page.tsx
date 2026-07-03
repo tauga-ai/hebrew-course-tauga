@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface SentenceStat { set_id: number; attempts: number; avg_score: number | null }
 interface InterviewStat { total: number; avg_score: number | null }
@@ -34,11 +35,7 @@ export default function ActivityPage() {
     load()
   }, [email, router])
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
 
   const scoreColor = (s: number | null) => {
     if (s === null) return 'text-gray-400'

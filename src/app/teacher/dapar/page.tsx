@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DAPAR_SECTIONS, DAPAR_TOTAL, gradeDaparAnswers } from '@/lib/dapar'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface Submission {
   id: string; student_name: string; student_id: string
@@ -64,7 +65,7 @@ export default function TeacherDaparPage() {
       })
     : questionStats
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">טוען...</p></div>
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen p-4 max-w-4xl mx-auto">

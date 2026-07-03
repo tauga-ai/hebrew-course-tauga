@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface SetStats {
   set_id: number
@@ -49,11 +50,7 @@ export default function TeacherDashboard() {
     router.replace('/teacher/login')
   }
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen p-4 max-w-3xl mx-auto">

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import type { Question, PracticeSet } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -83,11 +84,7 @@ export default function PracticePage() {
     }
   }
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">

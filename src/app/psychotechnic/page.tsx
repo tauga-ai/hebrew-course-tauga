@@ -1,15 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 
 type Phase = 'select' | 'input' | 'result'
 
 interface QuestionResult {
   q: number; correct: number; student: number; isCorrect: boolean
 }
+
+interface PsychotechnicDraft {
+  selectedSetId: number
+  answers: number[]
+}
+
+const draftKey = (studentId: string) => `psychotechnic_draft_${studentId}`
 
 export default function PsychotechnicPage() {
   const router = useRouter()
@@ -22,6 +30,37 @@ export default function PsychotechnicPage() {
 
   const selectedSet = PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)
   const numQuestions = selectedSet?.answers.length || 0
+
+  // Restore an in-progress answer draft, if one was left behind by a refresh/navigation-away.
+  useEffect(() => {
+    if (!session) return
+    function restoreDraft() {
+      const draft = loadDraft<PsychotechnicDraft>(draftKey(session!.id))
+      if (draft) {
+        setSelectedSetId(draft.selectedSetId)
+        setAnswers(draft.answers)
+        setPhase('input')
+      }
+    }
+    restoreDraft()
+  }, [session])
+
+  // Auto-save while a set is being answered.
+  useEffect(() => {
+    if (!session || phase !== 'input' || selectedSetId === null) return
+    saveDraft(draftKey(session.id), { selectedSetId, answers })
+  }, [session, phase, selectedSetId, answers])
+
+  // Warn before leaving mid-answer — progress is saved, but a fresh tab still loses momentum.
+  useEffect(() => {
+    if (phase !== 'input') return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [phase])
 
   function selectSet(id: number) {
     setSelectedSetId(id)
@@ -56,6 +95,7 @@ export default function PsychotechnicPage() {
       }),
     })
     const data = await res.json()
+    if (session) clearDraft(draftKey(session.id))
     setResults(data)
     setPhase('result')
     setSubmitting(false)

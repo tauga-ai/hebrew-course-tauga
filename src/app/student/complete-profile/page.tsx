@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 // Forced destination for an authenticated user with no `students` row yet —
 // mainly first-time Google sign-ins, which have no class/full_name.
@@ -62,13 +63,7 @@ function CompleteProfileForm() {
     }
   }
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500 text-lg">טוען...</div>
-      </div>
-    )
-  }
+  if (checking) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

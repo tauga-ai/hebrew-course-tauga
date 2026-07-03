@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL as TOTAL, gradeDaparAnswers } from '@/lib/dapar'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 export default function DaparPage() {
   const router = useRouter()
@@ -81,11 +82,7 @@ export default function DaparPage() {
     setSubmitting(false)
   }
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
 
   // ── RESULTS SCREEN ──────────────────────────────────────────────────────────
   if (results) {

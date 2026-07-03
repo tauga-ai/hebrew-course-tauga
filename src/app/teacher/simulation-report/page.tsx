@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface SessionRow {
   session_id: string; student_name: string; status: string
@@ -39,7 +40,7 @@ export default function SimulationReportPage() {
     load()
   }, [email, router])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">טוען...</p></div>
+  if (loading) return <LoadingSpinner />
 
   const completed = sessions.filter(s => s.status === 'completed')
   const classAvgA = completed.length > 0 && completed.filter(s => s.part_a_pct !== null).length > 0

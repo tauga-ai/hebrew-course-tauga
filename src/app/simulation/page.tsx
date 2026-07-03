@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { shuffleWithSeed } from '@/lib/shuffle'
 import { SIMULATION_INTERVIEW_QUESTIONS } from '@/lib/interview-questions'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 import { ResultsPhase } from './_components/ResultsPhase'
 import { SentencePhase } from './_components/SentencePhase'
 import { ReadingPhase } from './_components/ReadingPhase'
@@ -40,6 +41,24 @@ export interface SimulationResults {
 }
 
 type Phase = 'intro' | 'starting' | 'a' | 'b' | 'c' | 'd_intro' | 'd' | 'results'
+
+interface SimulationDraft {
+  simSessionId: string
+  phase: Phase
+  partA: SimQuestion[]
+  partB: SimQuestion[]
+  partC: SimExercise[]
+  currentQ: number
+  readingAnswers: Record<number, number>
+  currentEx: number
+  sentenceInput: string
+  sentenceResults: SentenceResult[]
+  interviewIdx: number
+  interviewAnswers: string[]
+  interviewCurrentAnswer: string
+}
+
+const draftKey = (studentId: string) => `simulation_draft_${studentId}`
 
 const STEPS = [
   { label: 'חלק א', desc: '16 שאלות קשות', icon: '📖' },
@@ -84,8 +103,71 @@ export default function SimulationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Refresh-resistance: an in-progress draft found in localStorage on mount, offered as a resume prompt.
+  const [pendingDraft, setPendingDraft] = useState<SimulationDraft | null>(null)
+
   const sentenceSpeech = useSpeechToText({ appendMode: true, onTranscript: setSentenceInput })
   const interviewSpeech = useSpeechToText({ appendMode: true, onTranscript: setInterviewCurrentAnswer })
+
+  // Check once for a saved draft as soon as we know who the student is.
+  useEffect(() => {
+    if (!session) return
+    function checkForDraft() {
+      const draft = loadDraft<SimulationDraft>(draftKey(session!.id))
+      if (draft && draft.phase !== 'intro' && draft.phase !== 'starting' && draft.phase !== 'results') {
+        setPendingDraft(draft)
+      }
+    }
+    checkForDraft()
+  }, [session])
+
+  // Auto-save progress while a simulation is actually in flight.
+  useEffect(() => {
+    if (!session) return
+    if (phase === 'intro' || phase === 'starting' || phase === 'results') return
+    const draft: SimulationDraft = {
+      simSessionId, phase, partA, partB, partC,
+      currentQ, readingAnswers, currentEx, sentenceInput, sentenceResults,
+      interviewIdx, interviewAnswers, interviewCurrentAnswer,
+    }
+    saveDraft(draftKey(session.id), draft)
+  }, [session, phase, simSessionId, partA, partB, partC, currentQ, readingAnswers,
+      currentEx, sentenceInput, sentenceResults, interviewIdx, interviewAnswers, interviewCurrentAnswer])
+
+  // Warn before leaving mid-simulation — progress is saved, but a fresh tab loses submission state.
+  useEffect(() => {
+    if (phase === 'intro' || phase === 'starting' || phase === 'results') return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [phase])
+
+  function resumeDraft() {
+    if (!pendingDraft) return
+    const d = pendingDraft
+    setSimSessionId(d.simSessionId)
+    setPartA(d.partA)
+    setPartB(d.partB)
+    setPartC(d.partC)
+    setCurrentQ(d.currentQ)
+    setReadingAnswers(d.readingAnswers)
+    setCurrentEx(d.currentEx)
+    setSentenceInput(d.sentenceInput)
+    setSentenceResults(d.sentenceResults)
+    setInterviewIdx(d.interviewIdx)
+    setInterviewAnswers(d.interviewAnswers)
+    setInterviewCurrentAnswer(d.interviewCurrentAnswer)
+    setPhase(d.phase)
+    setPendingDraft(null)
+  }
+
+  function discardDraftAndStartOver() {
+    if (session) clearDraft(draftKey(session.id))
+    setPendingDraft(null)
+  }
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -284,6 +366,7 @@ export default function SimulationPage() {
       part_c: { avg: cAvg.toFixed(1), results: sentenceResults },
       part_d: { score: fb.score, level: fb.level, summary: fb.summary },
     })
+    if (session) clearDraft(draftKey(session.id))
     setInterviewProcessing(false)
     setPhase('results')
   }
@@ -312,6 +395,26 @@ export default function SimulationPage() {
   )
 
   // ── PHASE: INTRO ───────────────────────────────────────────────────────────
+  if (phase === 'intro' && pendingDraft) return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
+        <div className="text-5xl mb-4">⏸️</div>
+        <h1 className="text-2xl font-bold text-blue-700 mb-2">נמצאה סימולציה פעילה</h1>
+        <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+          נראה שהתחלת סימולציה ולא סיימת אותה. אפשר להמשיך מאיפה שעצרת, או להתחיל מחדש.
+        </p>
+        <button onClick={resumeDraft}
+          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition text-lg mb-3">
+          המשך מאיפה שעצרתי
+        </button>
+        <button onClick={discardDraftAndStartOver}
+          className="w-full border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition">
+          התחל מחדש
+        </button>
+      </div>
+    </div>
+  )
+
   if (phase === 'intro') return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">

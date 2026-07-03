@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -51,13 +52,7 @@ export default function ResetPasswordPage() {
     router.push('/menu')
   }
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500 text-lg">טוען...</div>
-      </div>
-    )
-  }
+  if (checking) return <LoadingSpinner />
 
   if (!validSession) {
     return (

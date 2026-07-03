@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface Submission {
   id: string; student_name: string; student_id: string
@@ -67,7 +68,7 @@ export default function PsychotechnicTeacherPage() {
     return v >= 70 ? 'text-green-600' : v >= 50 ? 'text-yellow-600' : 'text-red-500'
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">טוען...</p></div>
+  if (loading) return <LoadingSpinner />
 
   const filteredSubs = selectedSetId ? submissions.filter(s => s.set_id === selectedSetId) : submissions
   const selectedSetName = selectedSetId ? PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)?.name : null

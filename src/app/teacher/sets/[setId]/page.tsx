@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface QuestionAnalytics {
   id: number
@@ -46,11 +47,7 @@ export default function SetAnalyticsPage() {
     load()
   }, [setId, email, router])
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
   if (!data) return null
 
   return (

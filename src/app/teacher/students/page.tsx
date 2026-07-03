@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface StudentRow {
   student_id: string
@@ -38,11 +39,7 @@ export default function StudentsPage() {
     load()
   }, [email, router])
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">טוען...</p>
-    </div>
-  )
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen p-4 max-w-5xl mx-auto">
