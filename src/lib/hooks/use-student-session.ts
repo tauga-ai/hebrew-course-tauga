@@ -8,13 +8,17 @@ import type { StudentSession } from '@/lib/types'
  * Resolves the current student's session from /api/student/profile (backed
  * by the Supabase auth cookie, not localStorage). Redirects to `redirectTo`
  * when unauthenticated, or to /student/complete-profile when authenticated
- * but with no `students` row yet (first-time Google sign-ins mainly).
+ * but with no `students` row yet (first-time Google sign-ins mainly). Also
+ * redirects to /student/select-group when the student's class requires a
+ * lesson group they haven't picked yet — pass `skipGroupGate` from the
+ * select-group page itself to avoid redirecting back into a loop.
  * `loading` stays true until one of these resolves — callers must not act
  * on a null session while loading. On a network failure (fetch throws, or a
  * non-401/404 error status) `loading` still resolves to false and `error` is
  * set, instead of hanging forever; call `retry()` to try again.
  */
-export function useStudentSession(redirectTo = '/student') {
+export function useStudentSession(redirectTo = '/student', options: { skipGroupGate?: boolean } = {}) {
+  const { skipGroupGate = false } = options
   const router = useRouter()
   const [session, setSession] = useState<StudentSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,6 +47,12 @@ export function useStudentSession(redirectTo = '/student') {
 
         const data: StudentSession = await res.json()
         if (cancelled) return
+
+        if (!skipGroupGate && data.has_lesson_groups && data.lesson_group == null) {
+          router.replace('/student/select-group')
+          return
+        }
+
         setSession(data)
         setLoading(false)
       } catch {
@@ -56,7 +66,7 @@ export function useStudentSession(redirectTo = '/student') {
     return () => {
       cancelled = true
     }
-  }, [router, redirectTo, attempt])
+  }, [router, redirectTo, attempt, skipGroupGate])
 
   const retry = useCallback(() => setAttempt(a => a + 1), [])
 

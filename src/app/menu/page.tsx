@@ -53,9 +53,14 @@ export default function Menu() {
           <h1 className="text-xl font-bold text-primary-700">תרגול ניצנים</h1>
           <p className="text-sm text-gray-500">{session?.full_name} · {session?.class_name}</p>
         </div>
-        <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
-          יציאה
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => router.push('/student/personal-details')} className="text-sm text-gray-400 hover:text-gray-600">
+            פרטים אישיים
+          </button>
+          <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
+            יציאה
+          </button>
+        </div>
       </div>
 
       {/* DPR Simulation */}

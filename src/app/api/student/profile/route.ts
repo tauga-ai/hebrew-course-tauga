@@ -5,7 +5,8 @@ import { getStudentFromSession } from '@/lib/auth'
 
 /**
  * Returns the authenticated user's student profile (id, full_name, class_id,
- * class_name). Used by the student-session hook instead of localStorage.
+ * class_name, lesson_group). Used by the student-session hook instead of
+ * localStorage.
  */
 export async function GET() {
   const result = await getStudentFromSession()
@@ -20,7 +21,7 @@ export async function GET() {
   const db = createServiceClient()
   const { data: cls } = await db
     .from('classes')
-    .select('name')
+    .select('name, has_lesson_groups')
     .eq('id', result.student.class_id)
     .maybeSingle()
 
@@ -29,7 +30,54 @@ export async function GET() {
     full_name: result.student.full_name,
     class_id: result.student.class_id,
     class_name: cls?.name || '',
+    has_lesson_groups: cls?.has_lesson_groups || false,
+    lesson_group: result.student.lesson_group ?? null,
   })
+}
+
+/**
+ * Sets/changes the authenticated student's lesson_group. Only valid for
+ * classes with has_lesson_groups=true (currently just the Arabic-speaking
+ * class) — students pick which physical group they're in live, at the start
+ * of a lesson, per the teacher's instruction, and can change it again later.
+ */
+export async function PATCH(req: NextRequest) {
+  const result = await getStudentFromSession()
+
+  if (result.status === 'unauthenticated') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  if (result.status === 'no_profile') {
+    return NextResponse.json({ error: 'no_profile' }, { status: 404 })
+  }
+
+  const body = await req.json()
+  const lesson_group = Number(body.lesson_group)
+  if (![1, 2, 3].includes(lesson_group)) {
+    return NextResponse.json({ error: 'קבוצה לא חוקית' }, { status: 400 })
+  }
+
+  const db = createServiceClient()
+  const { data: cls } = await db
+    .from('classes')
+    .select('has_lesson_groups')
+    .eq('id', result.student.class_id)
+    .maybeSingle()
+
+  if (!cls?.has_lesson_groups) {
+    return NextResponse.json({ error: 'הכיתה שלך לא דורשת בחירת קבוצה' }, { status: 400 })
+  }
+
+  const { error } = await db
+    .from('students')
+    .update({ lesson_group })
+    .eq('id', result.student.id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ lesson_group })
 }
 
 /**

@@ -22,7 +22,7 @@ export async function getStudentFromSession(): Promise<StudentSessionResult> {
   const db = createServiceClient()
   const { data: student } = await db
     .from('students')
-    .select('id, full_name, class_id, created_at')
+    .select('id, full_name, class_id, created_at, lesson_group')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
@@ -37,9 +37,10 @@ export type TeacherSessionResult =
 
 /**
  * Resolves the authenticated teacher from the Supabase session.
- * Authorization is derived from owning a row in `classes` (teacher_email) —
- * not a client-supplied `?email=` query param, and not a separate hardcoded
- * allowlist duplicated from the client.
+ * Authorization is derived from owning a row in `class_teachers` — not a
+ * client-supplied `?email=` query param, and not a separate hardcoded
+ * allowlist duplicated from the client. A class can have several teachers,
+ * but each teacher belongs to exactly one class.
  */
 export async function requireTeacher(): Promise<TeacherSessionResult> {
   const supabase = await createClient()
@@ -47,12 +48,12 @@ export async function requireTeacher(): Promise<TeacherSessionResult> {
   if (!user?.email) return { status: 'unauthenticated' }
 
   const db = createServiceClient()
-  const { data: cls } = await db
-    .from('classes')
-    .select('id')
+  const { data: row } = await db
+    .from('class_teachers')
+    .select('teacher_email')
     .eq('teacher_email', user.email)
     .maybeSingle()
 
-  if (!cls) return { status: 'forbidden' }
+  if (!row) return { status: 'forbidden' }
   return { status: 'ok', email: user.email }
 }

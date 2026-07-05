@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 
+const LANGUAGES = ['ערבית', 'רוסית'] as const
+
 // Forced destination for an authenticated user with no `students` row yet —
 // mainly first-time Google sign-ins, which have no class/full_name.
 function CompleteProfileForm() {
@@ -88,23 +90,30 @@ function CompleteProfileForm() {
           </div>
 
           <div>
-            <label htmlFor="classCode" className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
-            <input
-              id="classCode"
-              type="text"
-              value={classCode}
-              onChange={e => setClassCode(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="קוד שקיבלת מהמורה"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">באיזו שפה את/ה לומד/ת?</label>
+            <div className="grid grid-cols-2 gap-3">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setClassCode(lang)}
+                  className={`py-2.5 rounded-lg font-semibold border transition ${
+                    classCode === lang
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                  }`}
+                >
+                  {lang}
+                </button>
+              ))}
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !classCode}
             className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'שומר/ת...' : 'המשך'}

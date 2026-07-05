@@ -16,9 +16,12 @@ function GoogleIcon() {
   )
 }
 
+const LANGUAGES = ['ערבית', 'רוסית'] as const
+
 function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const linkExpired = searchParams.get('error') === 'expired'
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,6 +29,7 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
 
   async function handleGoogle() {
     setGoogleLoading(true)
@@ -56,6 +60,9 @@ function RegisterForm() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm?type=email&next=/menu`,
+      },
     })
 
     if (signUpError) {
@@ -68,11 +75,12 @@ function RegisterForm() {
       return
     }
 
-    // Email confirmation is OFF for this project, so signUp should return a
-    // session immediately. If it doesn't, Supabase project settings changed
-    // out from under us — surface that instead of silently failing.
+    // This project requires email confirmation — signUp succeeds but returns
+    // no session until the student clicks the link in their inbox. Full
+    // name/class get re-entered at /student/complete-profile after they
+    // confirm and log in (same flow Google sign-ins already go through).
     if (!data.session) {
-      setError('ההרשמה בוצעה אך לא נוצר חיבור. נסה/י להתחבר.')
+      setAwaitingConfirmation(true)
       setLoading(false)
       return
     }
@@ -99,6 +107,24 @@ function RegisterForm() {
         <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">הרשמה</h1>
         <p className="text-center text-gray-500 mb-8 text-sm">תרגול ניצנים — הבנת הנקרא</p>
 
+        {linkExpired && (
+          <p className="text-amber-600 bg-amber-50 rounded-lg p-3 text-sm text-center mb-5">
+            הקישור לאישור פג תוקף — נסה/י להירשם שוב.
+          </p>
+        )}
+
+        {awaitingConfirmation ? (
+          <div className="text-center space-y-3">
+            <p className="text-gray-700">
+              נשלח אליך מייל עם קישור לאישור החשבון. לאחר שתאשר/י, אפשר להתחבר.
+            </p>
+            <p className="text-sm text-gray-400">לא קיבלת מייל? בדוק/י בתיקיית הספאם.</p>
+            <a href="/student" className="inline-block text-sm text-primary-600 hover:text-primary-700 mt-2">
+              חזרה להתחברות
+            </a>
+          </div>
+        ) : (
+        <>
         <button
           type="button"
           onClick={handleGoogle}
@@ -157,23 +183,30 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label htmlFor="classCode" className="block text-sm font-medium text-gray-700 mb-1">קוד כיתה</label>
-            <input
-              id="classCode"
-              type="text"
-              value={classCode}
-              onChange={e => setClassCode(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="קוד שקיבלת מהמורה"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">באיזו שפה את/ה לומד/ת?</label>
+            <div className="grid grid-cols-2 gap-3">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setClassCode(lang)}
+                  className={`py-2.5 rounded-lg font-semibold border transition ${
+                    classCode === lang
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                  }`}
+                >
+                  {lang}
+                </button>
+              ))}
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !classCode}
             className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
             {loading ? 'נרשם/ת...' : 'הרשמה'}
@@ -185,6 +218,8 @@ function RegisterForm() {
             יש לך כבר חשבון? התחבר/י
           </a>
         </div>
+        </>
+        )}
       </div>
     </div>
   )

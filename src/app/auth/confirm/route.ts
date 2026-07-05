@@ -3,18 +3,20 @@ import { createClient } from '@/lib/supabase/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 
 /**
- * Password-reset email link. Unlike the OAuth callback, Supabase's reset
- * link carries a `token_hash` + `type` (not a `code`) — redeemed with
- * verifyOtp(), which establishes a recovery session for the redirect target
- * to call updateUser({ password }) against.
+ * Redeems a Supabase email-OTP link — password reset (`type=recovery`) or
+ * signup confirmation (`type=email`). Unlike the OAuth callback, these links
+ * carry a `token_hash` + `type` (not a `code`) — redeemed with verifyOtp(),
+ * which establishes a session for the redirect target to use (e.g.
+ * updateUser({ password }) for recovery).
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  let next = searchParams.get('next') ?? '/student/reset-password'
+  const isRecovery = type === 'recovery'
+  let next = searchParams.get('next') ?? (isRecovery ? '/student/reset-password' : '/menu')
   if (!next.startsWith('/')) {
-    next = '/student/reset-password'
+    next = isRecovery ? '/student/reset-password' : '/menu'
   }
 
   if (token_hash && type) {
@@ -25,5 +27,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/student/forgot-password?error=expired`)
+  const expiredTarget = isRecovery ? '/student/forgot-password' : '/student/register'
+  return NextResponse.redirect(`${origin}${expiredTarget}?error=expired`)
 }

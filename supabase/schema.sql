@@ -2,8 +2,16 @@
 CREATE TABLE classes (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL,
-  teacher_email VARCHAR(255) NOT NULL,
-  join_code TEXT UNIQUE NOT NULL -- added by migration_student_auth_v2.sql
+  join_code TEXT UNIQUE NOT NULL, -- added by migration_student_auth_v2.sql
+  -- teacher_email removed by migration_multiple_teachers_per_class.sql, see class_teachers below
+  has_lesson_groups BOOLEAN NOT NULL DEFAULT FALSE -- added by migration_lesson_group.sql
+);
+
+-- Class Teachers — a class can have multiple teachers
+-- (added by migration_multiple_teachers_per_class.sql)
+CREATE TABLE class_teachers (
+  teacher_email VARCHAR(255) PRIMARY KEY,
+  class_id INTEGER REFERENCES classes(id) NOT NULL
 );
 
 -- Practice Sets
@@ -34,7 +42,8 @@ CREATE TABLE students (
   full_name VARCHAR(255) NOT NULL,
   class_id INTEGER REFERENCES classes(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  auth_user_id UUID UNIQUE REFERENCES auth.users(id) -- added by migration_student_auth_v2.sql; nullable (legacy rows), see plan for why
+  auth_user_id UUID UNIQUE REFERENCES auth.users(id), -- added by migration_student_auth_v2.sql; nullable (legacy rows), see plan for why
+  lesson_group SMALLINT CHECK (lesson_group IN (1, 2, 3)) -- added by migration_lesson_group.sql
 );
 
 -- Submissions (unique per student + practice set)
@@ -60,6 +69,7 @@ CREATE TABLE student_answers (
 
 -- Disable RLS (server uses service role key)
 ALTER TABLE classes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE class_teachers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_sets DISABLE ROW LEVEL SECURITY;
 ALTER TABLE questions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE students DISABLE ROW LEVEL SECURITY;

@@ -1,7 +1,6 @@
 export interface Class {
   id: number
   name: string
-  teacher_email: string
 }
 
 export interface Student {
@@ -9,6 +8,7 @@ export interface Student {
   full_name: string
   class_id: number
   created_at: string
+  lesson_group: number | null
 }
 
 export interface PracticeSet {
@@ -54,4 +54,6 @@ export interface StudentSession {
   full_name: string
   class_id: number
   class_name: string
+  has_lesson_groups: boolean
+  lesson_group: number | null
 }

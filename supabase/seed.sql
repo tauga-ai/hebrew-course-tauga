@@ -1,7 +1,12 @@
 -- Classes
-INSERT INTO classes (name, teacher_email) VALUES
-  ('כיתה 1', 'teacher1@gmail.com'),
-  ('כיתה 2', 'teacher2@gmail.com');
+INSERT INTO classes (name, join_code, has_lesson_groups) VALUES
+  ('כיתה ערבית', 'ערבית', TRUE),
+  ('כיתה רוסית', 'רוסית', FALSE);
+
+-- Class Teachers
+INSERT INTO class_teachers (teacher_email, class_id) VALUES
+  ('teacher1@gmail.com', (SELECT id FROM classes WHERE name = 'כיתה ערבית')),
+  ('teacher2@gmail.com', (SELECT id FROM classes WHERE name = 'כיתה רוסית'));
 
 -- Practice Sets
 INSERT INTO practice_sets (set_number, topic, difficulty_level) VALUES
