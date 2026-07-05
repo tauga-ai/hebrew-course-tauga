@@ -33,14 +33,16 @@ export async function getStudentFromSession(): Promise<StudentSessionResult> {
 export type TeacherSessionResult =
   | { status: 'unauthenticated' }
   | { status: 'forbidden' }
-  | { status: 'ok'; email: string }
+  | { status: 'ok'; email: string; isAdmin: boolean }
 
 /**
  * Resolves the authenticated teacher from the Supabase session.
  * Authorization is derived from owning a row in `class_teachers` — not a
  * client-supplied `?email=` query param, and not a separate hardcoded
  * allowlist duplicated from the client. A class can have several teachers,
- * but each teacher belongs to exactly one class.
+ * but each teacher belongs to exactly one class. Super admins (`admins`
+ * table) also pass, with `isAdmin: true` — they can view every class via a
+ * selector; see getClassAndStudents() in teacher-data.ts.
  */
 export async function requireTeacher(): Promise<TeacherSessionResult> {
   const supabase = await createClient()
@@ -54,6 +56,14 @@ export async function requireTeacher(): Promise<TeacherSessionResult> {
     .eq('teacher_email', user.email)
     .maybeSingle()
 
-  if (!row) return { status: 'forbidden' }
-  return { status: 'ok', email: user.email }
+  if (row) return { status: 'ok', email: user.email, isAdmin: false }
+
+  const { data: admin } = await db
+    .from('admins')
+    .select('email')
+    .eq('email', user.email)
+    .maybeSingle()
+
+  if (!admin) return { status: 'forbidden' }
+  return { status: 'ok', email: user.email, isAdmin: true }
 }

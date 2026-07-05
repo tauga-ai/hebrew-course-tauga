@@ -14,6 +14,12 @@ CREATE TABLE class_teachers (
   class_id INTEGER REFERENCES classes(id) NOT NULL
 );
 
+-- Admins — super admins who can view every class's teacher dashboards via a
+-- class selector (added by migration_super_admin.sql)
+CREATE TABLE admins (
+  email VARCHAR(255) PRIMARY KEY
+);
+
 -- Practice Sets
 CREATE TABLE practice_sets (
   id SERIAL PRIMARY KEY,
@@ -70,6 +76,7 @@ CREATE TABLE student_answers (
 -- Disable RLS (server uses service role key)
 ALTER TABLE classes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE class_teachers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE admins DISABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_sets DISABLE ROW LEVEL SECURITY;
 ALTER TABLE questions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE students DISABLE ROW LEVEL SECURITY;

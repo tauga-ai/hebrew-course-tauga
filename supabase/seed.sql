@@ -8,6 +8,11 @@ INSERT INTO class_teachers (teacher_email, class_id) VALUES
   ('teacher1@gmail.com', (SELECT id FROM classes WHERE name = 'כיתה ערבית')),
   ('teacher2@gmail.com', (SELECT id FROM classes WHERE name = 'כיתה רוסית'));
 
+-- Admins (super admins — see all classes)
+INSERT INTO admins (email) VALUES
+  ('adi1hacohen@gmail.com'),
+  ('yuvalpeer49@gmail.com');
+
 -- Practice Sets
 INSERT INTO practice_sets (set_number, topic, difficulty_level) VALUES
   (1,  'הבנת הנקרא - משפטים פשוטים', 1),
