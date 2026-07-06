@@ -1,17 +1,94 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
+import { gradeDaparAnswers } from '@/lib/dapar'
+import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
+import { SENTENCE_SETS } from '@/lib/sentence-exercises'
+import type { PracticeSet, Submission } from '@/lib/types'
 
 const GROUPS = [1, 2, 3] as const
+
+interface StatLine {
+  key: string
+  label: string
+  value: string
+}
 
 export default function PersonalDetailsPage() {
   const { session, loading, retry } = useStudentSession()
   const [saving, setSaving] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [savedGroup, setSavedGroup] = useState<number | null>(null)
+  const [stats, setStats] = useState<StatLine[] | null>(null)
+
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+
+    async function loadStats() {
+      const [practiceSetsRes, submissionsRes, daparRes, psychoRes, sentenceRes, interviewRes, simRes] = await Promise.all([
+        fetch('/api/practice-sets').then(r => r.json()).catch(() => null),
+        fetch(`/api/student/${session!.id}/submissions`).then(r => r.json()).catch(() => null),
+        fetch('/api/dapar/my-submission').then(r => r.json()).catch(() => null),
+        fetch('/api/psychotechnic/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/sentence/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/interview/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/simulation/my-stats').then(r => r.json()).catch(() => null),
+      ])
+      if (cancelled) return
+
+      const totalSets: PracticeSet[] = practiceSetsRes?.sets || []
+      const submissions: Submission[] = submissionsRes?.submissions || []
+      const avgReading = submissions.length > 0
+        ? submissions.reduce((s, sub) => s + sub.score_percentage, 0) / submissions.length
+        : null
+
+      const daparGrade = daparRes?.submission?.answers ? gradeDaparAnswers(daparRes.submission.answers) : null
+
+      const lines: StatLine[] = [
+        {
+          key: 'reading',
+          label: 'הבנת הנקרא',
+          value: `${submissions.length}/${totalSets.length} סטים${avgReading !== null ? ` · ממוצע ${Math.round(avgReading)}%` : ''}`,
+        },
+        {
+          key: 'dapar',
+          label: 'דפ"ר',
+          value: daparGrade ? `הוגש · ${Math.round(daparGrade.pct)}%` : 'עדיין לא הוגש',
+        },
+        {
+          key: 'psychotechnic',
+          label: 'פסיכוטכני',
+          value: `${psychoRes?.attempted_sets ?? 0}/${PSYCHOTECHNIC_SETS.length} מקבצים${psychoRes?.avg_pct != null ? ` · ממוצע ${Math.round(psychoRes.avg_pct)}%` : ''}`,
+        },
+        {
+          key: 'sentence',
+          label: 'בניית משפטים',
+          value: `${sentenceRes?.attempted ?? 0}/${SENTENCE_SETS.length} סטים${sentenceRes?.avg_score != null ? ` · ממוצע ${Math.round(sentenceRes.avg_score)}` : ''}`,
+        },
+        {
+          key: 'interview',
+          label: 'ראיון אישי',
+          value: interviewRes?.count
+            ? `${interviewRes.count} ראיונות · ממוצע ${Math.round(interviewRes.avg_score)}${interviewRes.latest_level ? ` · רמה אחרונה ${interviewRes.latest_level}` : ''}`
+            : 'עדיין לא בוצע',
+        },
+        {
+          key: 'simulation',
+          label: 'סימולציה',
+          value: simRes?.completed_count ? `${simRes.completed_count} סימולציות הושלמו` : 'עדיין לא בוצעה',
+        },
+      ]
+      setStats(lines)
+    }
+    loadStats()
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
   async function changeGroup(group: number) {
     setSaving(group)
@@ -73,6 +150,22 @@ export default function PersonalDetailsPage() {
               ))}
             </div>
             {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-md p-6 mt-4">
+        <h2 className="text-sm font-semibold text-gray-500 mb-3">הביצועים שלי</h2>
+        {stats === null ? (
+          <p className="text-sm text-gray-400">טוען...</p>
+        ) : (
+          <div className="space-y-3">
+            {stats.map(stat => (
+              <div key={stat.key} className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">{stat.label}</span>
+                <span className="font-semibold text-gray-800">{stat.value}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
