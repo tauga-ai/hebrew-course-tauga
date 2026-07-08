@@ -134,7 +134,10 @@ export default function Menu() {
             accentColor="ai-sentence"
             onClick={() => router.push('/ai-practice/sentence')}
           />
+        </CardGrid>
 
+        <h2 className="text-lg font-semibold text-fg mt-8 mb-4">סטי הבנת הנקרא</h2>
+        <CardGrid>
           {filteredSets.map(set => {
             const done = completedSetIds.has(set.id)
             const sub = submissions[set.id]
