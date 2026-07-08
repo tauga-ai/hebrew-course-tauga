@@ -14,6 +14,7 @@ const NAV_ITEMS: { href: string; label: string; classes: string }[] = [
   { href: '/teacher/psychotechnic', label: '🧠 פסיכוטכני', classes: 'bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-400 dark:hover:bg-teal-500/20' },
   { href: '/teacher/dapar', label: 'דפ"ר', classes: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20' },
   { href: '/teacher/tzav-rishon', label: 'צו ראשון פסיכוטכני בערבית', classes: 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20' },
+  { href: '/teacher/makbatzim', label: 'שאלות שעדי שלחה', classes: 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:text-cyan-400 dark:hover:bg-cyan-500/20' },
 ]
 
 interface TeacherClassOption {

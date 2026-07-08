@@ -47,7 +47,7 @@ export default function MakbatzimSetsPage() {
             subtitle={`${s.count} שאלות`}
             accentColor="makbatzim"
             onClick={() => router.push(`/makbatzim/${s.key}`)}
-            trailing={<span className="text-accent-makbatzim text-xl">←</span>}
+            trailing={<span className="text-fg/40 text-xl">←</span>}
           />
         ))}
       </CardGrid>
