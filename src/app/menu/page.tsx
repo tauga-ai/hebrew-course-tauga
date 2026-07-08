@@ -13,10 +13,8 @@ export default function Menu() {
   const router = useRouter()
   const { session } = useStudentSession()
   const [sets, setSets] = useState<PracticeSet[]>([])
-  const [completedSetIds, setCompletedSetIds] = useState<Set<number>>(new Set())
-  const [submissions, setSubmissions] = useState<Record<number, Submission>>({})
+  const [completedCount, setCompletedCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [difficultyFilter, setDifficultyFilter] = useState<number | null>(null)
 
   useEffect(() => {
     if (!session) return
@@ -27,17 +25,9 @@ export default function Menu() {
         fetch(`/api/student/${session!.id}/submissions`),
       ])
       const setsData = await setsRes.json()
-      const subsData = await subsRes.json()
+      const subsData: { submissions?: Submission[] } = await subsRes.json()
       setSets(setsData.sets || [])
-
-      const subMap: Record<number, Submission> = {}
-      const doneIds = new Set<number>()
-      for (const sub of subsData.submissions || []) {
-        subMap[sub.practice_set_id] = sub
-        doneIds.add(sub.practice_set_id)
-      }
-      setSubmissions(subMap)
-      setCompletedSetIds(doneIds)
+      setCompletedCount(subsData.submissions?.length || 0)
       setLoading(false)
     }
     load()
@@ -50,16 +40,9 @@ export default function Menu() {
 
   if (loading) return <LoadingSpinner />
 
-  const availableDifficulties = Array.from(new Set(sets.map(s => s.difficulty_level))).sort((a, b) => a - b)
-  const filteredSets = difficultyFilter === null ? sets : sets.filter(s => s.difficulty_level === difficultyFilter)
-
   return (
     <div className="min-h-screen md:flex">
-      <StudentSidebar
-        difficultyFilter={difficultyFilter}
-        onDifficultyFilterChange={setDifficultyFilter}
-        availableDifficulties={availableDifficulties}
-      />
+      <StudentSidebar />
 
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mb-6 mt-4">
@@ -121,6 +104,13 @@ export default function Menu() {
             onClick={() => router.push('/tzav-rishon')}
           />
           <Card
+            icon="📖"
+            title="סטי הבנת הנקרא"
+            subtitle={`${completedCount}/${sets.length} סטים הושלמו`}
+            accentColor="reading"
+            onClick={() => router.push('/reading-sets')}
+          />
+          <Card
             icon="🤖"
             title="הבנת הנקרא"
             subtitle="תרגול עם AI"
@@ -134,35 +124,6 @@ export default function Menu() {
             accentColor="ai-sentence"
             onClick={() => router.push('/ai-practice/sentence')}
           />
-        </CardGrid>
-
-        <h2 className="text-lg font-semibold text-fg mt-8 mb-4">סטי הבנת הנקרא</h2>
-        <CardGrid>
-          {filteredSets.map(set => {
-            const done = completedSetIds.has(set.id)
-            const sub = submissions[set.id]
-            return (
-              <Card
-                key={set.id}
-                icon="📖"
-                title={`סט ${set.set_number}`}
-                subtitle={`${set.topic}, רמה ${set.difficulty_level}`}
-                accentColor="reading"
-                disabled={done}
-                onClick={() => router.push(`/practice/${set.id}`)}
-                trailing={
-                  done ? (
-                    <span className="flex flex-col items-end">
-                      <span className="text-success-600 font-bold text-sm">{Math.round(sub.score_percentage)}%</span>
-                      <span className="text-xs text-success-600/70">הושלם</span>
-                    </span>
-                  ) : (
-                    <span className="text-primary-500 text-sm">←</span>
-                  )
-                }
-              />
-            )
-          })}
         </CardGrid>
       </div>
     </div>

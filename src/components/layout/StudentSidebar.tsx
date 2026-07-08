@@ -17,15 +17,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
   { href: '/psychotechnic', icon: '🧠', label: 'פסיכוטכני' },
   { href: '/tzav-rishon', icon: '🎯', label: 'דפ"ר לצו ראשון' },
+  { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא' },
   { href: '/ai-practice/reading', icon: '🤖', label: 'הבנת הנקרא (AI)' },
   { href: '/ai-practice/sentence', icon: '🤖', label: 'בניית משפט (AI)' },
 ]
-
-interface StudentSidebarProps {
-  difficultyFilter: number | null
-  onDifficultyFilterChange: (level: number | null) => void
-  availableDifficulties: number[]
-}
 
 /**
  * Wraps /menu only (an explicit component the page imports, not a new
@@ -33,7 +28,7 @@ interface StudentSidebarProps {
  * moved. Horizontal scroll strip on mobile, a real fixed sidebar from `md:`
  * up (matches the "sidebar for easy navigation and filtering" request).
  */
-export function StudentSidebar({ difficultyFilter, onDifficultyFilterChange, availableDifficulties }: StudentSidebarProps) {
+export function StudentSidebar() {
   const pathname = usePathname()
 
   return (
@@ -59,35 +54,6 @@ export function StudentSidebar({ difficultyFilter, onDifficultyFilterChange, ava
           </Link>
         ))}
       </nav>
-
-      {availableDifficulties.length > 1 && (
-        <div className="hidden md:block mt-auto pt-4 border-t border-card-border">
-          <span className="text-xs text-fg/60 block mb-2">סינון סטי הבנת הנקרא לפי רמה</span>
-          <div className="flex flex-wrap gap-1">
-            <button
-              type="button"
-              onClick={() => onDifficultyFilterChange(null)}
-              className={`text-xs px-2 py-1 rounded-md transition ${
-                difficultyFilter === null ? 'bg-highlight text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'
-              }`}
-            >
-              הכל
-            </button>
-            {availableDifficulties.map(level => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => onDifficultyFilterChange(level)}
-                className={`text-xs px-2 py-1 rounded-md transition ${
-                  difficultyFilter === level ? 'bg-highlight text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'
-                }`}
-              >
-                רמה {level}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </aside>
   )
 }
