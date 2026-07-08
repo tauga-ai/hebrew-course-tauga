@@ -6,6 +6,8 @@ import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 import { PageHeader } from '@/components/PageHeader'
+import { CardGrid } from '@/components/ui/CardGrid'
+import { Card } from '@/components/ui/Card'
 
 type Phase = 'select' | 'input' | 'result'
 
@@ -108,7 +110,7 @@ export default function PsychotechnicPage() {
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       <PageHeader
         onBack={() => phase === 'input' ? setPhase('select') : router.push('/menu')}
-        title="פסיכוטכני — הזנת תשובות"
+        title="פסיכוטכני: הזנת תשובות"
         right={session?.full_name}
       />
 
@@ -119,19 +121,20 @@ export default function PsychotechnicPage() {
             <p className="font-semibold mb-1">📋 איך זה עובד?</p>
             <p>ענית על מקבץ פסיכוטכני בדף הכתוב. בחר כאן את שם המקבץ שענית עליו, הכנס את התשובות שסימנת, ותקבל מיד את הציון שלך.</p>
           </div>
-          <h2 className="text-base font-semibold text-gray-700 mb-3">בחר מקבץ:</h2>
-          <div className="grid gap-2">
+          <h2 className="text-base font-semibold text-fg/80 mb-3">בחר מקבץ:</h2>
+          <CardGrid>
             {PSYCHOTECHNIC_SETS.map(set => (
-              <button key={set.id} onClick={() => selectSet(set.id)}
-                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-400 hover:shadow-sm transition flex justify-between items-center group">
-                <div>
-                  <div className="font-semibold text-gray-800">{set.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{set.answers.length} שאלות</div>
-                </div>
-                <span className="text-primary-400 group-hover:translate-x-1 transition-transform">←</span>
-              </button>
+              <Card
+                key={set.id}
+                icon="🧠"
+                title={set.name}
+                subtitle={`${set.answers.length} שאלות`}
+                accentColor="psychotechnic"
+                onClick={() => selectSet(set.id)}
+                trailing={<span className="text-accent-psychotechnic">←</span>}
+              />
             ))}
-          </div>
+          </CardGrid>
         </>
       )}
 

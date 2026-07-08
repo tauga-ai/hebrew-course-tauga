@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * Tailwind v4 CSS-first equivalent of `darkMode: 'class'`. Every `dark:`
+ * utility applies when the nearest ancestor has data-theme="dark" — set on
+ * <html> by src/app/layout.tsx (cookie-driven) and toggled live by
+ * src/components/theme/ThemeProvider.tsx. Not a plain `prefers-color-scheme`
+ * media query, since that alone can never be overridden by an explicit,
+ * persisted user choice.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
  * Design tokens. Generates bg-, text-, and border- utilities automatically
  * (Tailwind 4 CSS-first theming) — e.g. --color-primary-600 becomes bg-primary-600.
  * Values mirror the existing Tailwind palette colors already used across the
@@ -46,12 +56,69 @@
   --color-accent-ai-reading: #059669;
   --color-accent-ai-sentence: #d97706;
   --color-accent-tzav-rishon: #e11d48;
+
+  /*
+   * Foreground-only variant for accents used as direct text on the page
+   * background (text-accent-*), as opposed to bg-accent-* and border-accent-*
+   * fills where the base color already has enough contrast against white.
+   * Only tzav-rishon needs this today — #e11d48 is 4.2:1 against the new
+   * dark background (#0a0a0f), just under the 4.5:1 AA text threshold;
+   * overridden lighter in dark mode below. Add a -fg pair here if another
+   * accent ever gets a text-accent-* usage that needs the same split.
+   */
+  --color-accent-tzav-rishon-fg: #e11d48;
+
+  /*
+   * Page bg/fg + card surface/border tokens — registered here (with light
+   * defaults) so Tailwind generates bg-bg/text-fg/bg-surface/border-card-border
+   * utilities; actual values are overridden per theme below via plain CSS
+   * (custom properties resolve at used-value time, not at Tailwind-build
+   * time), so any component using these utilities follows the theme
+   * automatically with zero dark: prefixing needed.
+   */
+  --color-bg: #f9fafb;
+  --color-fg: #111827;
+  --color-surface: #ffffff;
+  --color-card-border: #e5e7eb;
+  --color-highlight: #0891b2;
+}
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0a0a0f;
+  --color-fg: #e5e7eb;
+  --color-accent-tzav-rishon-fg: #fb7185;
+  --color-surface: #12151c;
+  --color-card-border: #232733;
+  --color-highlight: #22d3ee;
+}
+
+/*
+ * No-JS fallback only: if a visitor has no theme cookie *and* the inline
+ * script in layout.tsx's <head> never ran (JS disabled), approximate the
+ * OS preference via the media query. Guarded by :not([data-theme]) so it
+ * never fights an explicit choice already applied via the attribute.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --color-bg: #0a0a0f;
+    --color-fg: #e5e7eb;
+    --color-accent-tzav-rishon-fg: #fb7185;
+    --color-surface: #12151c;
+    --color-card-border: #232733;
+    --color-highlight: #22d3ee;
+  }
 }
 
 body {
   font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
-  background: #f9fafb;
-  color: #111827;
+  background: var(--color-bg);
+  color: var(--color-fg);
 }
 
 /*

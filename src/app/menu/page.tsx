@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import type { PracticeSet, Submission } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { CardGrid } from '@/components/ui/CardGrid'
+import { Card } from '@/components/ui/Card'
 
 export default function Menu() {
   const router = useRouter()
@@ -13,6 +16,7 @@ export default function Menu() {
   const [completedSetIds, setCompletedSetIds] = useState<Set<number>>(new Set())
   const [submissions, setSubmissions] = useState<Record<number, Submission>>({})
   const [loading, setLoading] = useState(true)
+  const [difficultyFilter, setDifficultyFilter] = useState<number | null>(null)
 
   useEffect(() => {
     if (!session) return
@@ -46,142 +50,117 @@ export default function Menu() {
 
   if (loading) return <LoadingSpinner />
 
+  const availableDifficulties = Array.from(new Set(sets.map(s => s.difficulty_level))).sort((a, b) => a - b)
+  const filteredSets = difficultyFilter === null ? sets : sets.filter(s => s.difficulty_level === difficultyFilter)
+
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6 mt-4">
-        <div>
-          <h1 className="text-xl font-bold text-primary-700">תרגול ניצנים</h1>
-          <p className="text-sm text-gray-500">{session?.full_name} · {session?.class_name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/student/personal-details')} className="text-sm text-gray-400 hover:text-gray-600">
-            פרטים אישיים
-          </button>
-          <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
-            יציאה
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen md:flex">
+      <StudentSidebar
+        difficultyFilter={difficultyFilter}
+        onDifficultyFilterChange={setDifficultyFilter}
+        availableDifficulties={availableDifficulties}
+      />
 
-      {/* DPR Simulation */}
-      <button onClick={() => router.push('/dapar')}
-        className="w-full text-right bg-slate-700 rounded-xl p-4 mb-3 hover:bg-slate-800 transition flex items-center justify-between">
-        <div>
-          <div className="text-white font-bold">📝 סימולציית דפ&quot;ר</div>
-          <div className="text-slate-300 text-xs mt-0.5">הזנת תשובות לשאלות 1–50</div>
-        </div>
-        <span className="text-white text-xl">←</span>
-      </button>
-
-      {/* Simulation banner */}
-      <button onClick={() => router.push('/simulation')}
-        className="w-full text-right bg-gradient-to-l from-primary-700 to-primary-500 rounded-xl p-4 mb-3 hover:from-primary-800 hover:to-primary-600 transition flex items-center justify-between shadow-md">
-        <div>
-          <div className="text-white font-bold">🏆 סימולציה אמיתית</div>
-          <div className="text-primary-100 text-xs mt-0.5">חלק א+ב: הבנת הנקרא · חלק ג: משפטים · חלק ד: ראיון</div>
-        </div>
-        <span className="text-white text-xl">←</span>
-      </button>
-
-      {/* Practice modes */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <button onClick={() => router.push('/interview')}
-          className="text-right bg-primary-600 rounded-xl p-4 hover:bg-primary-700 transition flex items-center justify-between">
+      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
+        <div className="flex justify-between items-center mb-6 mt-4">
           <div>
-            <div className="text-white font-bold text-sm">🗣️ ראיון אישי</div>
-            <div className="text-primary-100 text-xs mt-0.5">סימולציית AI</div>
+            <h1 className="text-xl font-bold text-fg">שלום, {session?.full_name}</h1>
+            <p className="text-sm text-fg/60">{session?.class_name}</p>
           </div>
-          <span className="text-white">←</span>
-        </button>
-        <button onClick={() => router.push('/sentence')}
-          className="text-right bg-purple-600 rounded-xl p-4 hover:bg-purple-700 transition flex items-center justify-between">
-          <div>
-            <div className="text-white font-bold text-sm">✍️ בניית משפטים</div>
-            <div className="text-purple-100 text-xs mt-0.5">9 סטים · ציון + שיפור</div>
-          </div>
-          <span className="text-white">←</span>
-        </button>
-      </div>
-      {/* Psychotechnic */}
-      <button onClick={() => router.push('/psychotechnic')}
-        className="w-full text-right bg-teal-600 rounded-xl p-4 mb-3 hover:bg-teal-700 transition flex items-center justify-between">
-        <div>
-          <div className="text-white font-bold">🧠 פסיכוטכני — הזנת תשובות</div>
-          <div className="text-teal-100 text-xs mt-0.5">10 מקבצים · בדיקה מיידית · ציון + תיקון</div>
-        </div>
-        <span className="text-white text-xl">←</span>
-      </button>
-
-      {/* Tzav Rishon — bilingual (Hebrew/Arabic) quantitative-reasoning bank. Distinct color/icon/full name from "📝 סימולציית דפ״ר" above, on purpose — different feature, easy to confuse if styled similarly. */}
-      <button onClick={() => router.push('/tzav-rishon')}
-        className="w-full text-right bg-rose-600 rounded-xl p-4 mb-3 hover:bg-rose-700 transition flex items-center justify-between">
-        <div>
-          <div className="text-white font-bold">🎯 דפ״ר לצו ראשון</div>
-          <div className="text-rose-100 text-xs mt-0.5">300 שאלות · אחוזים, ממוצעים, תנועה, הסתברות</div>
-        </div>
-        <span className="text-white text-xl">←</span>
-      </button>
-
-      {/* AI-generated practice */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <button onClick={() => router.push('/ai-practice/reading')}
-          className="text-right bg-emerald-600 rounded-xl p-4 hover:bg-emerald-700 transition flex items-center justify-between">
-          <div>
-            <div className="text-white font-bold text-sm">🤖 הבנת הנקרא</div>
-            <div className="text-emerald-100 text-xs mt-0.5">תרגול עם AI</div>
-          </div>
-          <span className="text-white">←</span>
-        </button>
-        <button onClick={() => router.push('/ai-practice/sentence')}
-          className="text-right bg-amber-600 rounded-xl p-4 hover:bg-amber-700 transition flex items-center justify-between">
-          <div>
-            <div className="text-white font-bold text-sm">🤖 בניית משפט</div>
-            <div className="text-amber-100 text-xs mt-0.5">תרגול עם AI</div>
-          </div>
-          <span className="text-white">←</span>
-        </button>
-      </div>
-
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">סטי הבנת הנקרא</h2>
-
-      <div className="grid gap-3">
-        {sets.map(set => {
-          const done = completedSetIds.has(set.id)
-          const sub = submissions[set.id]
-          return (
-            <button
-              key={set.id}
-              onClick={() => !done && router.push(`/practice/${set.id}`)}
-              className={`w-full text-right rounded-xl border p-4 transition ${
-                done
-                  ? 'bg-green-50 border-green-200 cursor-default'
-                  : 'bg-white border-gray-200 hover:border-primary-400 hover:shadow-sm cursor-pointer'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-semibold text-gray-800">
-                    סט {set.set_number}
-                  </div>
-                  <div className="text-sm text-gray-500 mt-0.5">{set.topic}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">רמה {set.difficulty_level}</div>
-                </div>
-                <div className="text-left">
-                  {done ? (
-                    <div className="flex flex-col items-end">
-                      <span className="text-green-600 font-bold text-lg">
-                        {Math.round(sub.score_percentage)}%
-                      </span>
-                      <span className="text-xs text-green-500">הושלם</span>
-                    </div>
-                  ) : (
-                    <span className="text-primary-500 text-sm font-medium">התחל ←</span>
-                  )}
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/student/personal-details')} className="text-sm text-fg/50 hover:text-fg">
+              פרטים אישיים
             </button>
-          )
-        })}
+            <button onClick={handleLogout} className="text-sm text-fg/50 hover:text-fg">
+              יציאה
+            </button>
+          </div>
+        </div>
+
+        <CardGrid>
+          <Card
+            icon="📝"
+            title='סימולציית דפ"ר'
+            subtitle="הזנת תשובות לשאלות 1-50"
+            accentColor="dapar"
+            onClick={() => router.push('/dapar')}
+          />
+          <Card
+            icon="🏆"
+            title="סימולציה אמיתית"
+            subtitle="חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון"
+            accentColor="simulation"
+            onClick={() => router.push('/simulation')}
+          />
+          <Card
+            icon="🗣️"
+            title="ראיון אישי"
+            subtitle="סימולציית AI"
+            accentColor="interview"
+            onClick={() => router.push('/interview')}
+          />
+          <Card
+            icon="✍️"
+            title="בניית משפטים"
+            subtitle="9 סטים, ציון ושיפור"
+            accentColor="sentence"
+            onClick={() => router.push('/sentence')}
+          />
+          <Card
+            icon="🧠"
+            title="פסיכוטכני: הזנת תשובות"
+            subtitle="10 מקבצים, בדיקה מיידית, ציון ותיקון"
+            accentColor="psychotechnic"
+            onClick={() => router.push('/psychotechnic')}
+          />
+          <Card
+            icon="🎯"
+            title='דפ"ר לצו ראשון'
+            subtitle="300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות"
+            accentColor="tzav-rishon"
+            onClick={() => router.push('/tzav-rishon')}
+          />
+          <Card
+            icon="🤖"
+            title="הבנת הנקרא"
+            subtitle="תרגול עם AI"
+            accentColor="ai-reading"
+            onClick={() => router.push('/ai-practice/reading')}
+          />
+          <Card
+            icon="🤖"
+            title="בניית משפט"
+            subtitle="תרגול עם AI"
+            accentColor="ai-sentence"
+            onClick={() => router.push('/ai-practice/sentence')}
+          />
+
+          {filteredSets.map(set => {
+            const done = completedSetIds.has(set.id)
+            const sub = submissions[set.id]
+            return (
+              <Card
+                key={set.id}
+                icon="📖"
+                title={`סט ${set.set_number}`}
+                subtitle={`${set.topic}, רמה ${set.difficulty_level}`}
+                accentColor="reading"
+                disabled={done}
+                onClick={() => router.push(`/practice/${set.id}`)}
+                trailing={
+                  done ? (
+                    <span className="flex flex-col items-end">
+                      <span className="text-success-600 font-bold text-sm">{Math.round(sub.score_percentage)}%</span>
+                      <span className="text-xs text-success-600/70">הושלם</span>
+                    </span>
+                  ) : (
+                    <span className="text-primary-500 text-sm">←</span>
+                  )
+                }
+              />
+            )
+          })}
+        </CardGrid>
       </div>
     </div>
   )

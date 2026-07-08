@@ -6,6 +6,8 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
+import { CardGrid } from '@/components/ui/CardGrid'
+import { Card } from '@/components/ui/Card'
 
 interface TopicMeta {
   key: string
@@ -39,7 +41,7 @@ export default function TzavRishonTopicsPage() {
       <PageHeader
         backHref="/menu"
         title={isAr ? 'دفار للاستدعاء الأول' : 'דפ״ר לצו ראשון'}
-        titleColorClass="text-accent-tzav-rishon"
+        titleColorClass="text-accent-tzav-rishon-fg"
       />
 
       <div className="grid grid-cols-2 gap-3 mb-6">
@@ -48,7 +50,7 @@ export default function TzavRishonTopicsPage() {
           className={`py-2.5 rounded-lg font-semibold border transition ${
             language === 'he'
               ? 'bg-accent-tzav-rishon text-white border-accent-tzav-rishon'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-accent-tzav-rishon'
+              : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
           עברית
@@ -58,30 +60,26 @@ export default function TzavRishonTopicsPage() {
           className={`py-2.5 rounded-lg font-semibold border transition ${
             language === 'ar'
               ? 'bg-accent-tzav-rishon text-white border-accent-tzav-rishon'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-accent-tzav-rishon'
+              : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
           العربية
         </button>
       </div>
 
-      <div className="grid gap-3">
+      <CardGrid>
         {topics.map(t => (
-          <button
+          <Card
             key={t.key}
+            icon="🎯"
+            title={isAr ? t.labelAr : t.labelHe}
+            subtitle={isAr ? `${t.count} سؤال` : `${t.count} שאלות`}
+            accentColor="tzav-rishon"
             onClick={() => router.push(`/tzav-rishon/${t.key}`)}
-            className="w-full text-right bg-white rounded-xl border-2 border-gray-200 hover:border-accent-tzav-rishon hover:shadow-sm p-4 transition flex items-center justify-between"
-          >
-            <div>
-              <div className="font-semibold text-gray-800">{isAr ? t.labelAr : t.labelHe}</div>
-              <div className="text-xs text-gray-400 mt-0.5">
-                {isAr ? `${t.count} سؤال` : `${t.count} שאלות`}
-              </div>
-            </div>
-            <span className="text-accent-tzav-rishon text-xl">←</span>
-          </button>
+            trailing={<span className="text-accent-tzav-rishon-fg text-xl">←</span>}
+          />
         ))}
-      </div>
+      </CardGrid>
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
+import { CardGrid } from '@/components/ui/CardGrid'
+import { Card } from '@/components/ui/Card'
 
 export default function SentenceLanding() {
   const router = useRouter()
@@ -27,39 +29,31 @@ export default function SentenceLanding() {
         <p className="font-semibold text-primary-800 mb-2">📌 איך זה עובד?</p>
         <ol className="space-y-1 text-primary-700 list-decimal list-inside">
           <li>בכל תרגיל מוצגות <strong>12 מילים</strong></li>
-          <li>מילים <strong className="text-blue-900">★ מסומנות בכחול — חובה</strong> להשתמש בהן</li>
+          <li>מילים <strong className="text-blue-900">★ מסומנות בכחול: חובה</strong> להשתמש בהן</li>
           <li>השתמש בלפחות <strong>6 מילים</strong> מהרשימה הכללית</li>
           <li>כתוב את המשפט או הקלט את עצמך</li>
           <li>תקבל ציון + משוב + גרסה מושלמת עם הקראה</li>
         </ol>
-        <p className="text-primary-600 text-xs mt-2">💡 צורות שונות של מילה נספרות — למשל ״חברים״ וגם ״חבריי״</p>
+        <p className="text-primary-600 text-xs mt-2">💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״</p>
       </div>
 
-      <div className="grid gap-3">
+      <CardGrid>
         {SENTENCE_SETS.map(set => (
-          <button
+          <Card
             key={set.id}
+            icon="✍️"
+            title={`סט ${set.id}`}
+            subtitle="10 תרגילים"
+            accentColor="sentence"
             onClick={() => router.push(`/sentence/${set.id}`)}
-            className="w-full text-right bg-white rounded-2xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-sm transition group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-gray-800">סט {set.id}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[set.difficulty]}`}>
-                    {difficultyLabel[set.difficulty]}
-                  </span>
-                  <span className="text-xs text-gray-400">10 תרגילים</span>
-                </div>
-              </div>
-              <span className="text-primary-400 text-xl group-hover:translate-x-1 transition-transform">←</span>
-            </div>
-          </button>
+            trailing={
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[set.difficulty]}`}>
+                {difficultyLabel[set.difficulty]}
+              </span>
+            }
+          />
         ))}
-      </div>
-
+      </CardGrid>
     </div>
   )
 }
