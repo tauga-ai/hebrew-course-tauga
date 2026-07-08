@@ -3,13 +3,16 @@
 import { useRouter } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 export default function InterviewLanding() {
   const router = useRouter()
   const { session } = useStudentSession()
 
   return (
-    <div className="min-h-screen p-4 max-w-lg mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-lg mx-auto w-full">
       <PageHeader backHref="/menu" backLabel="← חזרה לתפריט" right={session?.full_name} />
 
       <div className="text-center mb-10">
@@ -61,6 +64,7 @@ export default function InterviewLanding() {
       <div className="mt-8 bg-surface rounded-xl p-4 text-sm text-fg/60 text-right border border-card-border">
         <p className="font-medium text-fg/80 mb-1">💡 טיפ</p>
         <p>התחל עם תרגול השאלות כדי להכיר את הנושאים, ואחרי כן נסה את סימולציית הראיון.</p>
+      </div>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { AIReadingQuestion } from '@/app/api/ai-practice/reading/route'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'משפטים פשוטים: מי, מה, איפה',
@@ -65,7 +66,9 @@ export default function AIReadingPage() {
   const isCorrect = selected !== null && question !== null && selected === question.correct_index
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
         backHref="/menu"
         backLabel="← תפריט"
@@ -228,6 +231,7 @@ export default function AIReadingPage() {
           </button>
         </>
       )}
+      </div>
     </div>
   )
 }

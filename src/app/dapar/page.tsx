@@ -6,6 +6,7 @@ import { DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL as TOTAL, gradeDaparAnswers } f
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 export default function DaparPage() {
   const router = useRouter()
@@ -91,7 +92,9 @@ export default function DaparPage() {
     const scoreColor = grade.pct >= 70 ? 'text-green-600 dark:text-green-400' : grade.pct >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
 
     return (
-      <div className="min-h-screen p-4 max-w-3xl mx-auto pb-12">
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-3xl mx-auto w-full pb-12">
         <div className="text-center mt-6 mb-6">
           <div className="text-5xl mb-2">🏆</div>
           <h1 className="text-2xl font-bold text-primary-700">תוצאות הסימולציה</h1>
@@ -153,13 +156,16 @@ export default function DaparPage() {
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition">
           חזור לתפריט
         </button>
+        </div>
       </div>
     )
   }
 
   // ── INPUT SCREEN ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen p-4 max-w-3xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-3xl mx-auto w-full">
       <PageHeader backHref="/menu" title={'סימולציית דפ"ר'} subtitle={session?.full_name} right={`${answered}/${TOTAL}`} />
 
       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mb-5">
@@ -225,6 +231,7 @@ export default function DaparPage() {
       >
         {submitting ? 'שולח...' : `הגש (${answered}/${TOTAL} הוזנו)`}
       </button>
+      </div>
     </div>
   )
 }

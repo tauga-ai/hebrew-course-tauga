@@ -7,6 +7,7 @@ import { speakHebrew } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'מילון יומיומי בסיסי: בית, משפחה, בית ספר',
@@ -98,7 +99,9 @@ export default function AISentencePage() {
   const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : s >= 6 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
         backHref="/menu"
         backLabel="← תפריט"
@@ -253,6 +256,7 @@ export default function AISentencePage() {
           </button>
         </>
       )}
+      </div>
     </div>
   )
 }

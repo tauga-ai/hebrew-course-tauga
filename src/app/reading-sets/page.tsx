@@ -6,6 +6,7 @@ import type { PracticeSet, Submission } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 
@@ -49,7 +50,9 @@ export default function ReadingSetsPage() {
   const filteredSets = difficultyFilter === null ? sets : sets.filter(s => s.difficulty_level === difficultyFilter)
 
   return (
-    <div className="min-h-screen p-4 max-w-5xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
       <PageHeader backHref="/menu" title="סטי הבנת הנקרא" right={session?.full_name} />
 
       {availableDifficulties.length > 1 && (
@@ -105,6 +108,7 @@ export default function ReadingSetsPage() {
           )
         })}
       </CardGrid>
+      </div>
     </div>
   )
 }

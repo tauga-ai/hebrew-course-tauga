@@ -23,10 +23,11 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 /**
- * Wraps /menu only (an explicit component the page imports, not a new
- * route-group layout) — keeps this pass's blast radius small, no files
- * moved. Horizontal scroll strip on mobile, a real fixed sidebar from `md:`
- * up (matches the "sidebar for easy navigation and filtering" request).
+ * A component each page imports directly (not a route-group layout) —
+ * keeps every page's blast radius small, no files moved. Rendered by every
+ * student section except the full-screen exam/recording flows
+ * (/simulation, /interview/simulate) and /student/personal-details.
+ * Horizontal scroll strip on mobile, a real fixed sidebar from `md:` up.
  */
 export function StudentSidebar() {
   const pathname = usePathname()
@@ -39,20 +40,23 @@ export function StudentSidebar() {
       </div>
 
       <nav className="flex flex-row md:flex-col gap-1 shrink-0">
-        {NAV_ITEMS.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
-              pathname === item.href
-                ? 'bg-highlight/10 text-highlight'
-                : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {NAV_ITEMS.map(item => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
+                active
+                  ? 'bg-highlight/10 text-highlight'
+                  : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
       </nav>
     </aside>
   )

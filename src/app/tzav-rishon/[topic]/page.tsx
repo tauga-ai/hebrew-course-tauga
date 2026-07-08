@@ -9,6 +9,7 @@ import { Segments } from '@/components/tzav-rishon/Segments'
 import { QuestionMap } from '@/components/tzav-rishon/QuestionMap'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import type { Segment } from '@/data/tzav-rishon/types'
 
 interface QuestionOut {
@@ -128,7 +129,9 @@ export default function TzavRishonPracticePage() {
   )
 
   return (
-    <div lang={isAr ? 'ar' : 'he'} className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div lang={isAr ? 'ar' : 'he'} className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
         backHref="/tzav-rishon"
         title={isAr ? topicMeta.labelAr : topicMeta.labelHe}
@@ -237,6 +240,7 @@ export default function TzavRishonPracticePage() {
       </div>
 
       <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={setCurrentIndex} />
+      </div>
     </div>
   )
 }

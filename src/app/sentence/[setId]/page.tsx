@@ -8,6 +8,7 @@ import { speakHebrew } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -105,7 +106,9 @@ export default function SentenceSetPage() {
   const scoreLabel = (s: number) => s >= 9 ? 'מצוין!' : s >= 7 ? 'טוב מאוד' : s >= 5 ? 'סביר' : 'צריך שיפור'
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader backHref="/sentence" subtitle={set.title} right={`${exerciseIdx + 1}/${set.exercises.length}`} />
 
       {/* Progress */}
@@ -288,6 +291,7 @@ export default function SentenceSetPage() {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

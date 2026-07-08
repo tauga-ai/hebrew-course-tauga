@@ -7,6 +7,7 @@ import { stopSpeaking } from '@/lib/use-hebrew-tts'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -35,7 +36,9 @@ export default function PracticePage() {
   const answered = Object.keys(answers).length
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader backHref="/interview" title="תרגול שאלות ראיון" subtitle={session?.full_name} right={`${answered}/${total} נענו`} />
 
       {/* Progress */}
@@ -125,6 +128,7 @@ export default function PracticePage() {
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }

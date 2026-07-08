@@ -7,6 +7,7 @@ import type { Question, PracticeSet } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -88,7 +89,9 @@ export default function PracticePage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader backHref="/menu" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} right={`${answered}/${total}`} />
 
       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-6">
@@ -146,6 +149,7 @@ export default function PracticePage() {
         className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition disabled:opacity-50">
         {submitting ? 'שולח...' : `הגש (${answered}/${total} נענו)`}
       </button>
+      </div>
     </div>
   )
 }

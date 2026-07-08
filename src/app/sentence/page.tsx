@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { SENTENCE_SETS, DIFFICULTY_COLORS } from '@/lib/sentence-exercises'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 
@@ -16,7 +17,9 @@ export default function SentenceLanding() {
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader backHref="/menu" backLabel="← חזרה לתפריט" right={session?.full_name} />
 
       <div className="text-center mb-5">
@@ -54,6 +57,7 @@ export default function SentenceLanding() {
           />
         ))}
       </CardGrid>
+      </div>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 
@@ -37,7 +38,9 @@ export default function TzavRishonTopicsPage() {
   const isAr = language === 'ar'
 
   return (
-    <div lang={isAr ? 'ar' : 'he'} className="min-h-screen p-4 max-w-md mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div lang={isAr ? 'ar' : 'he'} className="flex-1 p-4 max-w-md mx-auto w-full">
       <PageHeader
         backHref="/menu"
         title={isAr ? 'دفار للاستدعاء الأول' : 'דפ״ר לצו ראשון'}
@@ -80,6 +83,7 @@ export default function TzavRishonTopicsPage() {
           />
         ))}
       </CardGrid>
+      </div>
     </div>
   )
 }

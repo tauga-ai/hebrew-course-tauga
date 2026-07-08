@@ -6,6 +6,7 @@ import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 import { PageHeader } from '@/components/PageHeader'
+import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 
@@ -107,7 +108,9 @@ export default function PsychotechnicPage() {
   const answeredCount = answers.filter(a => a > 0).length
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
+    <div className="min-h-screen md:flex">
+      <StudentSidebar />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
         onBack={() => phase === 'input' ? setPhase('select') : router.push('/menu')}
         title="פסיכוטכני: הזנת תשובות"
@@ -230,6 +233,7 @@ export default function PsychotechnicPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }
