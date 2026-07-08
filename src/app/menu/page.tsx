@@ -124,6 +124,13 @@ export default function Menu() {
             accentColor="ai-sentence"
             onClick={() => router.push('/ai-practice/sentence')}
           />
+          <Card
+            icon="🧮"
+            title="שאלות שעדי שלחה"
+            subtitle="6 מקבצי שאלות"
+            accentColor="makbatzim"
+            onClick={() => router.push('/makbatzim')}
+          />
         </CardGrid>
       </div>
     </div>

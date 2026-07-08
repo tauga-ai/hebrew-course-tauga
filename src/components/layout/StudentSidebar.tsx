@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא', alsoActiveUnder: ['/practice'] },
   { href: '/ai-practice/reading', icon: '🤖', label: 'הבנת הנקרא (AI)' },
   { href: '/ai-practice/sentence', icon: '🤖', label: 'בניית משפט (AI)' },
+  { href: '/makbatzim', icon: '🧮', label: 'שאלות שעדי שלחה' },
 ]
 
 /**
