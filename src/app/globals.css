@@ -45,10 +45,23 @@
   --color-accent-psychotechnic: #0d9488;
   --color-accent-ai-reading: #059669;
   --color-accent-ai-sentence: #d97706;
+  --color-accent-tzav-rishon: #e11d48;
 }
 
 body {
   font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
   background: #f9fafb;
   color: #111827;
+}
+
+/*
+ * :lang(ar) matches any element whose computed language is Arabic — set by
+ * the nearest ancestor's `lang="ar"` attribute — and cascades to every
+ * descendant automatically, so a single `lang="ar"` on the tzav-rishon
+ * practice content's wrapper is enough to switch its whole subtree to
+ * Cairo, without repeating it per element. Heebo (body's default) is
+ * untouched everywhere else.
+ */
+:lang(ar) {
+  font-family: var(--font-cairo), Tahoma, Arial, sans-serif;
 }

@@ -29,7 +29,7 @@ export default function PersonalDetailsPage() {
     let cancelled = false
 
     async function loadStats() {
-      const [practiceSetsRes, submissionsRes, daparRes, psychoRes, sentenceRes, interviewRes, simRes] = await Promise.all([
+      const [practiceSetsRes, submissionsRes, daparRes, psychoRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
         fetch('/api/practice-sets').then(r => r.json()).catch(() => null),
         fetch(`/api/student/${session!.id}/submissions`).then(r => r.json()).catch(() => null),
         fetch('/api/dapar/my-submission').then(r => r.json()).catch(() => null),
@@ -37,6 +37,7 @@ export default function PersonalDetailsPage() {
         fetch('/api/sentence/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/interview/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/simulation/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/tzav-rishon/my-stats').then(r => r.json()).catch(() => null),
       ])
       if (cancelled) return
 
@@ -80,6 +81,14 @@ export default function PersonalDetailsPage() {
           key: 'simulation',
           label: 'סימולציה',
           value: simRes?.completed_count ? `${simRes.completed_count} סימולציות הושלמו` : 'עדיין לא בוצעה',
+        },
+        {
+          key: 'tzav-rishon',
+          label: 'דפ״ר לצו ראשון',
+          // total comes from the API dynamically (sum across all 4 topics), unlike
+          // the two lines above that read a client-side constant's .length — this
+          // one has no equivalent constant to import, so it's computed server-side.
+          value: `${tzavRishonRes?.attempted ?? 0}/${tzavRishonRes?.total ?? 0} שאלות${tzavRishonRes?.avg_pct != null ? ` · ממוצע ${Math.round(tzavRishonRes.avg_pct)}%` : ''}`,
         },
       ]
       setStats(lines)

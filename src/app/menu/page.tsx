@@ -112,6 +112,16 @@ export default function Menu() {
         <span className="text-white text-xl">←</span>
       </button>
 
+      {/* Tzav Rishon — bilingual (Hebrew/Arabic) quantitative-reasoning bank. Distinct color/icon/full name from "📝 סימולציית דפ״ר" above, on purpose — different feature, easy to confuse if styled similarly. */}
+      <button onClick={() => router.push('/tzav-rishon')}
+        className="w-full text-right bg-rose-600 rounded-xl p-4 mb-3 hover:bg-rose-700 transition flex items-center justify-between">
+        <div>
+          <div className="text-white font-bold">🎯 דפ״ר לצו ראשון</div>
+          <div className="text-rose-100 text-xs mt-0.5">300 שאלות · אחוזים, ממוצעים, תנועה, הסתברות</div>
+        </div>
+        <span className="text-white text-xl">←</span>
+      </button>
+
       {/* AI-generated practice */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         <button onClick={() => router.push('/ai-practice/reading')}
