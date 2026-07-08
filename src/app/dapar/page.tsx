@@ -88,28 +88,28 @@ export default function DaparPage() {
   // ── RESULTS SCREEN ──────────────────────────────────────────────────────────
   if (results) {
     const grade = gradeDaparAnswers(results)
-    const scoreColor = grade.pct >= 70 ? 'text-green-600' : grade.pct >= 50 ? 'text-yellow-600' : 'text-red-500'
+    const scoreColor = grade.pct >= 70 ? 'text-green-600 dark:text-green-400' : grade.pct >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
 
     return (
       <div className="min-h-screen p-4 max-w-3xl mx-auto pb-12">
         <div className="text-center mt-6 mb-6">
           <div className="text-5xl mb-2">🏆</div>
           <h1 className="text-2xl font-bold text-primary-700">תוצאות הסימולציה</h1>
-          <p className="text-gray-500 text-sm">{session?.full_name}</p>
+          <p className="text-fg/60 text-sm">{session?.full_name}</p>
           <div className={`text-5xl font-bold mt-3 ${scoreColor}`}>{grade.pct}%</div>
-          <p className="text-gray-500 text-sm mt-1">{grade.totalCorrect} נכון מתוך {TOTAL}</p>
+          <p className="text-fg/60 text-sm mt-1">{grade.totalCorrect} נכון מתוך {TOTAL}</p>
         </div>
 
         {/* Per-section summary */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
           {grade.perSection.map(section => {
-            const color = section.pct >= 70 ? 'bg-green-50 border-green-200' : section.pct >= 50 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
-            const textColor = section.pct >= 70 ? 'text-green-700' : section.pct >= 50 ? 'text-yellow-700' : 'text-red-600'
+            const color = section.pct >= 70 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : section.pct >= 50 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
+            const textColor = section.pct >= 70 ? 'text-green-700 dark:text-green-400' : section.pct >= 50 ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
             return (
               <div key={section.label} className={`rounded-xl border p-3 text-center ${color}`}>
                 <div className={`text-2xl font-bold ${textColor}`}>{section.pct}%</div>
-                <div className="text-xs text-gray-600 mt-0.5">{section.label}</div>
-                <div className="text-xs text-gray-400">{section.correct}/10</div>
+                <div className="text-xs text-fg/70 mt-0.5">{section.label}</div>
+                <div className="text-xs text-fg/40">{section.correct}/10</div>
               </div>
             )
           })}
@@ -125,17 +125,17 @@ export default function DaparPage() {
                   const unanswered = q.selected === 0
                   return (
                     <div key={q.q} className={`flex items-center gap-3 rounded-xl border p-3 ${
-                      unanswered ? 'bg-gray-50 border-gray-200' :
-                      q.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                      unanswered ? 'bg-black/5 dark:bg-white/5 border-card-border' :
+                      q.isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
                     }`}>
-                      <span className="text-sm font-bold text-gray-500 w-6 text-center flex-shrink-0">{q.q}</span>
+                      <span className="text-sm font-bold text-fg/60 w-6 text-center flex-shrink-0">{q.q}</span>
                       <div className="flex-1 text-sm">
                         {unanswered ? (
-                          <span className="text-gray-400">לא נענתה</span>
+                          <span className="text-fg/40">לא נענתה</span>
                         ) : q.isCorrect ? (
-                          <span className="text-green-700 font-semibold">✓ תשובה {q.selected}</span>
+                          <span className="text-green-700 dark:text-green-400 font-semibold">✓ תשובה {q.selected}</span>
                         ) : (
-                          <span className="text-red-600">
+                          <span className="text-red-600 dark:text-red-400">
                             ✗ ענית <strong>{q.selected}</strong> · נכון: <strong>{q.correct}</strong>
                           </span>
                         )}
@@ -162,16 +162,16 @@ export default function DaparPage() {
     <div className="min-h-screen p-4 max-w-3xl mx-auto">
       <PageHeader backHref="/menu" title={'סימולציית דפ"ר'} subtitle={session?.full_name} right={`${answered}/${TOTAL}`} />
 
-      <div className="w-full bg-gray-200 rounded-full h-1.5 mb-5">
+      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mb-5">
         <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${(answered / TOTAL) * 100}%` }} />
       </div>
 
-      <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-5 text-sm text-primary-800 text-right">
-        לכל שאלה — לחץ על המספר שסימנת בטופס שלך (1 / 2 / 3 / 4)
+      <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-5 text-sm text-primary-800 dark:text-primary-300 text-right">
+        לכל שאלה: לחץ על המספר שסימנת בטופס שלך (1 / 2 / 3 / 4)
       </div>
 
       {submitError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700 text-right">
+        <div className="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-800 rounded-xl p-3 mb-4 text-sm text-red-700 dark:text-red-400 text-right">
           אירעה שגיאה בשמירה. בדוק חיבור לאינטרנט ונסה שוב.
         </div>
       )}
@@ -182,15 +182,15 @@ export default function DaparPage() {
           return (
             <div key={section.label}>
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-sm font-bold text-primary-700">{section.label}</span>
-                <span className="text-xs text-gray-400">{sectionAnswered}/10</span>
+                <span className="text-sm font-bold text-primary-700 dark:text-primary-400">{section.label}</span>
+                <span className="text-xs text-fg/40">{sectionAnswered}/10</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Array.from({ length: section.to - section.from + 1 }, (_, j) => {
                   const i = section.from - 1 + j
                   return (
-                    <div key={i} className={`flex items-center gap-3 bg-white rounded-xl border p-3 ${answers[i] > 0 ? 'border-primary-300' : 'border-gray-200'}`}>
-                      <span className="text-sm font-bold text-gray-500 w-6 text-center flex-shrink-0">{i + 1}</span>
+                    <div key={i} className={`flex items-center gap-3 bg-surface rounded-xl border p-3 ${answers[i] > 0 ? 'border-primary-300 dark:border-primary-700' : 'border-card-border'}`}>
+                      <span className="text-sm font-bold text-fg/60 w-6 text-center flex-shrink-0">{i + 1}</span>
                       <div className="grid grid-cols-4 gap-1.5 flex-1">
                         {[1, 2, 3, 4].map(opt => (
                           <button
@@ -199,7 +199,7 @@ export default function DaparPage() {
                             className={`py-2 rounded-lg text-sm font-bold transition border ${
                               answers[i] === opt
                                 ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-400 hover:bg-primary-50'
+                                : 'bg-black/5 dark:bg-white/5 text-fg/70 border-card-border hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10'
                             }`}
                           >
                             {opt}
@@ -207,7 +207,7 @@ export default function DaparPage() {
                         ))}
                       </div>
                       {answers[i] > 0 && (
-                        <button onClick={() => setAnswer(i, 0)} aria-label="נקה תשובה" className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">✕</button>
+                        <button onClick={() => setAnswer(i, 0)} aria-label="נקה תשובה" className="text-xs text-fg/30 hover:text-red-400 flex-shrink-0">✕</button>
                       )}
                     </div>
                   )

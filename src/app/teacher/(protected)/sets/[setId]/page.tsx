@@ -52,21 +52,21 @@ export default function SetAnalyticsPage() {
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
-        <h1 className="text-xl font-bold text-primary-700">
-          סט {data.practice_set.set_number} — ניתוח שאלות
+      <div className="bg-surface rounded-2xl border border-card-border p-5 mb-6">
+        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">
+          סט {data.practice_set.set_number}: ניתוח שאלות
         </h1>
-        <p className="text-sm text-gray-500 mt-1">{data.practice_set.topic} · רמה {data.practice_set.difficulty_level} · {data.class_name}</p>
+        <p className="text-sm text-fg/60 mt-1">{data.practice_set.topic} · רמה {data.practice_set.difficulty_level} · {data.class_name}</p>
         <div className="flex gap-6 mt-3 text-sm">
           <div>
-            <span className="text-gray-500">השלימו: </span>
-            <span className="font-bold text-gray-800">{data.total_submissions}</span>
+            <span className="text-fg/60">השלימו: </span>
+            <span className="font-bold text-fg">{data.total_submissions}</span>
           </div>
           <div>
-            <span className="text-gray-500">ממוצע: </span>
+            <span className="text-fg/60">ממוצע: </span>
             <span className={`font-bold ${
-              data.avg_score === null ? 'text-gray-400' :
-              data.avg_score >= 70 ? 'text-green-600' : 'text-red-500'
+              data.avg_score === null ? 'text-fg/40' :
+              data.avg_score >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
             }`}>
               {data.avg_score === null ? '—' : `${Math.round(data.avg_score)}%`}
             </span>
@@ -81,28 +81,28 @@ export default function SetAnalyticsPage() {
           const correctPct = total > 0 ? Math.round((q.correct_count / total) * 100) : null
 
           return (
-            <div key={q.id} className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div key={q.id} className="bg-surface rounded-2xl border border-card-border p-5">
               {/* Question header */}
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <span className="text-xs font-semibold text-fg/40 uppercase tracking-wide">
                   שאלה {qi + 1}
                 </span>
                 {total > 0 && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     correctPct !== null && correctPct >= 70
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-600'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
+                      : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
                   }`}>
                     {correctPct}% ענו נכון ({q.correct_count}/{total})
                   </span>
                 )}
                 {total === 0 && (
-                  <span className="text-xs text-gray-300">אין תשובות עדיין</span>
+                  <span className="text-xs text-fg/30">אין תשובות עדיין</span>
                 )}
               </div>
 
               {/* Question text */}
-              <p className="text-gray-800 leading-relaxed mb-4 whitespace-pre-line text-sm">
+              <p className="text-fg leading-relaxed mb-4 whitespace-pre-line text-sm">
                 {q.question_text}
               </p>
 
@@ -117,10 +117,10 @@ export default function SetAnalyticsPage() {
                   return (
                     <div key={optNum} className={`rounded-xl border p-3 ${
                       isCorrect
-                        ? 'border-green-300 bg-green-50'
+                        ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/40'
                         : count > 0
-                        ? 'border-red-100 bg-red-50'
-                        : 'border-gray-100 bg-gray-50'
+                        ? 'border-red-100 bg-red-50 dark:border-red-900 dark:bg-red-950/40'
+                        : 'border-card-border bg-black/5 dark:bg-white/5'
                     }`}>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -128,18 +128,18 @@ export default function SetAnalyticsPage() {
                             ? 'bg-green-500 text-white'
                             : count > 0
                             ? 'bg-red-400 text-white'
-                            : 'bg-gray-200 text-gray-500'
+                            : 'bg-gray-200 dark:bg-white/10 text-fg/60'
                         }`}>
                           {HEBREW[i]}
                         </span>
-                        <span className={`text-sm flex-1 ${isCorrect ? 'font-semibold text-green-800' : 'text-gray-700'}`}>
+                        <span className={`text-sm flex-1 ${isCorrect ? 'font-semibold text-green-800 dark:text-green-300' : 'text-fg/80'}`}>
                           {opt}
                         </span>
                         {isCorrect && (
-                          <span className="text-green-600 text-xs font-bold">✓ נכון</span>
+                          <span className="text-green-600 dark:text-green-400 text-xs font-bold">✓ נכון</span>
                         )}
                         <span className={`text-xs font-semibold ml-1 ${
-                          isCorrect ? 'text-green-700' : count > 0 ? 'text-red-500' : 'text-gray-400'
+                          isCorrect ? 'text-green-700 dark:text-green-400' : count > 0 ? 'text-red-500 dark:text-red-400' : 'text-fg/40'
                         }`}>
                           {count > 0 || total > 0 ? `${count} (${pct}%)` : '—'}
                         </span>
@@ -147,10 +147,10 @@ export default function SetAnalyticsPage() {
 
                       {/* Distribution bar */}
                       {total > 0 && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mr-7">
+                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mr-7">
                           <div
                             className={`h-1.5 rounded-full transition-all ${
-                              isCorrect ? 'bg-green-500' : count > 0 ? 'bg-red-400' : 'bg-gray-300'
+                              isCorrect ? 'bg-green-500' : count > 0 ? 'bg-red-400' : 'bg-gray-300 dark:bg-white/20'
                             }`}
                             style={{ width: `${pct}%` }}
                           />

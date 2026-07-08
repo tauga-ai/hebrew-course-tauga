@@ -68,7 +68,7 @@ function RegisterForm() {
     if (signUpError) {
       setError(
         signUpError.message.toLowerCase().includes('already registered')
-          ? 'כתובת המייל הזו כבר רשומה — נסה/י להתחבר'
+          ? 'כתובת המייל הזו כבר רשומה, נסה/י להתחבר'
           : 'שגיאה בהרשמה'
       )
       setLoading(false)
@@ -103,23 +103,23 @@ function RegisterForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">הרשמה</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">תרגול ניצנים — הבנת הנקרא</p>
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">הרשמה</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">תרגול ניצנים: הבנת הנקרא</p>
 
         {linkExpired && (
-          <p className="text-amber-600 bg-amber-50 rounded-lg p-3 text-sm text-center mb-5">
-            הקישור לאישור פג תוקף — נסה/י להירשם שוב.
+          <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 rounded-lg p-3 text-sm text-center mb-5">
+            הקישור לאישור פג תוקף, נסה/י להירשם שוב.
           </p>
         )}
 
         {awaitingConfirmation ? (
           <div className="text-center space-y-3">
-            <p className="text-gray-700">
+            <p className="text-fg/80">
               נשלח אליך מייל עם קישור לאישור החשבון. לאחר שתאשר/י, אפשר להתחבר.
             </p>
-            <p className="text-sm text-gray-400">לא קיבלת מייל? בדוק/י בתיקיית הספאם.</p>
-            <a href="/student" className="inline-block text-sm text-primary-600 hover:text-primary-700 mt-2">
+            <p className="text-sm text-fg/40">לא קיבלת מייל? בדוק/י בתיקיית הספאם.</p>
+            <a href="/student" className="inline-block text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400 mt-2">
               חזרה להתחברות
             </a>
           </div>
@@ -129,53 +129,53 @@ function RegisterForm() {
           type="button"
           onClick={handleGoogle}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 mb-4"
+          className="w-full flex items-center justify-center gap-2 border border-card-border rounded-lg py-2.5 font-medium text-fg/80 hover:bg-black/5 dark:hover:bg-white/5 transition disabled:opacity-50 mb-4"
         >
           <GoogleIcon />
           {googleLoading ? 'מעביר ל-Google...' : 'הרשמה עם Google'}
         </button>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="h-px bg-gray-200 flex-1" />
-          <span className="text-xs text-gray-400">או, אם אין לך Google</span>
-          <div className="h-px bg-gray-200 flex-1" />
+          <div className="h-px bg-card-border flex-1" />
+          <span className="text-xs text-fg/40">או, אם אין לך Google</span>
+          <div className="h-px bg-card-border flex-1" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">שם מלא</label>
+            <label htmlFor="fullName" className="block text-sm font-medium text-fg/80 mb-1">שם מלא</label>
             <input
               id="fullName"
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="הכנס/י את שמך המלא"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-fg/80 mb-1">מייל</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="name@example.com"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-fg/80 mb-1">סיסמה</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="לפחות 6 תווים"
               minLength={6}
               required
@@ -183,7 +183,7 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">באיזו שפה את/ה לומד/ת?</label>
+            <label className="block text-sm font-medium text-fg/80 mb-1">באיזו שפה את/ה לומד/ת?</label>
             <div className="grid grid-cols-2 gap-3">
               {LANGUAGES.map(lang => (
                 <button
@@ -193,7 +193,7 @@ function RegisterForm() {
                   className={`py-2.5 rounded-lg font-semibold border transition ${
                     classCode === lang
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                      : 'bg-surface text-fg/80 border-card-border hover:border-primary-400'
                   }`}
                 >
                   {lang}
@@ -202,7 +202,7 @@ function RegisterForm() {
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
@@ -214,7 +214,7 @@ function RegisterForm() {
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700">
+          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
             יש לך כבר חשבון? התחבר/י
           </a>
         </div>

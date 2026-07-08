@@ -6,19 +6,19 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
 
 const LEVEL_LABELS: Record<number, string> = {
-  1: 'משפטים פשוטים — מי, מה, איפה',
-  2: 'סיבות וזמנים — למה, מתי',
-  3: 'ניגודים ורעיונות — למרות ש, כי',
-  4: 'קטעים מידעיים — פסקה שלמה',
-  5: 'קטעים מתקדמים — ניתוח ומסקנות',
+  1: 'משפטים פשוטים: מי, מה, איפה',
+  2: 'סיבות וזמנים: למה, מתי',
+  3: 'ניגודים ורעיונות: למרות ש, כי',
+  4: 'קטעים מידעיים: פסקה שלמה',
+  5: 'קטעים מתקדמים: ניתוח ומסקנות',
 }
 
 const LEVEL_COLORS: Record<number, string> = {
-  1: 'border-green-300 bg-green-50 text-green-700',
-  2: 'border-primary-300 bg-primary-50 text-primary-700',
-  3: 'border-yellow-300 bg-yellow-50 text-yellow-700',
-  4: 'border-orange-300 bg-orange-50 text-orange-700',
-  5: 'border-red-300 bg-red-50 text-red-700',
+  1: 'border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400',
+  2: 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-500/10 dark:text-primary-400',
+  3: 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-400',
+  4: 'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-400',
+  5: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400',
 }
 
 const HEBREW = ['א', 'ב', 'ג', 'ד']
@@ -77,7 +77,7 @@ export default function AIReadingPage() {
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
         <>
-          <p className="text-center text-gray-500 text-sm mb-6">בחר רמה וה-AI יצור לך שאלה בהבנת הנקרא</p>
+          <p className="text-center text-fg/60 text-sm mb-6">בחר רמה וה-AI יצור לך שאלה בהבנת הנקרא</p>
           <div className="grid gap-3">
             {[1, 2, 3, 4, 5].map(lvl => (
               <button
@@ -95,9 +95,9 @@ export default function AIReadingPage() {
               </button>
             ))}
           </div>
-          {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-4">{error}</p>}
           {stats.total > 0 && (
-            <div className="mt-6 bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-600">
+            <div className="mt-6 bg-black/5 dark:bg-white/5 rounded-xl p-4 text-center text-sm text-fg/70">
               סיכום: {stats.correct} נכון מתוך {stats.total} ({Math.round((stats.correct / stats.total) * 100)}%)
             </div>
           )}
@@ -108,24 +108,24 @@ export default function AIReadingPage() {
       {phase === 'loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-spin">🤖</div>
-          <p className="text-gray-500">יוצר שאלה ברמה {level}...</p>
+          <p className="text-fg/60">יוצר שאלה ברמה {level}...</p>
         </div>
       )}
 
       {/* ── QUESTION ── */}
       {phase === 'question' && question && (
         <>
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+          <div className="bg-surface rounded-2xl border border-card-border shadow-sm p-6 mb-4">
             <div className="flex justify-between items-center mb-3">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${LEVEL_COLORS[level!]}`}>
                 רמה {level}
               </span>
-              <span className="text-xs text-gray-400">קרא את הטקסט וענה על השאלה</span>
+              <span className="text-xs text-fg/40">קרא את הטקסט וענה על השאלה</span>
             </div>
-            <p className="text-gray-800 leading-relaxed text-base mb-5 whitespace-pre-line border-b border-gray-100 pb-4">
+            <p className="text-fg leading-relaxed text-base mb-5 whitespace-pre-line border-b border-card-border pb-4">
               {question.passage}
             </p>
-            <p className="text-gray-700 font-semibold leading-relaxed">{question.question}</p>
+            <p className="text-fg/80 font-semibold leading-relaxed">{question.question}</p>
           </div>
 
           <div className="space-y-3 mb-6">
@@ -135,12 +135,12 @@ export default function AIReadingPage() {
                 onClick={() => setSelected(i)}
                 className={`w-full text-right rounded-xl border p-4 transition flex items-center gap-3 ${
                   selected === i
-                    ? 'bg-primary-50 border-primary-400 text-primary-800'
-                    : 'bg-white border-gray-200 hover:border-primary-300 text-gray-800'
+                    ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-primary-800 dark:text-primary-300'
+                    : 'bg-surface border-card-border hover:border-primary-300 text-fg'
                 }`}
               >
                 <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  selected === i ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'
+                  selected === i ? 'bg-primary-500 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'
                 }`}>
                   {HEBREW[i]}
                 </span>
@@ -163,23 +163,23 @@ export default function AIReadingPage() {
       {phase === 'result' && question && selected !== null && (
         <>
           {/* Result banner */}
-          <div className={`rounded-2xl border p-5 text-center mb-4 ${isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+          <div className={`rounded-2xl border p-5 text-center mb-4 ${isCorrect ? 'bg-green-50 border-green-300 dark:bg-green-950/40 dark:border-green-700' : 'bg-red-50 border-red-300 dark:bg-red-950/40 dark:border-red-700'}`}>
             <div className="text-4xl mb-2">{isCorrect ? '✅' : '❌'}</div>
-            <div className={`text-xl font-bold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+            <div className={`text-xl font-bold ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
               {isCorrect ? 'נכון!' : 'לא נכון'}
             </div>
             {!isCorrect && (
-              <div className="text-sm text-red-600 mt-1">
+              <div className="text-sm text-red-600 dark:text-red-400 mt-1">
                 התשובה הנכונה: <strong>{HEBREW[question.correct_index]}. {question.options[question.correct_index]}</strong>
               </div>
             )}
           </div>
 
           {/* Passage + highlighted answer */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-            <p className="text-xs text-gray-400 mb-2">הטקסט</p>
-            <p className="text-gray-800 leading-relaxed text-sm mb-3">{question.passage}</p>
-            <p className="text-xs text-gray-400 mb-1">השאלה: {question.question}</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-3">
+            <p className="text-xs text-fg/40 mb-2">הטקסט</p>
+            <p className="text-fg leading-relaxed text-sm mb-3">{question.passage}</p>
+            <p className="text-xs text-fg/40 mb-1">השאלה: {question.question}</p>
           </div>
 
           {/* Options with result */}
@@ -189,19 +189,19 @@ export default function AIReadingPage() {
               const isChosen = i === selected
               return (
                 <div key={i} className={`rounded-xl border p-3 flex items-center gap-3 ${
-                  isRight ? 'bg-green-50 border-green-300' :
-                  isChosen && !isRight ? 'bg-red-50 border-red-300' :
-                  'bg-gray-50 border-gray-100'
+                  isRight ? 'bg-green-50 border-green-300 dark:bg-green-950/40 dark:border-green-700' :
+                  isChosen && !isRight ? 'bg-red-50 border-red-300 dark:bg-red-950/40 dark:border-red-700' :
+                  'bg-black/5 dark:bg-white/5 border-card-border'
                 }`}>
                   <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                     isRight ? 'bg-green-500 text-white' :
                     isChosen ? 'bg-red-400 text-white' :
-                    'bg-gray-200 text-gray-500'
+                    'bg-gray-200 dark:bg-white/10 text-fg/60'
                   }`}>{HEBREW[i]}</span>
-                  <span className={`text-sm ${isRight ? 'text-green-800 font-semibold' : isChosen ? 'text-red-700' : 'text-gray-500'}`}>
+                  <span className={`text-sm ${isRight ? 'text-green-800 dark:text-green-300 font-semibold' : isChosen ? 'text-red-700 dark:text-red-400' : 'text-fg/60'}`}>
                     {opt}
                   </span>
-                  {isRight && <span className="mr-auto text-green-600 text-xs font-bold">✓ נכון</span>}
+                  {isRight && <span className="mr-auto text-green-600 dark:text-green-400 text-xs font-bold">✓ נכון</span>}
                 </div>
               )
             })}
@@ -209,7 +209,7 @@ export default function AIReadingPage() {
 
           {/* Explanation */}
           {question.explanation && (
-            <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-4 text-sm text-primary-800">
+            <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800 rounded-xl p-4 mb-4 text-sm text-primary-800 dark:text-primary-300">
               <strong>הסבר: </strong>{question.explanation}
             </div>
           )}

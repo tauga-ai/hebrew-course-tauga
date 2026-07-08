@@ -56,7 +56,7 @@ export default function StudentLogin() {
     })
 
     if (signInError) {
-      setError('אימייל או סיסמה שגויים. אם נרשמת עם Google — יש להשתמש בכפתור Google.')
+      setError('אימייל או סיסמה שגויים. אם נרשמת עם Google, יש להשתמש בכפתור Google.')
       setLoading(false)
       return
     }
@@ -68,35 +68,35 @@ export default function StudentLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">תרגול ניצנים</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">הבנת הנקרא</p>
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">תרגול ניצנים</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">הבנת הנקרא</p>
 
         <button
           type="button"
           onClick={handleGoogle}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 mb-4"
+          className="w-full flex items-center justify-center gap-2 border border-card-border rounded-lg py-2.5 font-medium text-fg/80 hover:bg-black/5 dark:hover:bg-white/5 transition disabled:opacity-50 mb-4"
         >
           <GoogleIcon />
           {googleLoading ? 'מעביר ל-Google...' : 'התחברות עם Google'}
         </button>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="h-px bg-gray-200 flex-1" />
-          <span className="text-xs text-gray-400">או, אם אין לך Google</span>
-          <div className="h-px bg-gray-200 flex-1" />
+          <div className="h-px bg-card-border flex-1" />
+          <span className="text-xs text-fg/40">או, אם אין לך Google</span>
+          <div className="h-px bg-card-border flex-1" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-fg/80 mb-1">מייל</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="name@example.com"
               required
             />
@@ -104,8 +104,8 @@ export default function StudentLogin() {
 
           <div>
             <div className="flex justify-between items-baseline mb-1">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">סיסמה</label>
-              <a href="/student/forgot-password" className="text-xs text-primary-600 hover:text-primary-700">
+              <label htmlFor="password" className="block text-sm font-medium text-fg/80">סיסמה</label>
+              <a href="/student/forgot-password" className="text-xs text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
                 שכחת סיסמה?
               </a>
             </div>
@@ -114,13 +114,13 @@ export default function StudentLogin() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="סיסמה"
               required
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
@@ -132,10 +132,10 @@ export default function StudentLogin() {
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <a href="/student/register" className="block text-sm text-primary-600 hover:text-primary-700">
+          <a href="/student/register" className="block text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
             אין לך חשבון? הרשמה
           </a>
-          <a href="/teacher/login" className="block text-xs text-gray-400 hover:text-gray-600">
+          <a href="/teacher/login" className="block text-xs text-fg/40 hover:text-fg/70">
             כניסה למורה
           </a>
         </div>

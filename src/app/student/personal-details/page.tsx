@@ -127,20 +127,20 @@ export default function PersonalDetailsPage() {
     <div className="min-h-screen p-4 max-w-md mx-auto">
       <PageHeader backHref="/menu" title="פרטים אישיים" />
 
-      <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
+      <div className="bg-surface rounded-2xl shadow-md p-6 space-y-4">
         <div>
-          <div className="text-xs text-gray-400 mb-0.5">שם מלא</div>
-          <div className="font-semibold text-gray-800">{session?.full_name}</div>
+          <div className="text-xs text-fg/40 mb-0.5">שם מלא</div>
+          <div className="font-semibold text-fg">{session?.full_name}</div>
         </div>
         <div>
-          <div className="text-xs text-gray-400 mb-0.5">כיתה</div>
-          <div className="font-semibold text-gray-800">{session?.class_name}</div>
+          <div className="text-xs text-fg/40 mb-0.5">כיתה</div>
+          <div className="font-semibold text-fg">{session?.class_name}</div>
         </div>
 
         {session?.has_lesson_groups && (
           <div>
-            <div className="text-xs text-gray-400 mb-2">
-              כיתה נוכחית בשיעור {currentGroup && `— כיתה ${currentGroup}`}
+            <div className="text-xs text-fg/40 mb-2">
+              כיתה נוכחית בשיעור {currentGroup && `: כיתה ${currentGroup}`}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {GROUPS.map(group => (
@@ -151,28 +151,28 @@ export default function PersonalDetailsPage() {
                   className={`font-bold py-3 rounded-lg transition disabled:opacity-50 ${
                     currentGroup === group
                       ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-black/5 dark:bg-white/5 text-fg/80 hover:bg-black/10 dark:hover:bg-white/10'
                   }`}
                 >
                   {saving === group ? '...' : `כיתה ${group}`}
                 </button>
               ))}
             </div>
-            {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
+            {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-2">{error}</p>}
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md p-6 mt-4">
-        <h2 className="text-sm font-semibold text-gray-500 mb-3">הביצועים שלי</h2>
+      <div className="bg-surface rounded-2xl shadow-md p-6 mt-4">
+        <h2 className="text-sm font-semibold text-fg/60 mb-3">הביצועים שלי</h2>
         {stats === null ? (
-          <p className="text-sm text-gray-400">טוען...</p>
+          <p className="text-sm text-fg/40">טוען...</p>
         ) : (
           <div className="space-y-3">
             {stats.map(stat => (
               <div key={stat.key} className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">{stat.label}</span>
-                <span className="font-semibold text-gray-800">{stat.value}</span>
+                <span className="text-fg/60">{stat.label}</span>
+                <span className="font-semibold text-fg">{stat.value}</span>
               </div>
             ))}
           </div>

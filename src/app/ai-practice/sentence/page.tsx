@@ -9,19 +9,19 @@ import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
 
 const LEVEL_LABELS: Record<number, string> = {
-  1: 'מילון יומיומי בסיסי — בית, משפחה, בית ספר',
-  2: 'פעולות ומצבים — עבודה, נסיעה, קנייה',
-  3: 'נושאים מגוונים — ספורט, מוזיקה, טיול',
-  4: 'אוצר מילים מתקדם — טכנולוגיה, חברה, מדע',
-  5: 'מושגים אקדמיים — ניתוח, השוואה, מסקנות',
+  1: 'מילון יומיומי בסיסי: בית, משפחה, בית ספר',
+  2: 'פעולות ומצבים: עבודה, נסיעה, קנייה',
+  3: 'נושאים מגוונים: ספורט, מוזיקה, טיול',
+  4: 'אוצר מילים מתקדם: טכנולוגיה, חברה, מדע',
+  5: 'מושגים אקדמיים: ניתוח, השוואה, מסקנות',
 }
 
 const LEVEL_COLORS: Record<number, string> = {
-  1: 'border-green-300 bg-green-50 text-green-700',
-  2: 'border-primary-300 bg-primary-50 text-primary-700',
-  3: 'border-yellow-300 bg-yellow-50 text-yellow-700',
-  4: 'border-orange-300 bg-orange-50 text-orange-700',
-  5: 'border-red-300 bg-red-50 text-red-700',
+  1: 'border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400',
+  2: 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-500/10 dark:text-primary-400',
+  3: 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-400',
+  4: 'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-400',
+  5: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400',
 }
 
 type Phase = 'pick' | 'gen-loading' | 'input' | 'eval-loading' | 'result'
@@ -94,8 +94,8 @@ export default function AISentencePage() {
     } finally { setTtsLoading(false) }
   }
 
-  const scoreColor = (s: number) => s >= 8 ? 'text-green-600' : s >= 6 ? 'text-yellow-600' : 'text-red-500'
-  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200' : s >= 6 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+  const scoreColor = (s: number) => s >= 8 ? 'text-green-600 dark:text-green-400' : s >= 6 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
+  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : s >= 6 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
 
   return (
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
@@ -103,7 +103,7 @@ export default function AISentencePage() {
         backHref="/menu"
         backLabel="← תפריט"
         title="בניית משפטים עם AI"
-        titleColorClass="text-purple-700"
+        titleColorClass="text-purple-700 dark:text-purple-400"
         subtitle={level ? `רמה ${level}` : undefined}
         right={scores.length > 0 ? `${(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10` : undefined}
       />
@@ -111,7 +111,7 @@ export default function AISentencePage() {
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
         <>
-          <p className="text-center text-gray-500 text-sm mb-6">בחר רמה וה-AI יצור לך תרגיל בניית משפט</p>
+          <p className="text-center text-fg/60 text-sm mb-6">בחר רמה וה-AI יצור לך תרגיל בניית משפט</p>
           <div className="grid gap-3">
             {[1, 2, 3, 4, 5].map(lvl => (
               <button key={lvl} onClick={() => generateExercise(lvl)}
@@ -126,9 +126,9 @@ export default function AISentencePage() {
               </button>
             ))}
           </div>
-          {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-4">{error}</p>}
           {scores.length > 0 && (
-            <div className="mt-6 bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-600">
+            <div className="mt-6 bg-black/5 dark:bg-white/5 rounded-xl p-4 text-center text-sm text-fg/70">
               ממוצע כולל: {(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10 ({scores.length} תרגילים)
             </div>
           )}
@@ -139,24 +139,24 @@ export default function AISentencePage() {
       {phase === 'gen-loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-spin">🤖</div>
-          <p className="text-gray-500">יוצר תרגיל ברמה {level}...</p>
+          <p className="text-fg/60">יוצר תרגיל ברמה {level}...</p>
         </div>
       )}
 
       {/* ── INPUT ── */}
       {phase === 'input' && wordList && (
         <>
-          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-4 text-sm text-primary-800">
+          <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-4 text-sm text-primary-800 dark:text-primary-300">
             <p>השתמש בכל המילים <strong>★ המסומנות בכחול</strong> ובלפחות <strong>6 מילים</strong> מהרשימה.</p>
-            <p className="text-xs text-primary-600 mt-0.5">נושא: {wordList.theme}</p>
+            <p className="text-xs text-primary-600 dark:text-primary-400 mt-0.5">נושא: {wordList.theme}</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase mb-3">המילים שלך</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
+            <p className="text-xs font-semibold text-fg/40 uppercase mb-3">המילים שלך</p>
             <div className="flex flex-wrap gap-2">
               {wordList.words.map((w, i) => (
                 <span key={i} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
-                  w.starred ? 'bg-primary-600 text-white border-primary-600 shadow-sm' : 'bg-gray-100 text-gray-700 border-gray-200'
+                  w.starred ? 'bg-primary-600 text-white border-primary-600 shadow-sm' : 'bg-black/5 dark:bg-white/5 text-fg/80 border-card-border'
                 }`}>
                   {w.starred ? '★ ' : ''}{w.text}
                 </span>
@@ -164,18 +164,18 @@ export default function AISentencePage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium text-gray-700">המשפט שלך</span>
+              <span className="text-sm font-medium text-fg/80">המשפט שלך</span>
               <div className="flex gap-2">
                 {sentence && (
                   <button onClick={() => { stopListening(); setSentence('') }}
-                    className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded">נקה</button>
+                    className="text-xs text-fg/40 hover:text-red-500 px-2 py-1 rounded">נקה</button>
                 )}
                 {speechSupported && (
                   <button onClick={() => isListening ? stopListening() : startListening(sentence)}
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
-                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-500/20'
                     }`}>
                     {isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
                   </button>
@@ -184,9 +184,9 @@ export default function AISentencePage() {
             </div>
             <textarea value={sentence} onChange={e => setSentence(e.target.value)}
               placeholder="כתוב כאן את המשפט שלך בעברית, או הקלט את עצמך..."
-              rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-800 text-base"
+              rows={4} className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 bg-surface text-fg text-base"
             />
-            {isListening && <p className="text-xs text-red-500 mt-1.5 animate-pulse">🎤 מקליט... לחץ ״עצור״ כשתסיים.</p>}
+            {isListening && <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 animate-pulse">🎤 מקליט... לחץ ״עצור״ כשתסיים.</p>}
           </div>
 
           <button onClick={submitSentence} disabled={!sentence.trim()}
@@ -200,7 +200,7 @@ export default function AISentencePage() {
       {phase === 'eval-loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-bounce">🤔</div>
-          <p className="text-gray-500">בודק את המשפט שלך...</p>
+          <p className="text-fg/60">בודק את המשפט שלך...</p>
         </div>
       )}
 
@@ -209,37 +209,37 @@ export default function AISentencePage() {
         <>
           <div className={`rounded-2xl border p-5 text-center mb-4 ${scoreBg(feedback.score)}`}>
             <div className={`text-6xl font-bold ${scoreColor(feedback.score)}`}>{feedback.score}</div>
-            <div className="text-gray-500 text-sm">מתוך 10</div>
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="text-fg/60 text-sm">מתוך 10</div>
+            <div className="mt-2 text-xs text-fg/60">
               {feedback.used_all_starred
-                ? <span className="text-green-600">✓ כל מילות החובה שומשו</span>
-                : <span className="text-red-500">✗ חסרו: {feedback.missing_starred.join(', ')}</span>}
+                ? <span className="text-green-600 dark:text-green-400">✓ כל מילות החובה שומשו</span>
+                : <span className="text-red-500 dark:text-red-400">✗ חסרו: {feedback.missing_starred.join(', ')}</span>}
               <span className="mr-2">&bull; {feedback.words_used_count} מילים שומשו</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-3">
-            <p className="text-xs text-gray-400 mb-1">המשפט שלך</p>
-            <p className="text-gray-800 leading-relaxed">{sentence}</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
+            <p className="text-xs text-fg/40 mb-1">המשפט שלך</p>
+            <p className="text-fg leading-relaxed">{sentence}</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-            <h3 className="font-semibold text-gray-800 mb-2">💬 משוב</h3>
-            <p className="text-gray-700 text-sm leading-relaxed">{feedback.feedback}</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-3">
+            <h3 className="font-semibold text-fg mb-2">💬 משוב</h3>
+            <p className="text-fg/80 text-sm leading-relaxed">{feedback.feedback}</p>
           </div>
 
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4">
+          <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-green-800">✨ גרסה מושלמת</h3>
+              <h3 className="font-semibold text-green-800 dark:text-green-300">✨ גרסה מושלמת</h3>
               <button onClick={playImproved} disabled={ttsLoading}
-                className="flex items-center gap-1 text-xs bg-white border border-green-300 text-green-700 px-2.5 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
+                className="flex items-center gap-1 text-xs bg-surface border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-2.5 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-50 font-medium">
                 <span>{ttsLoading ? '⏳' : '🔊'}</span>
                 <span>{ttsLoading ? 'טוען...' : 'האזן לגרסה המושלמת'}</span>
               </button>
             </div>
-            <p className="text-green-900 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
+            <p className="text-green-900 dark:text-green-300 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
             {feedback.improvement_note && (
-              <p className="text-green-700 text-xs border-t border-green-200 pt-2 mt-2">{feedback.improvement_note}</p>
+              <p className="text-green-700 dark:text-green-400 text-xs border-t border-green-200 dark:border-green-800 pt-2 mt-2">{feedback.improvement_note}</p>
             )}
           </div>
 

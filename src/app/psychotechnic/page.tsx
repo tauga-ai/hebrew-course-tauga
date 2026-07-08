@@ -117,7 +117,7 @@ export default function PsychotechnicPage() {
       {/* ── SELECT SET ── */}
       {phase === 'select' && (
         <>
-          <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-5 text-sm text-primary-800 text-right">
+          <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-4 mb-5 text-sm text-primary-800 dark:text-primary-300 text-right">
             <p className="font-semibold mb-1">📋 איך זה עובד?</p>
             <p>ענית על מקבץ פסיכוטכני בדף הכתוב. בחר כאן את שם המקבץ שענית עליו, הכנס את התשובות שסימנת, ותקבל מיד את הציון שלך.</p>
           </div>
@@ -141,20 +141,20 @@ export default function PsychotechnicPage() {
       {/* ── INPUT ANSWERS ── */}
       {phase === 'input' && selectedSet && (
         <>
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
+          <div className="bg-surface rounded-2xl border border-card-border p-4 mb-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="font-semibold text-gray-800">{selectedSet.name}</span>
-              <span className="text-sm text-gray-500">{answeredCount}/{numQuestions} הוזנו</span>
+              <span className="font-semibold text-fg">{selectedSet.name}</span>
+              <span className="text-sm text-fg/60">{answeredCount}/{numQuestions} הוזנו</span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
+            <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
               <div className="bg-primary-500 h-1.5 rounded-full transition-all" style={{ width: `${(answeredCount / numQuestions) * 100}%` }} />
             </div>
           </div>
 
           <div className="space-y-3 mb-5">
             {Array.from({ length: numQuestions }, (_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="text-sm font-semibold text-gray-600 mb-3">שאלה {i + 1}</div>
+              <div key={i} className="bg-surface rounded-xl border border-card-border p-4">
+                <div className="text-sm font-semibold text-fg/70 mb-3">שאלה {i + 1}</div>
                 <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 3, 4].map(opt => (
                     <button
@@ -163,7 +163,7 @@ export default function PsychotechnicPage() {
                       className={`py-3 rounded-xl text-base font-bold transition border-2 ${
                         answers[i] === opt
                           ? 'border-primary-500 bg-primary-500 text-white shadow-md scale-105'
-                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-primary-300 hover:bg-primary-50'
+                          : 'border-card-border bg-black/5 dark:bg-white/5 text-fg/70 hover:border-primary-300 hover:bg-primary-50 dark:hover:bg-primary-500/10'
                       }`}
                     >
                       {opt}
@@ -189,30 +189,30 @@ export default function PsychotechnicPage() {
         <>
           {/* Score */}
           <div className={`rounded-2xl border p-6 text-center mb-4 ${
-            results.score / results.total >= 0.7 ? 'bg-green-50 border-green-200' :
-            results.score / results.total >= 0.5 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+            results.score / results.total >= 0.7 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' :
+            results.score / results.total >= 0.5 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
           }`}>
             <div className={`text-6xl font-bold ${
-              results.score / results.total >= 0.7 ? 'text-green-600' :
-              results.score / results.total >= 0.5 ? 'text-yellow-600' : 'text-red-500'
+              results.score / results.total >= 0.7 ? 'text-green-600 dark:text-green-400' :
+              results.score / results.total >= 0.5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
             }`}>{results.score}/{results.total}</div>
-            <div className="text-gray-500 text-sm mt-1">{Math.round((results.score / results.total) * 100)}% נכון</div>
-            <div className="text-gray-600 text-sm font-medium mt-1">{selectedSet.name}</div>
+            <div className="text-fg/60 text-sm mt-1">{Math.round((results.score / results.total) * 100)}% נכון</div>
+            <div className="text-fg/70 text-sm font-medium mt-1">{selectedSet.name}</div>
           </div>
 
           {/* Per-question results */}
           <div className="space-y-2 mb-5">
             {results.results.map(r => (
               <div key={r.q} className={`rounded-xl border p-3 flex items-center justify-between ${
-                r.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                r.isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-3">
                   <span className="text-lg">{r.isCorrect ? '✅' : '❌'}</span>
-                  <span className="text-sm font-medium text-gray-700">שאלה {r.q}</span>
+                  <span className="text-sm font-medium text-fg/80">שאלה {r.q}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="text-gray-500">סימנת: <strong>{r.student}</strong></span>
-                  {!r.isCorrect && <span className="text-green-700">נכון: <strong>{r.correct}</strong></span>}
+                  <span className="text-fg/60">סימנת: <strong>{r.student}</strong></span>
+                  {!r.isCorrect && <span className="text-green-700 dark:text-green-400">נכון: <strong>{r.correct}</strong></span>}
                 </div>
               </div>
             ))}
@@ -224,7 +224,7 @@ export default function PsychotechnicPage() {
               מקבץ נוסף
             </button>
             <button onClick={() => router.push('/menu')}
-              className="flex-1 border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition">
+              className="flex-1 border border-card-border text-fg/70 font-semibold py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition">
               חזור לתפריט
             </button>
           </div>

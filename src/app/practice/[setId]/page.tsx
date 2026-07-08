@@ -91,13 +91,13 @@ export default function PracticePage() {
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       <PageHeader backHref="/menu" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} right={`${answered}/${total}`} />
 
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-6">
         <div className="bg-primary-500 h-2 rounded-full transition-all" style={{ width: `${(answered / total) * 100}%` }} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
-        <div className="text-xs text-gray-400 mb-3">שאלה {currentIdx + 1} מתוך {total}</div>
-        <p className="text-gray-800 leading-relaxed text-base whitespace-pre-line">{q?.question_text}</p>
+      <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
+        <div className="text-xs text-fg/40 mb-3">שאלה {currentIdx + 1} מתוך {total}</div>
+        <p className="text-fg leading-relaxed text-base whitespace-pre-line">{q?.question_text}</p>
       </div>
 
       <div key={`opts-${q?.id}`} className="space-y-3 mb-6">
@@ -108,11 +108,11 @@ export default function PracticePage() {
               key={`${q?.id}-${opt.num}`}
               onClick={() => selectAnswer(q.id, opt.num)}
               className={`w-full text-right rounded-xl border p-4 transition flex items-center gap-3 ${
-                selected ? 'bg-primary-50 border-primary-400 text-primary-800' : 'bg-white border-gray-200 hover:border-primary-300 text-gray-800'
+                selected ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-primary-800 dark:text-primary-300' : 'bg-surface border-card-border hover:border-primary-300 text-fg'
               }`}
             >
               <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                selected ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'
+                selected ? 'bg-primary-500 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'
               }`}>
                 {hebrewLabels[i]}
               </span>
@@ -124,23 +124,23 @@ export default function PracticePage() {
 
       <div className="flex justify-between items-center mb-4">
         <button onClick={() => setCurrentIdx(i => Math.max(0, i - 1))} disabled={currentIdx === 0}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50">
+          className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">
           ← הקודמת
         </button>
         <div className="flex gap-1.5">
           {questions.map((qx, i) => (
             <button key={qx.id} onClick={() => setCurrentIdx(i)}
-              className={`w-2.5 h-2.5 rounded-full transition ${i === currentIdx ? 'bg-primary-600' : answers[qx.id] ? 'bg-primary-300' : 'bg-gray-200'}`}
+              className={`w-2.5 h-2.5 rounded-full transition ${i === currentIdx ? 'bg-primary-600' : answers[qx.id] ? 'bg-primary-300' : 'bg-gray-200 dark:bg-white/10'}`}
             />
           ))}
         </div>
         <button onClick={() => setCurrentIdx(i => Math.min(total - 1, i + 1))} disabled={currentIdx === total - 1}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50">
+          className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">
           הבאה →
         </button>
       </div>
 
-      {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+      {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{error}</p>}
 
       <button onClick={handleSubmit} disabled={submitting}
         className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition disabled:opacity-50">

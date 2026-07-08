@@ -4,15 +4,16 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 const NAV_ITEMS: { href: string; label: string; classes: string }[] = [
-  { href: '/teacher/dashboard', label: 'לוח בקרה', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100' },
-  { href: '/teacher/students', label: 'הבנת הנקרא', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100' },
-  { href: '/teacher/activity', label: 'משפטים + ראיון', classes: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
-  { href: '/teacher/simulation-report', label: '🏆 סימולציה', classes: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
-  { href: '/teacher/psychotechnic', label: '🧠 פסיכוטכני', classes: 'bg-teal-50 text-teal-700 hover:bg-teal-100' },
-  { href: '/teacher/dapar', label: 'דפ"ר', classes: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
-  { href: '/teacher/tzav-rishon', label: 'צו ראשון פסיכוטכני בערבית', classes: 'bg-rose-50 text-rose-700 hover:bg-rose-100' },
+  { href: '/teacher/dashboard', label: 'לוח בקרה', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20' },
+  { href: '/teacher/students', label: 'הבנת הנקרא', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20' },
+  { href: '/teacher/activity', label: 'משפטים + ראיון', classes: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20' },
+  { href: '/teacher/simulation-report', label: '🏆 סימולציה', classes: 'bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/20' },
+  { href: '/teacher/psychotechnic', label: '🧠 פסיכוטכני', classes: 'bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-400 dark:hover:bg-teal-500/20' },
+  { href: '/teacher/dapar', label: 'דפ"ר', classes: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20' },
+  { href: '/teacher/tzav-rishon', label: 'צו ראשון פסיכוטכני בערבית', classes: 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20' },
 ]
 
 interface TeacherClassOption {
@@ -61,7 +62,7 @@ function ClassSelector() {
     <select
       value={activeId}
       onChange={e => handleChange(e.target.value)}
-      className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700"
+      className="text-sm border border-card-border rounded-lg px-2 py-1.5 bg-surface text-fg/80"
     >
       {classes.map(c => (
         <option key={c.id} value={c.id}>{c.name}</option>
@@ -96,7 +97,8 @@ export default function TeacherProtectedLayout({ children }: { children: React.R
         </nav>
         <div className="flex items-center gap-3 flex-shrink-0">
           <ClassSelector />
-          <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
+          <ThemeToggle />
+          <button onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
             יציאה
           </button>
         </div>

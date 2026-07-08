@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError('שגיאה בעדכון הסיסמה — נסה/י לבקש קישור חדש')
+      setError('שגיאה בעדכון הסיסמה, נסה/י לבקש קישור חדש')
       setLoading(false)
       return
     }
@@ -57,9 +57,9 @@ export default function ResetPasswordPage() {
   if (!validSession) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8 text-center space-y-4">
-          <h1 className="text-xl font-bold text-red-600">הקישור לא בתוקף</h1>
-          <p className="text-gray-600 text-sm">
+        <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8 text-center space-y-4">
+          <h1 className="text-xl font-bold text-red-600 dark:text-red-400">הקישור לא בתוקף</h1>
+          <p className="text-fg/70 text-sm">
             הקישור לאיפוס הסיסמה פג תוקף או כבר נוצל. אפשר לבקש קישור חדש.
           </p>
           <a
@@ -75,19 +75,19 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">סיסמה חדשה</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">בחר/י סיסמה חדשה לחשבון שלך</p>
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">סיסמה חדשה</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">בחר/י סיסמה חדשה לחשבון שלך</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">סיסמה חדשה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-fg/80 mb-1">סיסמה חדשה</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="לפחות 6 תווים"
               minLength={6}
               required
@@ -95,20 +95,20 @@ export default function ResetPasswordPage() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">אימות סיסמה</label>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-fg/80 mb-1">אימות סיסמה</label>
             <input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="הכנס/י שוב את הסיסמה"
               minLength={6}
               required
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
           <button
             type="submit"

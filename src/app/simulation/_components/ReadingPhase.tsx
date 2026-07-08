@@ -50,14 +50,14 @@ export function ReadingPhase({
       {stepHeader}
       {progressBar}
       {errorBanner}
-      <div className="flex justify-between text-sm text-gray-500 mb-4">
+      <div className="flex justify-between text-sm text-fg/60 mb-4">
         <span>שאלה {currentQ + 1} / {questions.length}</span>
         <span>{answered} נענו</span>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
-        {isNewPassage && <p className="text-gray-700 leading-relaxed text-sm mb-3 pb-3 border-b border-gray-100 whitespace-pre-line">{q?.passage_text}</p>}
-        {groupByPassage && !isNewPassage && <p className="text-xs text-gray-400 mb-2 italic">(אותו קטע)</p>}
-        <p className="text-gray-800 font-semibold leading-relaxed">{q?.question_text}</p>
+      <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
+        {isNewPassage && <p className="text-fg/80 leading-relaxed text-sm mb-3 pb-3 border-b border-card-border whitespace-pre-line">{q?.passage_text}</p>}
+        {groupByPassage && !isNewPassage && <p className="text-xs text-fg/40 mb-2 italic">(אותו קטע)</p>}
+        <p className="text-fg font-semibold leading-relaxed">{q?.question_text}</p>
       </div>
       <div key={`${keyPrefix}-${q?.id}`} className="space-y-3 mb-4">
         {opts.map((opt, i) => {
@@ -65,8 +65,8 @@ export function ReadingPhase({
           return (
             <button key={`${q?.id}-${opt.num}`}
               onClick={() => setReadingAnswers(prev => ({ ...prev, [q.id]: opt.num }))}
-              className={`w-full text-right rounded-xl border p-3.5 transition flex items-center gap-3 ${sel ? 'bg-primary-50 border-primary-400' : 'bg-white border-gray-200 hover:border-primary-300'}`}>
-              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{HEBREW[i]}</span>
+              className={`w-full text-right rounded-xl border p-3.5 transition flex items-center gap-3 ${sel ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400' : 'bg-surface border-card-border hover:border-primary-300'}`}>
+              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-primary-500 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'}`}>{HEBREW[i]}</span>
               <span className="text-sm">{opt.text}</span>
             </button>
           )
@@ -74,9 +74,9 @@ export function ReadingPhase({
       </div>
       <div className="flex justify-between">
         <button onClick={() => setCurrentQ(i => Math.max(0, i - 1))} disabled={currentQ === 0}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm disabled:opacity-30 hover:bg-gray-50">← הקודמת</button>
+          className="px-4 py-2 rounded-lg border border-card-border text-sm disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">← הקודמת</button>
         {currentQ < questions.length - 1
-          ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">הבאה →</button>
+          ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm hover:bg-black/5 dark:hover:bg-white/5">הבאה →</button>
           : <button onClick={onFinish} disabled={answered < questions.length || submitting}
               className="px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-primary-700">{submitting ? 'שולח...' : finishLabel}</button>
         }

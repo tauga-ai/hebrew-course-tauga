@@ -38,73 +38,73 @@ export default function ActivityPage() {
   if (loading) return <LoadingSpinner />
 
   const scoreColor = (s: number | null) => {
-    if (s === null) return 'text-gray-400'
-    return s >= 7 ? 'text-green-600' : s >= 5 ? 'text-yellow-600' : 'text-red-500'
+    if (s === null) return 'text-fg/40'
+    return s >= 7 ? 'text-green-600 dark:text-green-400' : s >= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
   }
 
   return (
     <>
-      <h1 className="font-bold text-primary-700 mb-6">פעילות תלמידים</h1>
+      <h1 className="font-bold text-primary-700 dark:text-primary-400 mb-6">פעילות תלמידים</h1>
 
       {/* Interview summary */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
-        <h2 className="font-semibold text-gray-800 mb-3">🎤 ראיון אישי</h2>
+      <div className="bg-surface rounded-2xl border border-card-border p-5 mb-5">
+        <h2 className="font-semibold text-fg mb-3">🎤 ראיון אישי</h2>
         <div className="flex gap-6">
           <div>
-            <div className="text-2xl font-bold text-gray-800">{interviewStats?.total ?? 0}</div>
-            <div className="text-xs text-gray-500">ניסיונות</div>
+            <div className="text-2xl font-bold text-fg">{interviewStats?.total ?? 0}</div>
+            <div className="text-xs text-fg/60">ניסיונות</div>
           </div>
           <div>
             <div className={`text-2xl font-bold ${scoreColor(interviewStats?.avg_score ?? null)}`}>
               {interviewStats?.avg_score != null ? `${Math.round(interviewStats.avg_score)}/100` : '—'}
             </div>
-            <div className="text-xs text-gray-500">ממוצע</div>
+            <div className="text-xs text-fg/60">ממוצע</div>
           </div>
         </div>
       </div>
 
       {/* Sentence building by set */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
-        <h2 className="font-semibold text-gray-800 mb-3">✍️ בניית משפטים — לפי סט</h2>
+      <div className="bg-surface rounded-2xl border border-card-border p-5 mb-5">
+        <h2 className="font-semibold text-fg mb-3">✍️ בניית משפטים, לפי סט</h2>
         <div className="grid grid-cols-3 gap-2">
           {sentenceStats.map(s => (
-            <div key={s.set_id} className="bg-gray-50 rounded-xl p-3 text-center">
-              <div className="text-xs text-gray-500 mb-1">סט {s.set_id}</div>
+            <div key={s.set_id} className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-xs text-fg/60 mb-1">סט {s.set_id}</div>
               <div className={`text-lg font-bold ${scoreColor(s.avg_score)}`}>
                 {s.avg_score != null ? `${s.avg_score.toFixed(1)}/10` : '—'}
               </div>
-              <div className="text-xs text-gray-400">{s.attempts} ניסיונות</div>
+              <div className="text-xs text-fg/40">{s.attempts} ניסיונות</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Per-student table */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
-        <h2 className="font-semibold text-gray-800 mb-3">👤 פירוט לפי תלמיד</h2>
+      <div className="bg-surface rounded-2xl border border-card-border p-5">
+        <h2 className="font-semibold text-fg mb-3">👤 פירוט לפי תלמיד</h2>
         {students.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4">אין נתונים עדיין</p>
+          <p className="text-fg/40 text-sm text-center py-4">אין נתונים עדיין</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-right p-2 font-semibold text-gray-700">תלמיד</th>
-                  <th className="p-2 text-center font-semibold text-gray-700">משפטים (ניסיונות)</th>
-                  <th className="p-2 text-center font-semibold text-gray-700">ממוצע משפטים</th>
-                  <th className="p-2 text-center font-semibold text-gray-700">ראיונות</th>
-                  <th className="p-2 text-center font-semibold text-gray-700">ממוצע ראיון</th>
+                <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
+                  <th className="text-right p-2 font-semibold text-fg/80">תלמיד</th>
+                  <th className="p-2 text-center font-semibold text-fg/80">משפטים (ניסיונות)</th>
+                  <th className="p-2 text-center font-semibold text-fg/80">ממוצע משפטים</th>
+                  <th className="p-2 text-center font-semibold text-fg/80">ראיונות</th>
+                  <th className="p-2 text-center font-semibold text-fg/80">ממוצע ראיון</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((st, i) => (
-                  <tr key={st.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-2 font-medium text-gray-800">{st.name}</td>
-                    <td className="p-2 text-center text-gray-600">{st.sentence_attempts}</td>
+                  <tr key={st.id} className={i % 2 === 0 ? 'bg-surface' : 'bg-black/5 dark:bg-white/5'}>
+                    <td className="p-2 font-medium text-fg">{st.name}</td>
+                    <td className="p-2 text-center text-fg/70">{st.sentence_attempts}</td>
                     <td className={`p-2 text-center font-semibold ${scoreColor(st.sentence_avg)}`}>
                       {st.sentence_avg != null ? `${st.sentence_avg.toFixed(1)}/10` : '—'}
                     </td>
-                    <td className="p-2 text-center text-gray-600">{st.interview_count}</td>
+                    <td className="p-2 text-center text-fg/70">{st.interview_count}</td>
                     <td className={`p-2 text-center font-semibold ${scoreColor(st.interview_avg != null ? st.interview_avg / 10 : null)}`}>
                       {st.interview_avg != null ? `${Math.round(st.interview_avg)}/100` : '—'}
                     </td>

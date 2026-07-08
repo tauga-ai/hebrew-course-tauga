@@ -69,28 +69,28 @@ function CompleteProfileForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">כמעט סיימנו</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">רק עוד שני פרטים לפני שמתחילים</p>
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">כמעט סיימנו</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">רק עוד שני פרטים לפני שמתחילים</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-              שם מלא בעברית — כפי שהמורה מכיר/ה אותך
+            <label htmlFor="fullName" className="block text-sm font-medium text-fg/80 mb-1">
+              שם מלא בעברית, כפי שהמורה מכיר/ה אותך
             </label>
             <input
               id="fullName"
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="שם מלא"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">באיזו שפה את/ה לומד/ת?</label>
+            <label className="block text-sm font-medium text-fg/80 mb-1">באיזו שפה את/ה לומד/ת?</label>
             <div className="grid grid-cols-2 gap-3">
               {LANGUAGES.map(lang => (
                 <button
@@ -100,7 +100,7 @@ function CompleteProfileForm() {
                   className={`py-2.5 rounded-lg font-semibold border transition ${
                     classCode === lang
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                      : 'bg-surface text-fg/80 border-card-border hover:border-primary-400'
                   }`}
                 >
                   {lang}
@@ -109,7 +109,7 @@ function CompleteProfileForm() {
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
           <button
             type="submit"

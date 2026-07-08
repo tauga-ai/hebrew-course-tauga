@@ -33,7 +33,7 @@ export default function SentenceSetPage() {
 
   if (!set) return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-400">סט לא נמצא</p>
+      <p className="text-fg/40">סט לא נמצא</p>
     </div>
   )
 
@@ -100,8 +100,8 @@ export default function SentenceSetPage() {
     }
   }
 
-  const scoreColor = (s: number) => s >= 8 ? 'text-green-600' : s >= 6 ? 'text-yellow-600' : 'text-red-500'
-  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200' : s >= 6 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+  const scoreColor = (s: number) => s >= 8 ? 'text-green-600 dark:text-green-400' : s >= 6 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
+  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : s >= 6 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
   const scoreLabel = (s: number) => s >= 9 ? 'מצוין!' : s >= 7 ? 'טוב מאוד' : s >= 5 ? 'סביר' : 'צריך שיפור'
 
   return (
@@ -109,7 +109,7 @@ export default function SentenceSetPage() {
       <PageHeader backHref="/sentence" subtitle={set.title} right={`${exerciseIdx + 1}/${set.exercises.length}`} />
 
       {/* Progress */}
-      <div className="w-full bg-gray-200 rounded-full h-1.5 mb-6">
+      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mb-6">
         <div
           className="bg-primary-500 h-1.5 rounded-full transition-all"
           style={{ width: `${((exerciseIdx + (phase === 'result' ? 1 : 0)) / set.exercises.length) * 100}%` }}
@@ -120,7 +120,7 @@ export default function SentenceSetPage() {
       {phase === 'loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-bounce">🤔</div>
-          <p className="text-gray-500">בודק את המשפט שלך...</p>
+          <p className="text-fg/60">בודק את המשפט שלך...</p>
           <div className="flex gap-2">
             {[0,1,2].map(i => (
               <div key={i} className="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
@@ -133,19 +133,19 @@ export default function SentenceSetPage() {
       {phase === 'input' && (
         <>
           {/* Rules reminder */}
-          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 mb-4 text-sm text-primary-800">
+          <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-4 text-sm text-primary-800 dark:text-primary-300">
             <p>
               השתמש בכל המילים <strong>המסומנות בכוכב ★</strong> (חובה)
               ובלפחות <strong>6 מילים</strong> מהרשימה הכללית.
             </p>
-            <p className="text-primary-600 text-xs mt-1">
-              💡 צורות שונות של מילה נספרות — למשל ״חברים״ וגם ״חבריי״
+            <p className="text-primary-600 dark:text-primary-400 text-xs mt-1">
+              💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״
             </p>
           </div>
 
           {/* Word chips */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase mb-3">המילים שלך</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
+            <p className="text-xs font-semibold text-fg/40 uppercase mb-3">המילים שלך</p>
             <div className="flex flex-wrap gap-2">
               {exercise.words.map((w, i) => (
                 <span
@@ -153,7 +153,7 @@ export default function SentenceSetPage() {
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
                     w.starred
                       ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                      : 'bg-gray-100 text-gray-700 border-gray-200'
+                      : 'bg-black/5 dark:bg-white/5 text-fg/80 border-card-border'
                   }`}
                 >
                   {w.starred ? '★ ' : ''}{w.text}
@@ -163,14 +163,14 @@ export default function SentenceSetPage() {
           </div>
 
           {/* Input area */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium text-gray-700">המשפט שלך</span>
+              <span className="text-sm font-medium text-fg/80">המשפט שלך</span>
               <div className="flex gap-2">
                 {sentence && (
                   <button
                     onClick={() => { stopListening(); setSentence('') }}
-                    className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded"
+                    className="text-xs text-fg/40 hover:text-red-500 px-2 py-1 rounded"
                   >
                     נקה
                   </button>
@@ -181,7 +181,7 @@ export default function SentenceSetPage() {
                     className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ${
                       isListening
                         ? 'bg-red-500 text-white animate-pulse'
-                        : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+                        : 'bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-500/20'
                     }`}
                   >
                     {isListening ? '⏹ עצור' : '🎤 הקלט'}
@@ -194,15 +194,15 @@ export default function SentenceSetPage() {
               onChange={e => setSentence(e.target.value)}
               placeholder="כתוב כאן את המשפט שלך בעברית, או לחץ על 🎤..."
               rows={4}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 text-gray-800 text-base"
+              className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg text-base"
             />
             {isListening && (
-              <p className="text-xs text-red-500 mt-1.5 animate-pulse">
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 animate-pulse">
                 🎤 מקליט... דבר בעברית. לחץ ״עצור״ כשתסיים.
               </p>
             )}
             {speechSupported && !isListening && sentence && (
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="text-xs text-fg/40 mt-1.5">
                 💡 לחץ שוב על 🎤 כדי להוסיף עוד דיבור לטקסט
               </p>
             )}
@@ -224,53 +224,53 @@ export default function SentenceSetPage() {
           {/* Score card */}
           <div className={`rounded-2xl border p-5 text-center mb-4 ${scoreBg(feedback.score)}`}>
             <div className={`text-6xl font-bold ${scoreColor(feedback.score)}`}>{feedback.score}</div>
-            <div className="text-gray-500 text-sm">מתוך 10</div>
+            <div className="text-fg/60 text-sm">מתוך 10</div>
             <div className={`text-lg font-semibold mt-1 ${scoreColor(feedback.score)}`}>
               {scoreLabel(feedback.score)}
             </div>
-            <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+            <div className="mt-2 text-xs text-fg/60 space-y-0.5">
               {feedback.used_all_starred
-                ? <p className="text-green-600">✓ כל מילות החובה שומשו</p>
-                : <p className="text-red-500">✗ חסרו מילות חובה: <strong>{feedback.missing_starred.join(', ')}</strong></p>
+                ? <p className="text-green-600 dark:text-green-400">✓ כל מילות החובה שומשו</p>
+                : <p className="text-red-500 dark:text-red-400">✗ חסרו מילות חובה: <strong>{feedback.missing_starred.join(', ')}</strong></p>
               }
               <p>{feedback.words_used_count} מילים מהרשימה שומשו</p>
               {feedback.score <= 8 && feedback.score >= 7 && feedback.used_all_starred && (
-                <p className="text-yellow-600 text-xs mt-1">(-{10 - feedback.score} על דקדוק/ניסוח)</p>
+                <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">(-{10 - feedback.score} על דקדוק/ניסוח)</p>
               )}
             </div>
           </div>
 
           {/* Your sentence */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-3">
-            <p className="text-xs text-gray-400 mb-1">המשפט שכתבת</p>
-            <p className="text-gray-800 leading-relaxed">{sentence}</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
+            <p className="text-xs text-fg/40 mb-1">המשפט שכתבת</p>
+            <p className="text-fg leading-relaxed">{sentence}</p>
           </div>
 
           {/* Feedback */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-3">
-            <h3 className="font-semibold text-gray-800 mb-2">💬 משוב</h3>
-            <p className="text-gray-700 text-sm leading-relaxed">{feedback.feedback}</p>
+          <div className="bg-surface rounded-2xl border border-card-border p-5 mb-3">
+            <h3 className="font-semibold text-fg mb-2">💬 משוב</h3>
+            <p className="text-fg/80 text-sm leading-relaxed">{feedback.feedback}</p>
           </div>
 
           {/* Improved sentence */}
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4">
+          <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-green-800">✨ גרסה מושלמת</h3>
+              <h3 className="font-semibold text-green-800 dark:text-green-300">✨ גרסה מושלמת</h3>
               <button
                 onClick={playImproved}
                 disabled={improvedAudioLoading}
-                className="flex items-center gap-1 text-xs bg-white border border-green-300 text-green-700 px-2.5 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium"
+                className="flex items-center gap-1 text-xs bg-surface border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-2.5 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-50 font-medium"
               >
                 <span>{improvedAudioLoading ? '⏳' : '🔊'}</span>
                 <span>{improvedAudioLoading ? 'טוען...' : 'האזן לגרסה המושלמת'}</span>
               </button>
             </div>
-            <p className="text-green-900 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
+            <p className="text-green-900 dark:text-green-300 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
             {feedback.improvement_note && (
-              <p className="text-green-700 text-xs border-t border-green-200 pt-2 mt-2">{feedback.improvement_note}</p>
+              <p className="text-green-700 dark:text-green-400 text-xs border-t border-green-200 dark:border-green-800 pt-2 mt-2">{feedback.improvement_note}</p>
             )}
             {ttsError && (
-              <p className="text-red-500 text-xs mt-2">{ttsError}</p>
+              <p className="text-red-500 dark:text-red-400 text-xs mt-2">{ttsError}</p>
             )}
           </div>
 
@@ -282,7 +282,7 @@ export default function SentenceSetPage() {
           </button>
 
           {scores.length > 0 && (
-            <p className="text-center mt-3 text-sm text-gray-400">
+            <p className="text-center mt-3 text-sm text-fg/40">
               ממוצע עד כה: {(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10
             </p>
           )}

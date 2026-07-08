@@ -44,51 +44,51 @@ export default function StudentsPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-primary-700">ניתוח תלמידים</h1>
-        <p className="text-sm text-gray-500">{className}</p>
+        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">ניתוח תלמידים</h1>
+        <p className="text-sm text-fg/60">{className}</p>
       </div>
 
       {students.length === 0 ? (
-        <p className="text-center text-gray-400 mt-16">אין תלמידים עדיין</p>
+        <p className="text-center text-fg/40 mt-16">אין תלמידים עדיין</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full bg-white rounded-xl border border-gray-200 text-sm">
+          <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-right p-3 font-semibold text-gray-700">תלמיד</th>
+              <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
+                <th className="text-right p-3 font-semibold text-fg/80">תלמיד</th>
                 {setHeaders.map(h => (
-                  <th key={h.set_number} className="p-3 font-semibold text-gray-700 text-center whitespace-nowrap">
+                  <th key={h.set_number} className="p-3 font-semibold text-fg/80 text-center whitespace-nowrap">
                     סט {h.set_number}
                   </th>
                 ))}
-                <th className="p-3 font-semibold text-gray-700 text-center">ממוצע</th>
+                <th className="p-3 font-semibold text-fg/80 text-center">ממוצע</th>
               </tr>
             </thead>
             <tbody>
               {students.map((st, i) => (
-                <tr key={st.student_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="p-3 font-medium text-gray-800 border-b border-gray-100">{st.full_name}</td>
+                <tr key={st.student_id} className={i % 2 === 0 ? 'bg-surface' : 'bg-black/5 dark:bg-white/5'}>
+                  <td className="p-3 font-medium text-fg border-b border-card-border">{st.full_name}</td>
                   {setHeaders.map(h => {
                     const result = st.sets.find(s => s.set_number === h.set_number)
                     return (
-                      <td key={h.set_number} className="p-3 text-center border-b border-gray-100">
+                      <td key={h.set_number} className="p-3 text-center border-b border-card-border">
                         {result ? (
-                          <span className={`font-semibold ${result.score_percentage >= 70 ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`font-semibold ${result.score_percentage >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                             {Math.round(result.score_percentage)}%
                           </span>
                         ) : (
-                          <span className="text-gray-300">—</span>
+                          <span className="text-fg/30">—</span>
                         )}
                       </td>
                     )
                   })}
-                  <td className="p-3 text-center border-b border-gray-100">
+                  <td className="p-3 text-center border-b border-card-border">
                     {st.overall_avg !== null ? (
-                      <span className={`font-bold ${st.overall_avg >= 70 ? 'text-green-600' : 'text-red-500'}`}>
+                      <span className={`font-bold ${st.overall_avg >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                         {Math.round(st.overall_avg)}%
                       </span>
                     ) : (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-fg/30">—</span>
                     )}
                   </td>
                 </tr>

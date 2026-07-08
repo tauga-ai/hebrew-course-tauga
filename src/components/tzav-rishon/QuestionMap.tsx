@@ -18,7 +18,7 @@ export function QuestionMap({ count, currentIndex, results, onJump }: QuestionMa
             ? 'bg-green-500 text-white'
             : result === false
               ? 'bg-red-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-black/5 dark:bg-white/10 text-fg/70 hover:bg-black/10 dark:hover:bg-white/15'
         return (
           <button
             key={questionId}

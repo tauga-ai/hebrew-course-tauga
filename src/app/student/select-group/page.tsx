@@ -37,9 +37,9 @@ export default function SelectGroupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">איזו כיתה?</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">איזו כיתה?</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">
           {session?.full_name} · {session?.class_name}
           <br />
           תבחר/י את הכיתה שהמורה הכריז/ה עליה עכשיו בשיעור
@@ -58,7 +58,7 @@ export default function SelectGroupPage() {
           ))}
         </div>
 
-        {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+        {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-4">{error}</p>}
       </div>
     </div>
   )

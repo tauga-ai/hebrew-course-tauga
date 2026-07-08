@@ -91,12 +91,12 @@ export const SIMULATION_INTERVIEW_QUESTIONS: string[] = [
 ]
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  'אישי':    'bg-blue-100 text-blue-700',
-  'עברית':   'bg-purple-100 text-purple-700',
-  'משפחה':   'bg-pink-100 text-pink-700',
-  'לימודים': 'bg-yellow-100 text-yellow-700',
-  'פנאי':    'bg-green-100 text-green-700',
-  'צבא':     'bg-red-100 text-red-700',
-  'עתיד':    'bg-indigo-100 text-indigo-700',
-  'מאתגר':   'bg-orange-100 text-orange-700',
+  'אישי':    'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
+  'עברית':   'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400',
+  'משפחה':   'bg-pink-100 text-pink-700 dark:bg-pink-500/10 dark:text-pink-400',
+  'לימודים': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400',
+  'פנאי':    'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400',
+  'צבא':     'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400',
+  'עתיד':    'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400',
+  'מאתגר':   'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400',
 }

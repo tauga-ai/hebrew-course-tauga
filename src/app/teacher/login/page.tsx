@@ -36,37 +36,37 @@ export default function TeacherLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 mb-2">כניסת מורה</h1>
-        <p className="text-center text-gray-500 mb-8 text-sm">תרגול ניצנים</p>
+      <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">כניסת מורה</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">תרגול ניצנים</p>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">כתובת מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-fg/80 mb-1">כתובת מייל</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               placeholder="teacher@gmail.com"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-fg/80 mb-1">סיסמה</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
               required
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
@@ -78,7 +78,7 @@ export default function TeacherLogin() {
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-xs text-gray-400 hover:text-gray-600">
+          <a href="/student" className="text-xs text-fg/40 hover:text-fg/70">
             כניסת תלמיד
           </a>
         </div>

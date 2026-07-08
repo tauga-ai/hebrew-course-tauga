@@ -376,31 +376,31 @@ export default function SimulationPage() {
   const progressBar = (current: number) => (
     <div className="flex gap-1 mb-6">
       {STEPS.map((s, i) => (
-        <div key={i} className={`flex-1 h-1.5 rounded-full ${i < current ? 'bg-primary-500' : i === current ? 'bg-primary-300' : 'bg-gray-200'}`} />
+        <div key={i} className={`flex-1 h-1.5 rounded-full ${i < current ? 'bg-primary-500' : i === current ? 'bg-primary-300' : 'bg-gray-200 dark:bg-white/10'}`} />
       ))}
     </div>
   )
 
   const stepHeader = (step: number) => (
     <div className="flex justify-between items-center mt-4 mb-2">
-      <span className="text-sm text-gray-400">{STEPS[step].icon} {STEPS[step].label} — {STEPS[step].desc}</span>
+      <span className="text-sm text-fg/40">{STEPS[step].icon} {STEPS[step].label}: {STEPS[step].desc}</span>
     </div>
   )
 
   const errorBanner = (onRetry: () => void) => submitError && (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700 flex items-center justify-between gap-3">
+    <div className="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-800 rounded-xl p-3 mb-4 text-sm text-red-700 dark:text-red-400 flex items-center justify-between gap-3">
       <span>{submitError}</span>
-      <button onClick={onRetry} disabled={submitting} className="text-red-700 font-semibold underline flex-shrink-0 disabled:opacity-40">נסה שוב</button>
+      <button onClick={onRetry} disabled={submitting} className="text-red-700 dark:text-red-400 font-semibold underline flex-shrink-0 disabled:opacity-40">נסה שוב</button>
     </div>
   )
 
   // ── PHASE: INTRO ───────────────────────────────────────────────────────────
   if (phase === 'intro' && pendingDraft) return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
+      <div className="bg-surface rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">⏸️</div>
-        <h1 className="text-2xl font-bold text-primary-700 mb-2">נמצאה סימולציה פעילה</h1>
-        <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">נמצאה סימולציה פעילה</h1>
+        <p className="text-fg/70 mb-6 text-sm leading-relaxed">
           נראה שהתחלת סימולציה ולא סיימת אותה. אפשר להמשיך מאיפה שעצרת, או להתחיל מחדש.
         </p>
         <button onClick={resumeDraft}
@@ -408,7 +408,7 @@ export default function SimulationPage() {
           המשך מאיפה שעצרתי
         </button>
         <button onClick={discardDraftAndStartOver}
-          className="w-full border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition">
+          className="w-full border border-card-border text-fg/70 font-semibold py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition">
           התחל מחדש
         </button>
       </div>
@@ -417,14 +417,14 @@ export default function SimulationPage() {
 
   if (phase === 'intro') return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-md max-w-md w-full p-8 text-center">
+      <div className="bg-surface rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">🏆</div>
-        <h1 className="text-2xl font-bold text-primary-700 mb-2">סימולציה אמיתית</h1>
-        <p className="text-gray-500 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
-        <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">סימולציה אמיתית</h1>
+        <p className="text-fg/60 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
+        <p className="text-fg/70 mb-6 text-sm leading-relaxed">
           סימולציה מקיפה בת 4 חלקים המדמה תנאי בחינה אמיתיים.
         </p>
-        <div className="bg-gray-50 rounded-xl p-4 mb-6 text-right space-y-2">
+        <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 mb-6 text-right space-y-2">
           {STEPS.map((s, i) => (
             <div key={i} className="flex items-center gap-3 text-sm">
               <span className="text-lg">{s.icon}</span>
@@ -432,14 +432,14 @@ export default function SimulationPage() {
             </div>
           ))}
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6 text-xs text-yellow-800 text-right">
+        <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800 rounded-xl p-3 mb-6 text-xs text-yellow-800 dark:text-yellow-400 text-right">
           ⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.
         </div>
         <button onClick={startSimulation}
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
           התחל סימולציה
         </button>
-        <button onClick={() => router.push('/menu')} className="mt-3 text-sm text-gray-400 hover:text-gray-600">חזרה</button>
+        <button onClick={() => router.push('/menu')} className="mt-3 text-sm text-fg/40 hover:text-fg/70">חזרה</button>
       </div>
     </div>
   )
@@ -448,7 +448,7 @@ export default function SimulationPage() {
   if (phase === 'starting') return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <div className="text-5xl animate-bounce">📋</div>
-      <p className="text-gray-600 font-medium">טוען את הסימולציה...</p>
+      <p className="text-fg/70 font-medium">טוען את הסימולציה...</p>
     </div>
   )
 

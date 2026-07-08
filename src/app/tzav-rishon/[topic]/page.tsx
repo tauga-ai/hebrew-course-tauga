@@ -132,7 +132,7 @@ export default function TzavRishonPracticePage() {
       <PageHeader
         backHref="/tzav-rishon"
         title={isAr ? topicMeta.labelAr : topicMeta.labelHe}
-        titleColorClass="text-accent-tzav-rishon"
+        titleColorClass="text-accent-tzav-rishon-fg"
         right={<LtrIsolate>{`${answeredCount}/${total}`}</LtrIsolate>}
       />
 
@@ -142,7 +142,7 @@ export default function TzavRishonPracticePage() {
           className={`py-1.5 rounded-lg text-sm font-semibold border transition ${
             language === 'he'
               ? 'bg-accent-tzav-rishon text-white border-accent-tzav-rishon'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-accent-tzav-rishon'
+              : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
           עברית
@@ -152,25 +152,25 @@ export default function TzavRishonPracticePage() {
           className={`py-1.5 rounded-lg text-sm font-semibold border transition ${
             language === 'ar'
               ? 'bg-accent-tzav-rishon text-white border-accent-tzav-rishon'
-              : 'bg-white text-gray-700 border-gray-300 hover:border-accent-tzav-rishon'
+              : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
           العربية
         </button>
       </div>
 
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+      <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-4">
         <div
           className="bg-accent-tzav-rishon h-2 rounded-full transition-all"
           style={{ width: `${(answeredCount / total) * 100}%` }}
         />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
-        <div className="text-xs text-gray-400 mb-3">
+      <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
+        <div className="text-xs text-fg/40 mb-3">
           {isAr ? 'السؤال' : 'שאלה'} <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
         </div>
-        <p className="text-gray-800 leading-relaxed text-base">
+        <p className="text-fg leading-relaxed text-base">
           <Segments segments={current.question[language]} />
         </p>
       </div>
@@ -180,11 +180,11 @@ export default function TzavRishonPracticePage() {
           const optionNum = i + 1
           const isSelected = answered?.selected_option === optionNum
           const isTheCorrectOne = answered && answered.correct_option === optionNum
-          let stateClass = 'bg-white border-gray-200 hover:border-accent-tzav-rishon text-gray-800'
+          let stateClass = 'bg-surface border-card-border hover:border-accent-tzav-rishon text-fg'
           if (answered) {
-            if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800'
-            else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800'
-            else stateClass = 'bg-white border-gray-200 text-gray-500'
+            if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+            else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+            else stateClass = 'bg-surface border-card-border text-fg/60'
           }
           return (
             <button
@@ -193,7 +193,7 @@ export default function TzavRishonPracticePage() {
               disabled={!!answered || submitting}
               className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
             >
-              <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100">
+              <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/10">
                 {optionNum}
               </span>
               <span><Segments segments={opt[language]} /></span>
@@ -202,17 +202,17 @@ export default function TzavRishonPracticePage() {
         })}
       </div>
 
-      {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+      {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{error}</p>}
 
       {answered && (
-        <div className={`rounded-2xl p-4 mb-4 border ${answered.is_correct ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-          <div className={`font-bold mb-2 ${answered.is_correct ? 'text-green-700' : 'text-red-700'}`}>
+        <div className={`rounded-2xl p-4 mb-4 border ${answered.is_correct ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'}`}>
+          <div className={`font-bold mb-2 ${answered.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
             {answered.is_correct
               ? (isAr ? 'إجابة صحيحة!' : 'תשובה נכונה!')
               : (isAr ? 'إجابة غير صحيحة' : 'תשובה לא נכונה')}
           </div>
           {answered.explanation && (
-            <div className="text-sm text-gray-700 leading-relaxed">
+            <div className="text-sm text-fg/80 leading-relaxed">
               <Segments segments={answered.explanation[language]} />
             </div>
           )}
@@ -223,14 +223,14 @@ export default function TzavRishonPracticePage() {
         <button
           onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
           disabled={currentIndex === 0}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50"
+          className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
           {isAr ? '← السابق' : '← הקודמת'}
         </button>
         <button
           onClick={() => setCurrentIndex(i => Math.min(total - 1, i + 1))}
           disabled={currentIndex === total - 1}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50"
+          className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
           {isAr ? 'التالي →' : 'הבאה →'}
         </button>

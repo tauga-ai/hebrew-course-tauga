@@ -18,19 +18,19 @@ export function PageHeader({ backHref, onBack, backLabel = '← חזרה', title
   return (
     <div className="flex justify-between items-center mt-4 mb-6">
       {onBack ? (
-        <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600">
+        <button onClick={onBack} className="text-sm text-fg/40 hover:text-fg/70">
           {backLabel}
         </button>
       ) : (
-        <Link href={backHref!} className="text-sm text-gray-400 hover:text-gray-600">
+        <Link href={backHref!} className="text-sm text-fg/40 hover:text-fg/70">
           {backLabel}
         </Link>
       )}
       <div className="text-center">
         {title && <h1 className={`font-bold ${titleColorClass}`}>{title}</h1>}
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-fg/60">{subtitle}</p>}
       </div>
-      <div className="text-sm text-gray-500">{right}</div>
+      <div className="text-sm text-fg/60">{right}</div>
     </div>
   )
 }

@@ -56,8 +56,8 @@ export default function TzavRishonTeacherPage() {
   }
 
   const scoreColor = (v: number | null) => {
-    if (v === null) return 'text-gray-300'
-    return v >= 70 ? 'text-green-600' : v >= 50 ? 'text-yellow-600' : 'text-red-500'
+    if (v === null) return 'text-fg/30'
+    return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
   }
 
   if (loading) return <LoadingSpinner />
@@ -67,16 +67,16 @@ export default function TzavRishonTeacherPage() {
 
   return (
     <>
-      <h1 className="font-bold text-accent-tzav-rishon mb-1">דוח דפ״ר לצו ראשון</h1>
-      <p className="text-xs text-gray-500 mb-5">{className}</p>
+      <h1 className="font-bold text-accent-tzav-rishon-fg mb-1">דוח דפ״ר לצו ראשון</h1>
+      <p className="text-xs text-fg/60 mb-5">{className}</p>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <label htmlFor="topicFilter" className="text-sm font-medium text-gray-700 block mb-2">סנן לפי נושא:</label>
+      <div className="bg-surface rounded-xl border border-card-border p-4 mb-4">
+        <label htmlFor="topicFilter" className="text-sm font-medium text-fg/80 block mb-2">סנן לפי נושא:</label>
         <select
           id="topicFilter"
           value={selectedTopic}
           onChange={e => handleTopicSelect(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-right bg-white focus:outline-none focus:ring-2 focus:ring-accent-tzav-rishon"
+          className="w-full border border-card-border rounded-lg px-3 py-2 text-right bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-accent-tzav-rishon"
         >
           <option value="">כל הנושאים</option>
           {allTopics.map(t => (
@@ -84,22 +84,22 @@ export default function TzavRishonTeacherPage() {
           ))}
         </select>
         {selectedTopicLabel && (
-          <p className="text-xs text-accent-tzav-rishon mt-1">{filteredStudents.length} תלמידים ענו ב{selectedTopicLabel}</p>
+          <p className="text-xs text-accent-tzav-rishon-fg mt-1">{filteredStudents.length} תלמידים ענו ב{selectedTopicLabel}</p>
         )}
       </div>
 
       <div className="flex gap-2 mb-4">
         <button onClick={() => setTab('topics')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'topics' ? 'bg-accent-tzav-rishon text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'topics' ? 'bg-accent-tzav-rishon text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
           סיכום נושאים
         </button>
         <button onClick={() => setTab('students')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'students' ? 'bg-accent-tzav-rishon text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'students' ? 'bg-accent-tzav-rishon text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
           לפי תלמיד ({filteredStudents.length})
         </button>
         {selectedTopic && (
           <button onClick={() => setTab('questions')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'questions' ? 'bg-accent-tzav-rishon text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'questions' ? 'bg-accent-tzav-rishon text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
             ניתוח שאלות
           </button>
         )}
@@ -107,26 +107,26 @@ export default function TzavRishonTeacherPage() {
 
       {tab === 'topics' && (
         topicsSummary.length === 0 ? (
-          <p className="text-center text-gray-400 mt-12">אין נתונים עדיין</p>
+          <p className="text-center text-fg/40 mt-12">אין נתונים עדיין</p>
         ) : (
           <div className="grid gap-3">
             {topicsSummary.map(t => (
               <button key={t.topic} onClick={() => handleTopicSelect(t.topic)}
-                className="w-full text-right bg-white rounded-xl border border-gray-200 p-4 hover:border-accent-tzav-rishon hover:shadow-sm transition">
+                className="w-full text-right bg-surface rounded-xl border border-card-border p-4 hover:border-accent-tzav-rishon hover:shadow-sm transition">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-semibold text-gray-800">{t.topic_label_he}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{t.attempted_count} תשובות</div>
+                    <div className="font-semibold text-fg">{t.topic_label_he}</div>
+                    <div className="text-xs text-fg/60 mt-0.5">{t.attempted_count} תשובות</div>
                   </div>
                   <div className="text-left">
                     <div className={`text-2xl font-bold ${scoreColor(t.avg_pct)}`}>
                       {t.avg_pct !== null ? `${t.avg_pct}%` : '—'}
                     </div>
-                    <div className="text-xs text-gray-400">ממוצע</div>
+                    <div className="text-xs text-fg/40">ממוצע</div>
                   </div>
                 </div>
                 {t.avg_pct !== null && (
-                  <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5">
+                  <div className="mt-2 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
                     <div className={`h-1.5 rounded-full ${t.avg_pct >= 70 ? 'bg-green-500' : t.avg_pct >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
                       style={{ width: `${t.avg_pct}%` }} />
                   </div>
@@ -139,24 +139,24 @@ export default function TzavRishonTeacherPage() {
 
       {tab === 'students' && (
         filteredStudents.length === 0 ? (
-          <p className="text-center text-gray-400 mt-12">אין נתונים</p>
+          <p className="text-center text-fg/40 mt-12">אין נתונים</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full bg-white rounded-xl border border-gray-200 text-sm">
+            <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-right p-3 font-semibold text-gray-700">תלמיד</th>
-                  <th className="p-3 text-right font-semibold text-gray-700">נושא</th>
-                  <th className="p-3 text-center font-semibold text-gray-700">ציון</th>
-                  <th className="p-3 text-center font-semibold text-gray-700">%</th>
+                <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
+                  <th className="text-right p-3 font-semibold text-fg/80">תלמיד</th>
+                  <th className="p-3 text-right font-semibold text-fg/80">נושא</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">ציון</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">%</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredStudents.map((s, i) => (
-                  <tr key={`${s.student_id}-${s.topic}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-3 font-medium text-gray-800">{s.student_name}</td>
-                    <td className="p-3 text-gray-600 text-sm">{s.topic_label_he}</td>
-                    <td className="p-3 text-center font-semibold text-gray-800">{s.correct_count}/{s.total_answered}</td>
+                  <tr key={`${s.student_id}-${s.topic}`} className={i % 2 === 0 ? 'bg-surface' : 'bg-black/5 dark:bg-white/5'}>
+                    <td className="p-3 font-medium text-fg">{s.student_name}</td>
+                    <td className="p-3 text-fg/70 text-sm">{s.topic_label_he}</td>
+                    <td className="p-3 text-center font-semibold text-fg">{s.correct_count}/{s.total_answered}</td>
                     <td className={`p-3 text-center font-bold ${scoreColor(s.pct)}`}>{s.pct}%</td>
                   </tr>
                 ))}
@@ -168,19 +168,19 @@ export default function TzavRishonTeacherPage() {
 
       {tab === 'questions' && selectedTopic && (
         questionStats.length === 0 ? (
-          <p className="text-center text-gray-400 mt-12">אין נתוני שאלות עדיין</p>
+          <p className="text-center text-fg/40 mt-12">אין נתוני שאלות עדיין</p>
         ) : (
           <div className="space-y-3">
             {questionStats.map(q => (
-              <div key={q.question_id} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div key={q.question_id} className="bg-surface rounded-xl border border-card-border p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <span className="font-semibold text-gray-800">שאלה {q.question_id}</span>
-                    <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full mr-2">תשובה נכונה: {q.correct_answer}</span>
+                    <span className="font-semibold text-fg">שאלה {q.question_id}</span>
+                    <span className="text-xs text-green-700 bg-green-100 dark:bg-green-500/10 dark:text-green-400 px-2 py-0.5 rounded-full mr-2">תשובה נכונה: {q.correct_answer}</span>
                   </div>
                   <div className={`text-2xl font-bold ${scoreColor(q.success_pct)}`}>
                     {q.success_pct !== null ? `${q.success_pct}%` : '—'}
-                    <span className="text-xs text-gray-400 block text-center">{q.correct_count}/{q.total_answers}</span>
+                    <span className="text-xs text-fg/40 block text-center">{q.correct_count}/{q.total_answers}</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -190,12 +190,12 @@ export default function TzavRishonTeacherPage() {
                     const isCorrect = opt === q.correct_answer
                     return (
                       <div key={opt} className="flex items-center gap-2">
-                        <span className={`text-xs font-bold w-5 text-center ${isCorrect ? 'text-green-700' : 'text-gray-500'}`}>{opt}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-                          <div className={`h-4 rounded-full transition-all ${isCorrect ? 'bg-green-500' : count > 0 ? 'bg-red-300' : 'bg-gray-200'}`}
+                        <span className={`text-xs font-bold w-5 text-center ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-fg/60'}`}>{opt}</span>
+                        <div className="flex-1 bg-gray-100 dark:bg-white/10 rounded-full h-4 overflow-hidden">
+                          <div className={`h-4 rounded-full transition-all ${isCorrect ? 'bg-green-500' : count > 0 ? 'bg-red-300' : 'bg-gray-200 dark:bg-white/10'}`}
                             style={{ width: `${pct}%` }} />
                         </div>
-                        <span className={`text-xs w-16 text-left ${isCorrect ? 'text-green-700 font-semibold' : 'text-gray-500'}`}>
+                        <span className={`text-xs w-16 text-left ${isCorrect ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-fg/60'}`}>
                           {count} ({pct}%) {isCorrect ? '✓' : ''}
                         </span>
                       </div>
