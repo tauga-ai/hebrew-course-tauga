@@ -84,7 +84,7 @@ function ForgotPasswordForm() {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
+          <a href="/student" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
             חזרה להתחברות
           </a>
         </div>

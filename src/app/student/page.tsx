@@ -105,7 +105,7 @@ export default function StudentLogin() {
           <div>
             <div className="flex justify-between items-baseline mb-1">
               <label htmlFor="password" className="block text-sm font-medium text-fg/80">סיסמה</label>
-              <a href="/student/forgot-password" className="text-xs text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
+              <a href="/student/forgot-password" className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
                 שכחת סיסמה?
               </a>
             </div>
@@ -132,7 +132,7 @@ export default function StudentLogin() {
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <a href="/student/register" className="block text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
+          <a href="/student/register" className="block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
             אין לך חשבון? הרשמה
           </a>
           <a href="/teacher/login" className="block text-xs text-fg/40 hover:text-fg/70">

@@ -97,7 +97,7 @@ export default function DaparPage() {
         <div className="flex-1 p-4 max-w-3xl mx-auto w-full pb-12">
         <div className="text-center mt-6 mb-6">
           <div className="text-5xl mb-2">🏆</div>
-          <h1 className="text-2xl font-bold text-primary-700">תוצאות הסימולציה</h1>
+          <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400">תוצאות הסימולציה</h1>
           <p className="text-fg/60 text-sm">{session?.full_name}</p>
           <div className={`text-5xl font-bold mt-3 ${scoreColor}`}>{grade.pct}%</div>
           <p className="text-fg/60 text-sm mt-1">{grade.totalCorrect} נכון מתוך {TOTAL}</p>
@@ -122,7 +122,7 @@ export default function DaparPage() {
         <div className="space-y-5 mb-6">
           {SECTIONS.map(section => (
             <div key={section.label}>
-              <h3 className="text-sm font-bold text-primary-700 mb-2 px-1">{section.label}</h3>
+              <h3 className="text-sm font-bold text-primary-700 dark:text-primary-400 mb-2 px-1">{section.label}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {grade.perQuestion.slice(section.from - 1, section.to).map(q => {
                   const unanswered = q.selected === 0

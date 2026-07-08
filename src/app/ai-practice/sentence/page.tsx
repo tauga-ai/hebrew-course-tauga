@@ -251,7 +251,7 @@ export default function AISentencePage() {
             צור תרגיל נוסף
           </button>
           <button onClick={() => generateExercise(level!)}
-            className="w-full text-sm text-purple-500 hover:text-purple-700 py-2">
+            className="w-full text-sm text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 py-2">
             תרגיל נוסף באותה רמה ({level})
           </button>
         </>

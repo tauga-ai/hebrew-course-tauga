@@ -17,7 +17,7 @@ export default function InterviewLanding() {
 
       <div className="text-center mb-10">
         <div className="text-5xl mb-3">🗣️</div>
-        <h1 className="text-2xl font-bold text-primary-700 mb-2">ראיון אישי</h1>
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">ראיון אישי</h1>
         <p className="text-fg/60 text-sm">תרגול לראיון אישי בעברית לקראת השירות הצבאי</p>
       </div>
 

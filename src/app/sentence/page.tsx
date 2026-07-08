@@ -24,20 +24,20 @@ export default function SentenceLanding() {
 
       <div className="text-center mb-5">
         <div className="text-5xl mb-3">✍️</div>
-        <h1 className="text-2xl font-bold text-primary-700 mb-2">בניית משפטים</h1>
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">בניית משפטים</h1>
       </div>
 
       {/* How it works — at top */}
-      <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6 text-sm text-right">
-        <p className="font-semibold text-primary-800 mb-2">📌 איך זה עובד?</p>
-        <ol className="space-y-1 text-primary-700 list-decimal list-inside">
+      <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-4 mb-6 text-sm text-right">
+        <p className="font-semibold text-primary-800 dark:text-primary-300 mb-2">📌 איך זה עובד?</p>
+        <ol className="space-y-1 text-primary-700 dark:text-primary-400 list-decimal list-inside">
           <li>בכל תרגיל מוצגות <strong>12 מילים</strong></li>
-          <li>מילים <strong className="text-blue-900">★ מסומנות בכחול: חובה</strong> להשתמש בהן</li>
+          <li>מילים <strong className="text-blue-900 dark:text-blue-300">★ מסומנות בכחול: חובה</strong> להשתמש בהן</li>
           <li>השתמש בלפחות <strong>6 מילים</strong> מהרשימה הכללית</li>
           <li>כתוב את המשפט או הקלט את עצמך</li>
           <li>תקבל ציון + משוב + גרסה מושלמת עם הקראה</li>
         </ol>
-        <p className="text-primary-600 text-xs mt-2">💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״</p>
+        <p className="text-primary-600 dark:text-primary-400 text-xs mt-2">💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״</p>
       </div>
 
       <CardGrid>

@@ -225,7 +225,7 @@ export default function AIReadingPage() {
           </button>
           <button
             onClick={() => generateQuestion(level!)}
-            className="w-full mt-2 text-sm text-primary-500 hover:text-primary-700 py-2"
+            className="w-full mt-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 py-2"
           >
             תרגיל נוסף באותה רמה ({level})
           </button>

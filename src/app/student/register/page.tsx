@@ -119,7 +119,7 @@ function RegisterForm() {
               נשלח אליך מייל עם קישור לאישור החשבון. לאחר שתאשר/י, אפשר להתחבר.
             </p>
             <p className="text-sm text-fg/40">לא קיבלת מייל? בדוק/י בתיקיית הספאם.</p>
-            <a href="/student" className="inline-block text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400 mt-2">
+            <a href="/student" className="inline-block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mt-2">
               חזרה להתחברות
             </a>
           </div>
@@ -214,7 +214,7 @@ function RegisterForm() {
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/student" className="text-sm text-primary-600 hover:text-primary-700 dark:hover:text-primary-400">
+          <a href="/student" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
             יש לך כבר חשבון? התחבר/י
           </a>
         </div>

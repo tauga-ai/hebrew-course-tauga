@@ -127,7 +127,7 @@ export default function SimulatePage() {
         <div className="flex justify-between items-center mt-4 mb-6">
           <button onClick={() => router.push('/interview')} className="text-sm text-fg/40 hover:text-fg/70">← תפריט</button>
           <h1 className="font-bold text-primary-700 dark:text-primary-400">תוצאות הראיון</h1>
-          <button onClick={() => { setPhase('intro'); setFeedback(null) }} className="text-sm text-primary-500 hover:text-primary-700 dark:hover:text-primary-400">נסה שוב</button>
+          <button onClick={() => { setPhase('intro'); setFeedback(null) }} className="text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">נסה שוב</button>
         </div>
 
         <div className={`rounded-2xl border p-6 text-center mb-4 ${scoreBg}`}>

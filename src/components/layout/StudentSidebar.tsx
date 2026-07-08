@@ -8,6 +8,8 @@ interface NavItem {
   href: string
   icon: string
   label: string
+  /** Extra path prefixes that should also count as "active" for this item, for routes that don't live under `href` itself (e.g. a set's actual exercise page). */
+  alsoActiveUnder?: string[]
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -17,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
   { href: '/psychotechnic', icon: '🧠', label: 'פסיכוטכני' },
   { href: '/tzav-rishon', icon: '🎯', label: 'דפ"ר לצו ראשון' },
-  { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא' },
+  { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא', alsoActiveUnder: ['/practice'] },
   { href: '/ai-practice/reading', icon: '🤖', label: 'הבנת הנקרא (AI)' },
   { href: '/ai-practice/sentence', icon: '🤖', label: 'בניית משפט (AI)' },
 ]
@@ -41,7 +43,9 @@ export function StudentSidebar() {
 
       <nav className="flex flex-row md:flex-col gap-1 shrink-0">
         {NAV_ITEMS.map(item => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+          const active = pathname === item.href
+            || pathname.startsWith(`${item.href}/`)
+            || (item.alsoActiveUnder ?? []).some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))
           return (
             <Link
               key={item.href}
