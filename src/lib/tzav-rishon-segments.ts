@@ -2,11 +2,21 @@ export type Segment = { type: 'text' | 'math'; content: string }
 
 // Characters that, once a math run has started (triggered by a `\` command),
 // keep the run going while at brace-depth 0. Anything else (Hebrew, Arabic,
-// parens, quotes, sentence punctuation) ends the run — a whitelist rather
-// than a blacklist, so unexpected characters fail safe (end the run early,
+// quotes, sentence punctuation) ends the run — a whitelist rather than a
+// blacklist, so unexpected characters fail safe (end the run early,
 // producing two adjacent segments that still render correctly) instead of
 // silently swallowing prose into a formula.
-const MATH_CONTINUE = /[0-9a-zA-Z.,+\-=*/<>%^_\s]/
+//
+// `(` and `)` are included specifically so `\left(...\right)` parses as one
+// run — without them, `\left`/`\right` end up with no delimiter argument at
+// all (invalid on their own) the moment the following `(`/`)` breaks the
+// run. `;` is included for the `\;` spacing macro (e.g. `2 \;+\; 3`) — a
+// bare `\` followed by a character not in this set otherwise ends the run
+// right after the backslash, leaving a dangling, unparseable `\`. Low risk
+// of swallowing plain prose either way: both only matter while a math run
+// is already active (started by a preceding backslash command), and Hebrew
+// text essentially never touches an active run with zero whitespace.
+const MATH_CONTINUE = /[0-9a-zA-Z.,+\-=*/<>%^_();\s]/
 
 /**
  * Splits a string that mixes Hebrew/Arabic prose with bare LaTeX (no

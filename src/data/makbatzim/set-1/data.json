@@ -1,0 +1,752 @@
+[
+  {
+    "id": 1,
+    "question": [
+      {
+        "type": "text",
+        "content": "פשטו את הביטוי: 4 + 2 "
+      },
+      {
+        "type": "math",
+        "content": "\\cdot \\left(\\frac{6}{8} + \\frac{3}{4}\\right) - 5 \\cdot 0.2"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "5"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "6"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "17"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "18"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת בסדר פעולות חשבון. נזכור כי בסדר הפעולות, סוגריים קודמים לכל– אחריהם יגיעו כפל וחילוק– ורק לבסוף חיבור וחיסור. לכן, נתחיל מפתרון התרגיל שבתוך הסוגריים. כיוון שמדובר בתרגיל חיבור של שברים, נתחיל במציאת מכנה משותף– במקרה הזה נבחר ב־8, ונכפיל את שלושת הרביעים ב־2: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{6}{8} + \\frac{3}{4} = \\frac{6}{8} + \\frac{6}{8} = \\frac{12}{8} = 1\\frac{1}{2}"
+      },
+      {
+        "type": "text",
+        "content": " לאחר שמצאנו שבתוך הסוגריים הערך הוא 1.5, נחליף זאת בתרגיל: 4 + 2 "
+      },
+      {
+        "type": "math",
+        "content": "\\cdot 1.5 - 5 \\cdot 0.2"
+      },
+      {
+        "type": "text",
+        "content": " כעת נבצע את פעולות הכפל: 2 "
+      },
+      {
+        "type": "math",
+        "content": "\\cdot 1.5 = 3 5 \\cdot 0.2 = 1"
+      },
+      {
+        "type": "text",
+        "content": " ונקבל: 4 + 3 - 1 = 6 כלומר החישוב הסופי הוא 6 ."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": [
+      {
+        "type": "text",
+        "content": "לכמה שווה "
+      },
+      {
+        "type": "math",
+        "content": "2^5-2^4"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "1"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "2"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "16"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "4"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "משום שמדובר במספרים לא מאוד גבוהים, ניתן לבצע חישוב מלא, אך נראה דרך שיכולה להקל מאוד במקרים עתידיים. נוציא גורם משותף גבוה ככל הניתן, במקרה זה "
+      },
+      {
+        "type": "math",
+        "content": "2^4 ,"
+      },
+      {
+        "type": "text",
+        "content": " ונקבל– "
+      },
+      {
+        "type": "math",
+        "content": "2^4(2 - 1) = 2^4 \\cdot 1 = 2^4 = 16"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": [
+      {
+        "type": "text",
+        "content": "כאשר מחלקים מספר כלשהו ב־7 מתקבלת שארית 4. אם כופלים את המספר ב־3, מה תהיה השארית שלו בחלוקה ל־7?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "1"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "2"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "3"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "5"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת בחוקי חלוקה. כדי לפתור אותה בצורה הנוחה ביותר, נציב מספר מתאים מהרעש, ונפסול 3 תשובות. נתון כי מחלקה של המספר המקורי ב־7 מתקבלת שארית 4. נוכל לבחור מספר מתאים ונוח– למשל, 11. אם נכפיל את 11 ב־3, נקבל 33. כאשר נחלק את 33 שוב ב־7, נקבל 4 שלמים ושארית 5. ניתן לפסול את תשובות 1, 2 ו־3."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": [
+      {
+        "type": "text",
+        "content": "60 תלמידים צריכים להתחלק באופן שווה בין קבוצות, כך שבכל קבוצה יהיו 8 תלמידים. כמה תלמידים יישארו ללא קבוצה?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "1"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "2"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "3"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "4"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת בחוקי חלוקה. אנו צריכים לחלק 60 תלמידים, כך שבכל קבוצה יהיו 8 תלמידים. המספר הקרוב ביותר ל־60 אשר מתחלק ב־8 ללא שארית הוא 56 ( 8 "
+      },
+      {
+        "type": "math",
+        "content": "\\cdot 7 = 56 )."
+      },
+      {
+        "type": "text",
+        "content": " כלומר, 56 מהתלמידים יחולקו לקבוצות, ו־4 יישארו ללא קבוצה."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": [
+      {
+        "type": "text",
+        "content": "דן ודנה הם צמד אצנים. דנה רצה 8 ק\"מ בחצי שעה. דן רץ 3 ק\"מ ברבע שעה. כמה קילומטרים ירוצו שניהם בשעה וחצי?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "34"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "28"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "48"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "42"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נחשב כמה קילומטרים כל אחד מהם רץ בשעה אחת. דנה רצה 8 ק\"מ בחצי שעה, ולכן בשעה אחת תרוץ 8 "
+      },
+      {
+        "type": "math",
+        "content": "\\times 2 = 16"
+      },
+      {
+        "type": "text",
+        "content": " ק\"מ. דן רץ 3 ק\"מ ברבע שעה, ולכן בשעה אחת ירוץ 3 "
+      },
+      {
+        "type": "math",
+        "content": "\\times 4 = 12"
+      },
+      {
+        "type": "text",
+        "content": " ק\"מ. לכן בשעה וחצי ירוץ דן 12 "
+      },
+      {
+        "type": "math",
+        "content": "\\times 1\\frac{1}{2} = 18"
+      },
+      {
+        "type": "text",
+        "content": " ק\"מ, ודנה תרוץ 16 "
+      },
+      {
+        "type": "math",
+        "content": "\\times 1\\frac{1}{2} = 24"
+      },
+      {
+        "type": "text",
+        "content": " ק\"מ. בסך הכול ירוצו השניים 18 + 24 = 42 ק\"מ."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": [
+      {
+        "type": "text",
+        "content": "משך הפעלתה של מכונית בכיסה ה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle x"
+      },
+      {
+        "type": "text",
+        "content": " דקות. בין כל הפעלה, יש לחכות "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5"
+      },
+      {
+        "type": "text",
+        "content": " דקות לאיפוס המכונה. בהינתן שהמכונה פעלה ברצף מהשעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 30"
+      },
+      {
+        "type": "text",
+        "content": " ועד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 40"
+      },
+      {
+        "type": "text",
+        "content": " בדיוק (כולל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5"
+      },
+      {
+        "type": "text",
+        "content": " דקות ההפסקה בין ההפעלות), אך לא ידוע כמה פעמים פעלה המכונה. מה מהבאים יכול להיות "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle x"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 40"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 35"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 20"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 15"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "ראשית, נמצא כמה דקות המכונה פעלה ברצף. אנחנו יודעים שהיא פעלה בין השעות "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 30"
+      },
+      {
+        "type": "text",
+        "content": " ו- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 40 ,"
+      },
+      {
+        "type": "text",
+        "content": " כלומר שעה ועשר דקות, או בדקות- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 70"
+      },
+      {
+        "type": "text",
+        "content": " דק'. כלומר, אנחנו צריכים לבדוק את התשובות, ולראות איזה מהן יכולה להתאים להפעלה של "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 70"
+      },
+      {
+        "type": "text",
+        "content": " דק' בדיוק (עם אופציה להפסקות של "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5"
+      },
+      {
+        "type": "text",
+        "content": " דק' כמובן). בתשובה 1 - אם המכונה פועלת "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 40"
+      },
+      {
+        "type": "text",
+        "content": " דק', כלומר היא פעלה בפעם הראשונה עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 10 ,"
+      },
+      {
+        "type": "text",
+        "content": " התאפסה עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 15"
+      },
+      {
+        "type": "text",
+        "content": " ואז החלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 55 ."
+      },
+      {
+        "type": "text",
+        "content": " זה חורג מהזמן הנתון ולכן התשובה נפסלת. בתשובה 2 - אם המכונה פועלת "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " דק', כלומר היא פעלה בפעם הראשונה עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 05 ,"
+      },
+      {
+        "type": "text",
+        "content": " התאפסה עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 10"
+      },
+      {
+        "type": "text",
+        "content": " ואז החלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 45 ."
+      },
+      {
+        "type": "text",
+        "content": " זה חורג מזמן הנתון ולכן התשובה נפסלת. בתשובה 3 - אם המכונה פועלת "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " דק', כלומר היא פעלה בפעם הראשונה עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 50 ,"
+      },
+      {
+        "type": "text",
+        "content": " התאפה עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 55"
+      },
+      {
+        "type": "text",
+        "content": " ואז החלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 15 ."
+      },
+      {
+        "type": "text",
+        "content": " התאפסה שוב עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 20"
+      },
+      {
+        "type": "text",
+        "content": " והחלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 40"
+      },
+      {
+        "type": "text",
+        "content": " בדיוק. התשובה מתאימה. *ברגע שהתקבלה תשובה מתאימה, נמשיך הלאה במבחן. לשם הלמידה, נבדוק גם את התשובה האחרונה. בתשובה 4 - אם המכונה פועלת "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 15"
+      },
+      {
+        "type": "text",
+        "content": " דק', כלומר היא פעלה בפעם הראשונה עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 45 ,"
+      },
+      {
+        "type": "text",
+        "content": " התאפסה עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 13\\colon 50"
+      },
+      {
+        "type": "text",
+        "content": " ואז החלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 05 ."
+      },
+      {
+        "type": "text",
+        "content": " התאפסה שוב עד השעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 10"
+      },
+      {
+        "type": "text",
+        "content": " והחלה בפעולה נוספת עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 25 ."
+      },
+      {
+        "type": "text",
+        "content": " לאחר מכן התאפסה שוב עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 30 ,"
+      },
+      {
+        "type": "text",
+        "content": " ופעולתה הבאה תמשך עד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 14\\colon 45 ."
+      },
+      {
+        "type": "text",
+        "content": " זה חורג מזמן הנתון ולכן התשובה נפסלת."
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "question": [
+      {
+        "type": "text",
+        "content": "תום קנתה מצרכים בשוק. היא קנתה 2 תבניות של 12 ביצים, 3 שקיות של 8 גזרים, 7 תפוחים ו-2 מארזים של 10 יוגורטים. כמה מצרכים בודדים (ביצה אחת, גזר אחד,...) תום קנתה סה\"כ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 45"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 55"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 65"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 75"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נכתוב תרגיל, בהתאם לכמויות הרשומות בשאלה- 2 "
+      },
+      {
+        "type": "math",
+        "content": "\\cdot 12 \\;+\\; 3 \\cdot 8 \\;+\\; 7 \\;+\\; 2 \\cdot 10 \\;=\\; 24 \\;+\\; 24 \\;+\\; 7 \\;+\\; 20 \\;=\\; 48 \\;+\\; 27 \\;=\\; \\displaystyle \\mathbf{75}"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "question": [
+      {
+        "type": "text",
+        "content": "רכבת יצאה מתל אביב לחיפה במהירות 80 קמ\"ש. שעה לאחר מכן יצאה רכבת נוספת באותו כיוון במהירות 100 קמ\"ש. אחרי כמה זמן מהרגע שהרכבת השנייה יצאה היא תשיג את הראשונה?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "1"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "2"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "3"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "4"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת בתנועה. ניצור טבלת “זמן × מהירות = דרך”, ונציב את הנתונים הידועים לנו. נגדיר את משך הנסיעה של הרכבת הראשונה כ־t, ולכן משך הנסיעה של הרכבת השנייה יהיה t - 1 (משום שהיא יצאה שעה מאוחר יותר, היא נוסעת שעה פחות). רכבת זמן (שעות) מהירות (קמ\"ש) דרך (ק\"מ) 1 t 80 ? 2 t - 1 100 ? אנחנו לא יודעים מהי הדרך שהרכבות עברו, אך משום ששאלתנו היא על נקודת המפגש ביניהן, אנו יודעים כי הדרכים שוות זו לזו. לכן, נוכל להשוות את מכפלות הזמן והמהירות של שתי הרכבות, ונקבל: 80 t = 100 ( t − 1 ) 80t = 100(t - 1) 80 t = 100 t − 100 80t = 100t - 100 100 = 20 t 100 = 20t t = 5 t = 5 כלומר, הרכבת הראשונה נסעה במשך 5 שעות עד לנקודת המפגש, והרכבת השנייה נסעה 4 שעות. נשאלנו על משך הזמן של הרכבת השנייה, ולכן התשובה היא 4 שעות בדיוק."
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "question": [
+      {
+        "type": "text",
+        "content": "נועה רכבה 42 ק\"מ במשך 210 דקות בקצב קבוע. מה הייתה מהירותה (בקמ\"ש)?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "12"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "18"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "21"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "25"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת בתנועה. כדי למצוא את המהירות של נועה, ניעזר בנוסחת \"זמן × מהירות = דרך\", אך עלינו לשים לב לבעייה בשאלה – הזמן נתון בדקות, והשאלה על מהירות בקמ\"ש, כלומר עלינו קודם כל להמיר את הזמן הנתון לשעות על ידי חלוקה ב־60, ונקבל: 210 60 = 3.5 "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{210}{60} = 3.5 \\text{ שעות}"
+      },
+      {
+        "type": "text",
+        "content": " שעות כעת שיש לנו את הזמן בשעות ואת המרחק בק\"מ, נציב בנוסחה ונקבל: 42 3.5 = 84 7 = 12 "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{42}{3.5} = \\frac{84}{7} = 12"
+      },
+      {
+        "type": "text",
+        "content": " מהירותה של נועה הייתה 12 קמ\"ש."
+      }
+    ]
+  }
+]

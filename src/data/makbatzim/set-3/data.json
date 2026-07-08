@@ -1,0 +1,714 @@
+[
+  {
+    "id": 1,
+    "question": [
+      {
+        "type": "text",
+        "content": "בני היום בן 44. בעוד כמה שנים, גילו יהיה גדול פי 9 מסכום ספרותיו של גילו הנוכחי?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "19"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "28"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "65"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "72"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כי גילו של בני היום הוא 44, וכי עלינו למצוא בעוד כמה שנים, גילו יהיה גדול פי 9 מהסכום 4+4, כלומר, בעוד כמה שנים גילו יהיה שווה 9·(4+4) = 9·8 = 72. נמצא זאת בעזרת תרגיל חיסור, כאשר נחסר את גילו הנוכחי מהגיל המבוקש, ונקבל: 72 − 44 = 28 72 - 44 = 28"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": [
+      {
+        "type": "text",
+        "content": "היום רונן בן 8 שנים והדס בת 12 שנים. עוד כמה שנים ממוצע גיליהם יהיה 25 שנים?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "10"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "12"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "15"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "20"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נסמן ב-x את מספר השנים שיעברו עד שממוצע גיליהם יהיה 25. כלומר, כעבור x שנים מהיום רונן יהיה בן x+8 והדס בת x+12. נשווה את ממוצע הגילים שלהם בעוד x שנים ל-25 ונקבל- "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{(8+x)+(12+x)}{2}=25"
+      },
+      {
+        "type": "text",
+        "content": " נכפול את שני אגפי המשוואה ב-2 ונכנס איברים דומים: (8+x)+(12+x)=50 8+x+12+x=50 2x=30 x=15 כלומר, כעבור 15 שנים מהיום ממוצע הגילים של רונן והדס יהיה 25."
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": [
+      {
+        "type": "text",
+        "content": "בבניין מגורים שני חדרים. בחדר א' 18 אנשים וחדר ב' ריק. החל מהשעה 13:45 (כולל), יוצא אדם אחד כל רבע שעה מחדר א', ונכנסים 2 אנשים לחדר ב'. מתי ההפרש בין מספר האנשים בשני החדרים יהיה 3 בדיוק?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "14:15 ושוב ב15:00"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "14:45 ושוב ב15:15"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "14:30 ושוב ב15:15"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "14:45 ושוב ב15:00"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נפתור בשתי דרכים: דרך ראשונה- אלגברית: נבחין כי כל רבע שעה ההפרש בין חדר א' לחדר ב' קטן בשלוש, שכן אדם אחד יוצא מחדר א' ובנוסף שני אנשים נכנסים לחדר ב'. בנקודת ההתחלה, בחדר א' יש 18 ובחדר ב' אין אף אחד (0), ההפרש בין שני החדרים עומד על 18(ומיד קטן ל15). אז לאחר שעה ההפרש יקטן ב־12 ויעמוד על 3. נשים לב כי ההפרש כפי שמובא בשאלה, תמיד נמצא בערך מוחלט ולכן גם אם ההפרש בין חדר א' לחדר ב' יעמוד על -3 ההפרש בין החדרים יהיה 3. לאחר שעה וחצי ההפרש בין חדר א' לחדר ב' יעמוד על -3. דרך שנייה- טבלה: נבנה טבלה מתאימה ונמלא אותה שורה אחר שורה. כך נעבוד עם נתון אחד בכל פעם. זמן 13:45 14:00 14:15 14:30 14:45 15:00 15:15 15:30 15:45 חדר א 17 16 15 14 13 12 11 10 9 חדר ב 2 4 6 8 10 12 14 16 18 ההפרש 15 12 9 6 3 0 3 6 9 כעת קל לראות שההפרש בין מס' האנשים בחדר הוא 3 בדיוק בשעה 14:45 ובשעה 15:15."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": [
+      {
+        "type": "text",
+        "content": "מהו המספר הממשיך את הסדרה - 1, "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{1}{4}, \\frac{1}{16}, \\underline{\\hspace{1.2em}}"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{24}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{2}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{32}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{64}"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו קודם כל לזהות את החוקיות: הסדרה יורדת בקצב מהיר, ובנוסף היא עברה ממספר שלם לשברים. נבדוק חלוקה: המעבר מהמספר הראשון לשני: חלוקה ב-4 המעבר מהמספר השני לשלישי: חלוקה ב-4 מצאנו את החוקיות, לכן נחלק את המספר האחרון ב-4 גם כן: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{1}{16}\\div 4"
+      },
+      {
+        "type": "text",
+        "content": " בשביל לפתור את השבר הזה בצורה נוחה, נכניס את השברים לשבר אחד, ונפתור בשיטת \"האוזניים\" (או כפל בהופכי): "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{\\frac{1}{16}}{\\frac{4}{1}} \\frac{1\\times 1}{16\\times 4}=\\mathbf{\\frac{1}{64}}"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": [
+      {
+        "type": "text",
+        "content": "בסדרה חשבונית האיבר הראשון הוא 4, וגודל הקפיצה הוא 4. מהו סכומם של האיבר הרביעי והאיבר החמישי?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "28"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "38"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "36"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "44"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נכתוב תחילה את חמשת האיברים הראשונים בסדרה: איבר 1: 4 איבר 2: 4+4=8 איבר 3: 8+4=12 איבר 4: 12+4=16 איבר 5: 16+4=20 כעת נסכום את האיבר הרביעי ואת האיבר החמישי: 16+20="
+      },
+      {
+        "type": "math",
+        "content": "\\mathbf{36}"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": [
+      {
+        "type": "text",
+        "content": "כמה הם "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{5}{8}"
+      },
+      {
+        "type": "text",
+        "content": " פחות "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{1}{4}"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{8}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{1}{2}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{3}{8}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{5}{16}"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נכתוב מחדש: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{5}{8} - \\frac{1}{4} ="
+      },
+      {
+        "type": "text",
+        "content": " ? נמצא מכנה משותף - 8: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{1}{4} = \\frac{2}{8}"
+      },
+      {
+        "type": "text",
+        "content": " נציב: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{5}{8} - \\frac{2}{8} = \\frac{3}{8}"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "question": [
+      {
+        "type": "math",
+        "content": "\\frac{14}{3} \\div \\frac{7}{9} ="
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "6"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{14}{3}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{7}{3}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\frac{14}{9}"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נכניס את השברים לשבר אחד, ונפתור בשיטת \"האוזניים\" (או כפל בהופכי), כאשר נכפיל את המונה של השבר העליון עם המכנה של השבר התחתון ושניהם יהפכו למונה, ואת המכנה של השבר העליון עם המונה של השבר התחתון, ושניהם יהפכו למכנה: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{14}{3} \\div \\frac{7}{9} \\frac{14 \\times 9}{3 \\times 7} = \\frac{126}{21} = 6"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "question": [
+      {
+        "type": "text",
+        "content": "גן חיות מקבל משלוחי בננות, שאותן הוא מחלק לקופים באופן שווה. ידוע כי: א. אם גן החיות מקבל 21 בננות, יישארו 3 בננות עודפות. ב. אם גן החיות מקבל 38 בננות, יישארו 2 בננות עודפות. ג. אם גן החיות מקבל 46 בננות, יישאר בננה אחת עודפת. כמה קופים יכולים להיות בגן החיות?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "5"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "6"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "9"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "11"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נפתור את התרגיל בשיטה פסיכומטרית, ע\"י הצבת התשובות. נבדוק את תשובה (1): 5 קופים א. אם נחלק 21 בננות ל־5 קופים נקבל 4 בננות ובננה אחת עודפת, לכן תשובה זו נכשלת וניתן להפסיק את החישוב. נבדוק את תשובה (2): 6 קופים א. אם נחלק 21 בננות ל־6 קופים נקבל 3 בננות עודפות. ב. אם נחלק 38 בננות ל־6 קופים נקבל 2 בננות עודפות. ג. אם נחלק 46 בננות ל־6 קופים נקבל 4 בננות עודפות. לכן תשובה זו נכשלת. נבדוק את תשובה (3): 9 קופים א. אם נחלק 21 בננות ל־9 קופים נקבל 3 בננות עודפות. ב. אם נחלק 38 בננות ל־9 קופים נקבל 2 בננות עודפות. ג. אם נחלק 46 בננות ל־9 קופים נקבל בננה אחת עודפת. לכן זוהי התשובה הנכונה. עבור תשובה (4) – חלוקת 21 בננות ל־11 קופים תשאיר 10 קופים עם בננות עודפות, לכן גם תשובה זו שגויה."
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "question": [
+      {
+        "type": "text",
+        "content": "מספר מסוים מתחלק ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " ללא שארית. מה תהיה השארית אם נחלק את אותו המספר ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 0"
+        },
+        {
+          "type": "text",
+          "content": " או "
+        },
+        {
+          "type": "math",
+          "content": "\\displaystyle 2"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 0\\ \\mathrm{תמיד}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 2\\ \\mathrm{תמיד}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 1\\ \\mathrm{תמיד}"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "הכי נוח בשאלות מסוג זה, הינו לנו לעבוד בשיטת הצבה- לבחור מספר שמתחלק ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " ללא שארית ולחלק אותו ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4 ."
+      },
+      {
+        "type": "text",
+        "content": " בתשובות יש לנו רמז שעלינו לבדוק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " מספרים מכיוון שבתשובה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " כתוב לנו "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 0"
+      },
+      {
+        "type": "text",
+        "content": " או "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2 ."
+      },
+      {
+        "type": "text",
+        "content": " נבחר מספר שמתחלק ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " ללא שארית: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " כאשר נחלק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4"
+      },
+      {
+        "type": "text",
+        "content": " נקבל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " ושארית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\mathbf{2}"
+      },
+      {
+        "type": "text",
+        "content": " כעת נבחר מספר נוסף שמתחלק ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " ללא שארית: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " כאשר נחלק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4"
+      },
+      {
+        "type": "text",
+        "content": " נקבל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ושארית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\mathbf{0}"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, שתי האפשרויות ( "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 0"
+      },
+      {
+        "type": "text",
+        "content": " או "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2 )"
+      },
+      {
+        "type": "text",
+        "content": " אפשריות בתנאים הנתונים."
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "question": [
+      {
+        "type": "text",
+        "content": "אם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\sqrt{x+9}=5 ,"
+      },
+      {
+        "type": "text",
+        "content": " מהו ערכו של "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle x"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 34"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 16"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 25"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 4"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "כדי לבטל שורש ריבועי, נעלה את שני אגפי המשוואה בריבוע: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle (\\sqrt{x+9})^2=5^2 \\displaystyle x+9=25"
+      },
+      {
+        "type": "text",
+        "content": " נבודד את "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle X"
+      },
+      {
+        "type": "text",
+        "content": " : "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle X=25-9=\\mathbf{16}"
+      }
+    ]
+  }
+]

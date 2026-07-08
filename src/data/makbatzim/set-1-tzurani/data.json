@@ -1,0 +1,461 @@
+[
+  {
+    "id": 1,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947353900-p3k8vy.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים כי ישנו חץ בתוך הריבוע, אשר מסתובב "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 90"
+      },
+      {
+        "type": "text",
+        "content": " מעלות עם כיוון השעון. בנוסף, ניתן לראות כי ישנן "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " נקודות על "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " מקודקודי הריבוע. הקודקודים שעליהם הנקודה הם הקודקודים שאינם נמצאים על הצלע אשר החץ מצביע עליה. כלומר, עלינו למצוא תשובה בה החץ מסתובב ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 90"
+      },
+      {
+        "type": "text",
+        "content": " מעלות עם כיוון השעון, כך שיצביע על הצלע השמאלית התחתונה, וששני הקודקודים המסומנים יהיו אלו שאינם על הצלע שהחץ מצביע עליה- הימני והעליון."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947646739-nnkx3c.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים ריבוע המורכב משני מלבנים קטנים בצורה הראשונה, ובצורה השנייה, המלבן השמאלי \"נופל\" על צידו, בעוד שהימני אינו זז. כלומר, עלינו למצוא צורה בה החצי הימני של העיגול אינו משתנה, והחצי השמאלי \"נופל\" על צידו."
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947710838-golwsj.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים ששתי הצורות מהוות תמונת מראה מדויקת אחת של השנייה. כלומר, עלינו למצוא תמונת מראה של הצורה הנתונה בצמד השני."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947780556-fryxcr.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים שלושה עיגולים המסודרים בשורה, כאשר לכל עיגול ישנו צבע וגודל. במעבר מהצורה הראשונה לשנייה, הצבעים אינם משנים מקום (האפור נשאר השמאלי ביותר, השחור האמצעי והלבן הימני), אך הגדלים משנים מקום- כל גודל \"קופץ\" מיקום אחד שמאלה, כאשר השמאלי ביותר הופך לימני ביותר. כלומר, עלינו למצוא שלושה ריבועים, כאשר הימני ביותר אפור והשניים הנותרים שחורים (כמו בצורה הנתונה), והגדלים \"קפצו\" אחד שמאלה- השמאלי ביותר יהיה הקטן ביותר, האמצעי יהיה בינוני בגודלו, והימני ביותר יהיה הגדול ביותר."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947978707-mz6qa7.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים שני חצים בתוך ריבוע, כאשר במעבר לצורה השנייה, רק אחד מהם מתהפך ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 180"
+      },
+      {
+        "type": "text",
+        "content": " מעלות, והשני לא משתנה כלל. כלומר, עלינו למצוא עיגול שבו רק חץ אחד מתהפך ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 180"
+      },
+      {
+        "type": "text",
+        "content": " מעלות, והשני אינו זז כלל- כך שבעצם שניהם יפנו לאותו הכיוון במקרה זה."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947439137-jfdq3y.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים רצף של "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4"
+      },
+      {
+        "type": "text",
+        "content": " אותיות, אשר נשארות בדיוק באותו המיקום, ורק מסתובבות ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 90"
+      },
+      {
+        "type": "text",
+        "content": " מעלות נגד כיוון השעון. כלומר, עלינו למצוא את התשובה בה כל ארבע הספרות הנתונות נשארות במקומן, ומסתובבות ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 90"
+      },
+      {
+        "type": "text",
+        "content": " מעלות נגד כיוון השעון."
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947279372-8pl3x7.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים כי הצורה המרכזית (משולש) הופכת מגדולה לקטנה, וכי העיגולים הצבועים בשחור הנמצאים על הקווים היוצאים מקודקודיה, מתרחקים מהצורה לאחר שקטנה. כלומר, עלינו למצוא תשובה בה יש ריבוע קטן, אשר מכל קודקודיו יוצא קו, שבקצהו הרחוק של כל אחד נמצא ריבוע קטן הצבוע בשחור."
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947207081-2akq6n.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים כי הצורה הראשונה מורכבת מהרבה עיגולים קטנים אשר יוצרים משולש, והצורה השנייה מורכבת מהרבה משולשים קטנים אשר יוצרים צורת מעגל. בצמד השני, הצורה הנתונה היא מלבן המורכב מהרבה חצים קטנים. כלומר, עלינו למצוא הרבה מלבנים קטנים שייצרו צורת חץ."
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחר בצורה המתאימה ביותר"
+      }
+    ],
+    "imageUrl": "https://mcguzmbhfygyjguesyjs.supabase.co/storage/v1/object/public/content-files/image/1767947148225-kzwets.png",
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "א"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ב"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ג"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "ד"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בצמד הראשון, אנו רואים כי שתי הצורות הנתונות משלימות זו את זו מבחינת החלקים הצבועים בשחור. כלומר, עלינו למצוא את הצורה אשר תשלים את הצורה הנתונה, שכל ריבועיה יהיו צבועים בשחור מלבד השניים הקיימים."
+      }
+    ]
+  }
+]

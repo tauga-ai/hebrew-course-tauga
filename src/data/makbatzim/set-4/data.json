@@ -1,0 +1,1002 @@
+[
+  {
+    "id": 1,
+    "question": [
+      {
+        "type": "text",
+        "content": "אם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{a}{b}=3 ,"
+      },
+      {
+        "type": "text",
+        "content": " למה שווה הביטוי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{a+b}{b}"
+      },
+      {
+        "type": "text",
+        "content": " ?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 2"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 1.5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 4"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כי ניתן לפצל את הביטוי ולכתוב אותו בצורה הבאה: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{a+b}{b}=\\frac{a}{b}+\\frac{b}{b}"
+      },
+      {
+        "type": "text",
+        "content": " לפי הנתון, אנו יודעים כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{a}{b}=3"
+      },
+      {
+        "type": "text",
+        "content": " ואנחנו גם יודעים כי כל מספר חלקי עצמו שווה ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1 ,"
+      },
+      {
+        "type": "text",
+        "content": " לכן מתקיים: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{b}{b}=1"
+      },
+      {
+        "type": "text",
+        "content": " נציב זאת במשוואה: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{a}{b}+\\frac{b}{b}=3+1=\\mathbf{4}"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": [
+      {
+        "type": "text",
+        "content": "אם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle n"
+      },
+      {
+        "type": "text",
+        "content": " הוא מספר אי-זוגי, איזה מהביטויים הבאים הוא תמיד זוגי?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle n+2"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle n^2"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 3\\cdot n"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle n+1"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בשאלות בהן לא נתון לנו מספר מסוים, נבחר להציב מספר קל ונוח לעבודה. במקרה זה, אנו יודעים כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle n"
+      },
+      {
+        "type": "text",
+        "content": " הוא אי-זוגי, ולכן נבחר במספר האי-זוגי הקטן ביותר (מלבד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1 ,"
+      },
+      {
+        "type": "text",
+        "content": " שמתנהג בצורה שונה מאחרים ולכן נעדיף שלא להיעזר בו), כלומר "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3 ."
+      },
+      {
+        "type": "text",
+        "content": " כעת, נבדוק מה קורה ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " בכל אחד מהביטויים, ונבין איזה מהם הוא תמיד זוגי. 1. אי-זוגי +2 נשאר אי-זוגי: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle (3+2=5) 2."
+      },
+      {
+        "type": "text",
+        "content": " אי-זוגי בריבוע נשאר אי-זוגי: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle (3^2=9) 3."
+      },
+      {
+        "type": "text",
+        "content": " אי-זוגי כפול אי-זוגי נשאר אי-זוגי: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle (3\\cdot 3=9) 4."
+      },
+      {
+        "type": "text",
+        "content": " אי-זוגי +1 תמיד הופך לזוגי: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle (3+1=4)"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": [
+      {
+        "type": "text",
+        "content": "בימים ראשון, שני ושלישי בחנות כלי חרסינה ניקו עובדים את כוסות החרסינה. ביום ראשון עבדו 15 עובדים, ביום שני עבדו 11 עובדים, וביום שלישי עבדו 7 עובדים. כל אחד מהעובדים ניקה בקצב של 20 כוסות חרסינה ביום. בתום שלושת ימי העבודה סיימו העובדים לנקות את כוסות החרסינה. כמה כוסות חרסינה יש בממוצע בכל מדף אם ידוע שמספר המדפים הוא 730?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 22"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 26"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 39"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 52"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נתון כי ביום ראשון עבדו 15 עובדים, ביום שני עבדו 11 עובדים, וביום שלישי עבדו 7 עובדים, נחשב את מספר העובדים הכולל: 11 + 15 + 7 = 33 בתום שלושת ימי העבודה סיימו העובדים לנקות את כל כוסות החרסינה. כמות הכוסות הכוללת בחנות היא מספר העובדים הכולל כפול מספר הכוסות שנספיק כל אחד מהם לנקות ביום עבודה אחד: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20\\cdot 33 ."
+      },
+      {
+        "type": "text",
+        "content": " שאלנו כמה כוסות יש בממוצע בכל מדף אם ידוע שמספר המדפים הוא 30. נחלק את מספר הכוסות הכולל ב-30 כדי למצוא את ממוצע הכוסות בכל מדף: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{20\\cdot 33}{30}=\\frac{2\\cdot 10\\cdot 11\\cdot 3}{10\\cdot 3}=2\\cdot 11=22"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": [
+      {
+        "type": "text",
+        "content": "3 שותפים מנקים יחד את הבית. שותף א׳ יכול לנקות את כל הבית לבדו ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4"
+      },
+      {
+        "type": "text",
+        "content": " שעות, שותף ב׳ ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " שעות, ושותף ג׳ ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " שעות. כמה שעות ייקחו להם לנקות יחדיו את הבית?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 1.5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 2"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 3.5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 4.5"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כמה שעות ייקח לכל אחד מהשותפים לנקות את הבית לבדו. נציב את הנתונים הללו בטבלת "
+      },
+      {
+        "type": "math",
+        "content": "\\text{זמן}\\cdot \\text{הספק}=\\text{עבודה}"
+      },
+      {
+        "type": "text",
+        "content": " ונחשב את ההספק של כל אחד מהשותפים. לאחר מכן, נחבר את ההספקים שלהם, ונמצא כמה זמן ייקח לשלושתם יחד לנקות את הבית. זמן (שעות) הספק עבודה שותף א׳ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 4 \\displaystyle \\frac{1}{4} \\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " שותף ב׳ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6 \\displaystyle \\frac{1}{6} \\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " שותף ג׳ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12 \\displaystyle \\frac{1}{12} \\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " מצאנו את ההספק של כל אחד מהשותפים. נחבר את שלושת ההספקים יחד, בכדי למצוא את ההספק המשותף: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{4}+\\frac{1}{6}+\\frac{1}{12}=\\frac{3+2+1}{12}=\\frac{6}{12}=\\frac{1}{2}"
+      },
+      {
+        "type": "text",
+        "content": " נשתמש שוב בטבלה, ונמצא את משך הזמן שלקח לשלושתם יחד לנקות את הבית: זמן (שעות) הספק עבודה כולם יחד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{\\frac{1}{2}}=2 \\displaystyle \\frac{1}{2} \\displaystyle 1"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, השותפים ינקו יחד את הבית בתוך שעתיים ."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": [
+      {
+        "type": "text",
+        "content": "מיכל מתמלא ע״י שלושה ברזים. כל ברז ממלא את המיכל לבד ב־ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " שעות. מהו הזמן הדרוש למילוי שליש מיכל כשהשלושה פועלים יחד?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "חצי שעה"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "שעה"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "שעתיים"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 40"
+        },
+        {
+          "type": "text",
+          "content": " דקות"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אם ברז אחד ממלא את המיכל לבדו ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " שעות, ניתן להסיק כי שלושת הברזים ימלאו את המיכל בשעתיים, אם יעבדו יחד. שואלים מתי יתמלא שליש מיכל. נחלק שעתיים בשלוש ונקבל 40 דקות ."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": [
+      {
+        "type": "text",
+        "content": "עמוס מתאמן בחדר הכושר. בכל חודש הוא מעלה את משקל המשקולות באימון ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהמשקל הקודם. בחודש השני התאמן עם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 10"
+      },
+      {
+        "type": "text",
+        "content": " ק״ג. בחודש השלישי נפצע ובמקום להוסיף הפחית את המשקל ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 25\\%"
+      },
+      {
+        "type": "text",
+        "content": " אחוז. מה היה משקל המשקולות בסוף החודש הרביעי?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 9.6"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 8.8"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 9"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 10"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "בחודש השני עמוס התאמן עם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 10"
+      },
+      {
+        "type": "text",
+        "content": " ק״ג. בחודש השלישי הפחית את המשקל ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 25\\% ,"
+      },
+      {
+        "type": "text",
+        "content": " ולכן: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 10\\cdot \\frac{75}{100}=7.5"
+      },
+      {
+        "type": "text",
+        "content": " בחודש הרביעי העלה את המשקל ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20\\% ,"
+      },
+      {
+        "type": "text",
+        "content": " כלומר: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 7.5\\cdot \\frac{120}{100}=7.5\\cdot \\frac{6}{5}"
+      },
+      {
+        "type": "text",
+        "content": " נצמצם ונחשב: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 7.5=\\frac{15}{2} \\displaystyle \\frac{15}{2}\\cdot \\frac{6}{5}=\\frac{15\\cdot 6}{2\\cdot 5}=\\frac{3\\cdot 6}{2}=\\frac{18}{2}=\\mathbf{9}"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "question": [
+      {
+        "type": "text",
+        "content": "במיכל הדלק המלא של האוטובוס "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 200"
+      },
+      {
+        "type": "text",
+        "content": " ליטרים של דלק. המלצת יצרן הרכב היא לתדלק שוב כאשר נשארים "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהמיכל. אם ידוע כי כל ליטר דלק מספיק בממוצע ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ק״מ של נסיעה, כמה ק״מ האוטובוס יכול לנסוע עד שיצטרך לתדלק, לפי הנחיות היצרן?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 568"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 588"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 594"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 598"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כי האוטובוס יכול לנצל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 98\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהמיכל שלו לפני התדלוק. נמצא לכמה ליטרים זה שווה, בעזרת החישוב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{x}{200}=\\frac{98}{100} \\displaystyle \\frac{x}{2}=98 \\displaystyle x=196"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, האוטובוס יכול לנצל לפני התדלוק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 196"
+      },
+      {
+        "type": "text",
+        "content": " ליטרים של דלק. אנו יודעים כי כל ליטר מספיק ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ק״מ, ולכן האוטובוס יכול לנסוע- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 196\\cdot 3=588"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "question": [
+      {
+        "type": "math",
+        "content": "\\displaystyle 40\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהתלמידים בכיתה הן בנות. ידוע שיש בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " בנים. כמה תלמידים יש בכיתה סך הכל?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 18"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 20"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 24"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 25"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא כמה תלמידים יש בכיתה. אנו יודעים כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 40\\%"
+      },
+      {
+        "type": "text",
+        "content": " הן בנות, ולכן ניתן להסיק כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 60\\%"
+      },
+      {
+        "type": "text",
+        "content": " הם בנים. בנוסף, אנו יודעים כי ישנם בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " בנים. בעזרת נתונים אלו, נבנה משוואה ונמצא את כמות התלמידים בכיתה, כאשר נגדיר כמות זו כ- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle x - \\displaystyle \\frac{60}{100}=\\frac{12}{x} \\displaystyle \\frac{3}{5}=\\frac{12}{x} \\displaystyle 3x=60 \\displaystyle x=20"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, ישנם בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " תלמידים סה\"כ."
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "question": [
+      {
+        "type": "text",
+        "content": "במהלך סוף השבוע נמכרו "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1{,}200"
+      },
+      {
+        "type": "text",
+        "content": " כרטיסים לקולנוע. "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 60\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהם נרכשו במחיר מלא, "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 15\\%"
+      },
+      {
+        "type": "text",
+        "content": " בהנחת סטודנט, והיתר נמכרו במחיר מיוחד לילדים. מחיר הכרטיס המלא הוא "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 40"
+      },
+      {
+        "type": "text",
+        "content": " ₪, מחיר כרטיס הסטודנט הוא "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " ₪, ומחיר כרטיס לילדים הוא "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " ₪. מה סכום הרווח הקולנוע רק מכרטיסי הילדים ? (בש\"ח)"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 1500"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 2800"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 4500"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 6000"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא מה סכום הרווח של בית הקולנוע מכרטיסי הילדים. ראשית, נמצא כמה אחוזים מסך כל הכרטיסים נמכרו לילדים- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 100\\%-(60\\%+15\\%)=25\\%"
+      },
+      {
+        "type": "text",
+        "content": " כעת, נמצא את כמות כרטיסי הילדים. לשם כך, נעזר בשיטת "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 10\\% . \\displaystyle 10\\%"
+      },
+      {
+        "type": "text",
+        "content": " מתוך "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1200"
+      },
+      {
+        "type": "text",
+        "content": " הם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 120 ,"
+      },
+      {
+        "type": "text",
+        "content": " ו- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5\\%"
+      },
+      {
+        "type": "text",
+        "content": " יהיו בדיוק חצי מזה, כלומר "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 60 . \\displaystyle 25\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהכרטיסים היו כרטיסי ילדים. כפי שאמרנו, "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 10\\%"
+      },
+      {
+        "type": "text",
+        "content": " הם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 120 ,"
+      },
+      {
+        "type": "text",
+        "content": " ו- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5\\%"
+      },
+      {
+        "type": "text",
+        "content": " הם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 60 ,"
+      },
+      {
+        "type": "text",
+        "content": " ולכן כמות כרטיסי הילדים היא- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 120\\cdot 2+60=300 ."
+      },
+      {
+        "type": "text",
+        "content": " אנו יודעים כי בית הקולנוע הרוויח "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " ₪ מכל כרטיס ילד, ולכן הרווח הכולל מכרטיסי הילדים יהיה- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 300\\cdot 20=\\mathbf{6000}"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, בית הקולנוע הרוויח מכרטיסי הילדים "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\mathbf{6000}"
+      },
+      {
+        "type": "text",
+        "content": " ₪."
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "question": [
+      {
+        "type": "text",
+        "content": "שני רכבים יצאו ב-09:20 זה לקראת זה משתי ערים שמרחקן 260 ק״מ. מהירויותיהם 75 ו-55 קמ״ש. באיזו שעה ייפגשו?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "10{:}50"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "11{:}00"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "11{:}20"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "11{:}50"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "ניזכר כי כאשר שני רכבים נוסעים זה לקראת זה, המהירות המשותפת שלהם היא סכום שתי המהירויות. כלומר, המהירות המשותפת במקרה זה היא: 75 + 55 = 130 ניעזר בנוסחה: "
+      },
+      {
+        "type": "math",
+        "content": "\\text{מהירות} \\cdot \\text{זמן} = \\text{דרך}"
+      },
+      {
+        "type": "text",
+        "content": " ונמצא את הזמן עד למפגש בעזרת המהירות המשותפת שמצאנו: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{260}{130} = 2"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, הרכבים נסעו במשך שעתיים עד שנפגשו. מאחר שהם יצאו בשעה 09:20, הם ייפגשו בשעה: 11{:}20"
+      }
+    ]
+  }
+]

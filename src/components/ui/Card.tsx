@@ -17,6 +17,7 @@ const ACCENT_STYLES = {
   'ai-sentence': { badge: 'bg-accent-ai-sentence/10 text-accent-ai-sentence', hoverBorder: 'hover:border-accent-ai-sentence' },
   'tzav-rishon': { badge: 'bg-accent-tzav-rishon/10 text-accent-tzav-rishon-fg', hoverBorder: 'hover:border-accent-tzav-rishon' },
   reading: { badge: 'bg-primary-600/10 text-primary-700 dark:text-primary-400', hoverBorder: 'hover:border-primary-400' },
+  makbatzim: { badge: 'bg-accent-makbatzim/10 text-accent-makbatzim', hoverBorder: 'hover:border-accent-makbatzim' },
 } as const
 
 export type AccentColor = keyof typeof ACCENT_STYLES

@@ -1,0 +1,994 @@
+[
+  {
+    "id": 1,
+    "question": [
+      {
+        "type": "text",
+        "content": "נגר מתחיל מרכיב 3 שולחנות ב־4 שעות. נגר מיומן מרכיב 7 שולחנות ב־3 שעות. בנגריית \"העץ\" עובדים 3 נגרים מתחילים ו־2 נגרים מיומנים. כמה שולחנות ירכיבו ב־24 שעות?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "166"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "204"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "242"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "104"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא כמה שולחנות ירכיבו יחד בנגריית \"העץ\" ב־24 שעות. כיוון שמדובר על שאלת הספק, נסדר את הנתונים בטבלה: סוג עובד תפוקה וזמן הספק (שולחנות/שעה) נגר מתחיל 3 שולחנות ב־4 שעות "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " נגר מיומן 7 שולחנות ב־3 שעות "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{7}{3}"
+      },
+      {
+        "type": "text",
+        "content": " כיוון שידוע לנו ההספק של כל סוג עובד, נחשב את ההספק הכולל של 3 נגרים מתחילים ו־2 נגרים מיומנים: 3"
+      },
+      {
+        "type": "math",
+        "content": "\\cdot\\frac{3}{4}+\\;2\\cdot\\frac{7}{3}=\\frac{9}{4}+\\frac{14}{3}=\\frac{27}{12}+\\frac{56}{12}=\\frac{83}{12}\\ \\text{שולחנות/שעה}"
+      },
+      {
+        "type": "text",
+        "content": " כעת נכפיל בזמן הכולל 24 שעות כדי לקבל את מספר השולחנות שיורכבו: "
+      },
+      {
+        "type": "math",
+        "content": "\\text{כמות}=\\text{הספק כולל}\\times\\text{זמן}= \\frac{83}{12}\\cdot 24=2\\cdot 83=166"
+      },
+      {
+        "type": "text",
+        "content": " לכן, בנגריית \"העץ\" ירכיבו ב־24 שעות: 166 שולחנות."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": [
+      {
+        "type": "text",
+        "content": "רונה פותרת 64 תרגילים בשעה. בסוף כל שעה, קצב העבודה שלה יורד ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מהקצב הקודם. כמה שעות יקח לרונה לפתור 175 תרגילים?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "5"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "2"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "3"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "4"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא כמה זמן יקח לרונה לפתור 111 תרגילים. ידוע לנו שבשעה הראשונה פתרה רונה 64 תרגילים. בשעה השנייה, קצב הפתרון של רונה יורד ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מקצב הפתרון של השעה הראשונה. כלומר, בשעה השנייה, רונה פתרה "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מכמות השאלות שפתרה בשעה הראשונה. נחשב ערך זה: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}\\cdot 64 \\Rightarrow 3\\cdot 16=48"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, בשעה השנייה פתרה רונה 48 תרגילים. נחשב כמה תרגילים רונה פתרה עד כה: 64+48=112 נחשב כמה תרגילים רונה פתרה בשעה השלישית. בשעה השלישית, קצב הפתרון של רונה יורד ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מקצב הפתרון של השעה השנייה. כלומר, בשעה השלישית, רונה פתרה "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מכמות השאלות שפתרה בשעה השנייה. נחשב ערך זה: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}\\cdot 48 \\Rightarrow 3\\cdot 12=36"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, בשעה השלישית פתרה רונה 36 תרגילים. נחשב כמה תרגילים רונה פתרה עד כה: 112+36=148 נחשב כמה תרגילים רונה פתרה בשעה הרביעית. בשעה הרביעית, קצב הפתרון של רונה יורד ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מקצב הפתרון של השעה השלישית. כלומר, בשעה הרביעית, רונה פתרה "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}"
+      },
+      {
+        "type": "text",
+        "content": " מכמות השאלות שפתרה בשעה השלישית. נחשב ערך זה: "
+      },
+      {
+        "type": "math",
+        "content": "\\frac{3}{4}\\cdot 36 \\Rightarrow 3\\cdot 9=27"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, בשעה הרביעית פתרה רונה 27 תרגילים. נחשב כמה תרגילים רונה פתרה עד כה: 148+27=175 לרונה יקח 4 שעות לפתור 175 תרגילים."
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": [
+      {
+        "type": "text",
+        "content": "אמא מכינה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות בשעה, והילד אוכל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3.5"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות בחצי שעה. תוך כמה שעות יהיו בבית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 5.5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 6.5"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 7"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כי בכל שעה, מתווספות לבית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות, אך בכל חצי שעה, יורדות מהמלאי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3.5"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות. כדי לעבוד בצורה נוחה יותר, נכפיל ב־ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " ונקבל כי בכל שעה יורדות מהמלאי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 7"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות. כלומר, סה״כ מתווספות לבית בכל שעה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות. נשאלנו תוך כמה שעות יהיו בבית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות, ולכן נחלק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " ב־ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5 ,"
+      },
+      {
+        "type": "text",
+        "content": " ונקבל: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{35}{5}=7"
+      },
+      {
+        "type": "text",
+        "content": " לכן, יהיו בבית "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 35"
+      },
+      {
+        "type": "text",
+        "content": " עוגיות לאחר 7 שעות."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": [
+      {
+        "type": "text",
+        "content": "שלושה חברים- אופק, אור ויובל, עובדים יחד בחדר האוכל של הקיבוץ. אופק מכין סלט ירקות ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 15"
+      },
+      {
+        "type": "text",
+        "content": " דקות, אור ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " דקות, ויובל ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 30"
+      },
+      {
+        "type": "text",
+        "content": " דקות. כמה סלטים יכינו יחד תוך שעתיים?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 15"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 16"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 18"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 21"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "משום שאנו יודעים כמה זמן לוקח לכל אחד מהחברים להכין סלט בעצמו, ונשאלנו כמה סלטים יכינו כולם יחד (בו זמנית), נמצא את כמות הסלטים שהכין כל אחד מהם במשך שעתיים, ונחבר. נעשה זאת על ידי חלוקת הזמן הכולל הנתון (שעתיים, שהן "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 120"
+      },
+      {
+        "type": "text",
+        "content": " דקות), בזמן שלוקח לכל אחד מהחברים: • אופק מכין סלט ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 15"
+      },
+      {
+        "type": "text",
+        "content": " דקות, כלומר במשך שעתיים: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{120}{15}=8"
+      },
+      {
+        "type": "text",
+        "content": " • אור מכין סלט ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " דקות, כלומר במשך שעתיים: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{120}{20}=6"
+      },
+      {
+        "type": "text",
+        "content": " • יובל מכין סלט ב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 30"
+      },
+      {
+        "type": "text",
+        "content": " דקות, כלומר במשך שעתיים: "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{120}{30}=4"
+      },
+      {
+        "type": "text",
+        "content": " סה״כ, שלושת החברים יחד הכינו "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 18"
+      },
+      {
+        "type": "text",
+        "content": " סלטים."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": [
+      {
+        "type": "text",
+        "content": "מספר המטוסים בבסיס רמון הוא כפול ממספר המטוסים בבסיס נבטים, ופי 3.5 ממספר המטוסים בבסיס שדה דוב. ידוע כי בבסיס נבטים יש בדיוק 3 מטוסים יותר מבבסיס שדה דוב. מה מספר המטוסים הכולל?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "14"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "21"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "28"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "25"
+        }
+      ]
+    ],
+    "correctOption": 4,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא את מספר המטוסים הכולל. נציג את כמות המטוסים בטבלת היחס: רמון נבטים שדה דוב סך הכל יח׳ יחס 2 1 יח׳ יחס 3.5 1 על מנת שנוכל לעבוד בצורה נוחה, נעבוד עם מספרים שלמים: רמון נבטים שדה דוב סך הכל יח׳ יחס 2 1 יח׳ יחס 7 2 כעת, נמצא יחס משותף בין הנתונים: רמון נבטים שדה דוב סך הכל יח׳ יחס 2 1 יח׳ יחס 7 3.5 2 על מנת שנוכל לעבוד בצורה נוחה, נעבוד עם מספרים שלמים: רמון נבטים שדה דוב סך הכל יח׳ יחס 14 7 4 25 ניתן לראות כי במצב זה, ההפרש בין מספר המטוסים בנבטים למספר המטוסים בשדה דוב הוא 3. לכן, מספר המטוסים הכולל הוא 25."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": [
+      {
+        "type": "text",
+        "content": "אמא חתכה פיצה ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 8"
+      },
+      {
+        "type": "text",
+        "content": " חלקים שווים, ולאחר מכן חתכה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " מהם לעוד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " חלקים שווים. כל מבוגר קיבל חתיכה גדולה אחת, וכל ילד קיבל חתיכה קטנה אחת. אם היו במסיבה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " מבוגרים ו- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ילדים, כמה מהפיצה נשארה?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle \\frac{7}{16}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle \\frac{1}{2}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle \\frac{9}{16}"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle \\frac{5}{8}"
+        }
+      ]
+    ],
+    "correctOption": 1,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "נמצא לכמה חלקים הפיצה חולקה. בהתחלה, אמא חתכה את הפיצה ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 8"
+      },
+      {
+        "type": "text",
+        "content": " חתיכות, כלומר יש לנו "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 8"
+      },
+      {
+        "type": "text",
+        "content": " שמיניות פיצה. לאחר מכן, היא לקחה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " מתוכן וחתכה אותן לעוד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2"
+      },
+      {
+        "type": "text",
+        "content": " חלקים. כעת, יש לנו עדיין חמש שמיניות מהחיתוך המקורי, ועוד שלוש שמיניות, שכל אחת מהן חולקה לשני חצאים, כך שסך\"כ יש "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " חלקים נוספים. נכפיל שמינית אחת בחצי בכדי למצוא את החלק החדש מתוך הפיצה- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{8}\\cdot \\frac{1}{2}=\\frac{1}{16}"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, יש לנו כעת סה\"כ "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 11"
+      },
+      {
+        "type": "text",
+        "content": " חלקים, מתוכם "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 5"
+      },
+      {
+        "type": "text",
+        "content": " שכל אחד מהם מהווה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{8}"
+      },
+      {
+        "type": "text",
+        "content": " מהפיצה, ועוד "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 6"
+      },
+      {
+        "type": "text",
+        "content": " שכל אחד מהם מהווה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{16}"
+      },
+      {
+        "type": "text",
+        "content": " מהפיצה. אנו יודעים כי היו "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " מבוגרים ו- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ילדים, לכן סה\"כ נאכלו במסיבה- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{1}{8}\\cdot 3+\\frac{1}{16}\\cdot 3=\\frac{2}{16}\\cdot 3+\\frac{1}{16}\\cdot 3=\\frac{6+3}{16}=\\frac{9}{16}"
+      },
+      {
+        "type": "text",
+        "content": " שאלנו כמה מהפיצה נותרה, ולכן נחסיר את השבר שמצאנו מהשלם ונקבל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 1-\\frac{9}{16}=\\frac{7}{16}"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "question": [
+      {
+        "type": "math",
+        "content": "\\displaystyle 40\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהתלמידים בכיתה הן בנות. ידוע שיש בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " בנים. כמה תלמידים יש בכיתה סך הכל?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 18"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 20"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 24"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 25"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "עלינו למצוא כמה תלמידים יש בכיתה. אנו יודעים כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 40\\%"
+      },
+      {
+        "type": "text",
+        "content": " הן בנות, ולכן ניתן להסיק כי "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 60\\%"
+      },
+      {
+        "type": "text",
+        "content": " הם בנים. בנוסף, אנו יודעים כי ישנם בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 12"
+      },
+      {
+        "type": "text",
+        "content": " בנים. בעזרת נתונים אלו, נבנה משוואה ונמצא את כמות התלמידים בכיתה, כאשר נגדיר כמות זו כ- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle x - \\displaystyle \\frac{60}{100}=\\frac{12}{x} \\displaystyle \\frac{3}{5}=\\frac{12}{x} \\displaystyle 3x=60 \\displaystyle x=20"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, ישנם בכיתה "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 20"
+      },
+      {
+        "type": "text",
+        "content": " תלמידים סה\"כ."
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "question": [
+      {
+        "type": "text",
+        "content": "בחנות ספרים יש הנחה מיוחדת- הספר הראשון יימכר במחיר מלא, וכל ספר אחריו יימכר בהנחה עולה של 10% על המחיר המקורי- הספר השני בהנחה של 10%, השלישי בהנחה של 20% וכן הלאה. מחיר כל ספר הוא 80 ש\"ח. כמה ישלם לקוח שקונה 4 ספרים?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "260"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "272"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "304"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "308"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת באחוזים. עלינו למצוא כמה ישלם לקוח שקונה 4 ספרים. אנו יודעים כי לכל ספר יש הנחה שונה, ולכן נמצא את עלות כל ספר בנפרד. בעזרת הנתון כי 10% מ-80 הם בדיוק 8, נוכל לחשב את ההנחות- • ספר 1- נמכר במחיר מלא, 80. • ספר 2- נמכר בהנחה של 10%, שהם בדיוק 8, ועלות הספר תהיה 80-8=72 . • ספר 3- בהנחה 20%, שהם בדיוק 16, ועלות הספר תהיה 80-16=64 . • ספר 4- בהנחה 30%, שהם בדיוק 24, ועלות הספר תהיה 80-24=56 . עלות כל ארבעת הספרים- 80+72+64+56=152+120=272"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "question": [
+      {
+        "type": "text",
+        "content": "בתחרות מרתון ידוע ש-12% מהנרשמים כלל לא הופיעו לתחרות, ומתוך אלו שהגיעו, סיימו רק 80% מהמשתתפים את כל המסלול. אם סה\"כ נרשמו 500 רצים, כמה מהם התחילו את המרוץ אך לא סיימו?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "text",
+          "content": "60"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "72"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "88"
+        }
+      ],
+      [
+        {
+          "type": "text",
+          "content": "96"
+        }
+      ]
+    ],
+    "correctOption": 3,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "שאלה זו עוסקת באחוזים. עלינו למצוא כמה משתתפים התחילו את המרוץ אך לא סיימו. ראשית, נמצא כמה מהנרשמים הגיעו למרוץ. אנו יודעים כי 12% לא הגיעו כלל, מתוך 500 הנרשמים. ניעזר בשיטת10%-10%: 10% מתוך 500 הם 50, ו-1% מתוך 500 הם 5. לכן 12% הם 50+5+5=60 . כלומר, 60 נרשמים כלל לא הגיעו למרוץ, ולכן כמות המשתתפים שהגיעה היא- 500−60=440 . כעת, מתוך אלו שהגיעו, סיימו רק 80%, כלומר 20% לא סיימו. לכן עלינו למצוא 20% מתוך 440. ניעזר בשיטת 10%-10%: 10% מתוך 440 הם 44, ולכן 20% הם 44⋅2=88 . סה\"כ 88 משתתפים התחילו את המרוץ אך לא סיימו."
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "question": [
+      {
+        "type": "text",
+        "content": "במיכל הדלק המלא של האוטובוס "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 200"
+      },
+      {
+        "type": "text",
+        "content": " ליטרים של דלק. המלצת יצרן הרכב היא לתדלק שוב כאשר נשארים "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 2\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהמיכל. אם ידוע כי כל ליטר דלק מספיק בממוצע ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ק״מ של נסיעה, כמה ק״מ האוטובוס יכול לנסוע עד שיצטרך לתדלק, לפי הנחיות היצרן?"
+      }
+    ],
+    "options": [
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 568"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 588"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 594"
+        }
+      ],
+      [
+        {
+          "type": "math",
+          "content": "\\displaystyle 598"
+        }
+      ]
+    ],
+    "correctOption": 2,
+    "explanation": [
+      {
+        "type": "text",
+        "content": "אנו יודעים כי האוטובוס יכול לנצל "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 98\\%"
+      },
+      {
+        "type": "text",
+        "content": " מהמיכל שלו לפני התדלוק. נמצא לכמה ליטרים זה שווה, בעזרת החישוב- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle \\frac{x}{200}=\\frac{98}{100} \\displaystyle \\frac{x}{2}=98 \\displaystyle x=196"
+      },
+      {
+        "type": "text",
+        "content": " כלומר, האוטובוס יכול לנצל לפני התדלוק "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 196"
+      },
+      {
+        "type": "text",
+        "content": " ליטרים של דלק. אנו יודעים כי כל ליטר מספיק ל- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 3"
+      },
+      {
+        "type": "text",
+        "content": " ק״מ, ולכן האוטובוס יכול לנסוע- "
+      },
+      {
+        "type": "math",
+        "content": "\\displaystyle 196\\cdot 3=588"
+      }
+    ]
+  }
+]

@@ -92,6 +92,23 @@ test('splitSegments: an already-escaped percent sign is left untouched (not doub
   ])
 })
 
+test('splitSegments: \\left(...\\right) parses as one run, not two dangling delimiter commands', () => {
+  const segs = splitSegments('פשטו: 4 + 2 \\cdot \\left(\\frac{6}{8} + \\frac{3}{4}\\right) - 5')
+  assert.deepEqual(segs, [
+    { type: 'text', content: 'פשטו: 4 + 2 ' },
+    { type: 'math', content: '\\cdot \\left(\\frac{6}{8} + \\frac{3}{4}\\right) - 5' },
+  ])
+})
+
+test('splitSegments: the \\; spacing macro does not leave a dangling backslash', () => {
+  const segs = splitSegments('נחשב: 2 \\;+\\; 3 \\;=\\; 5 . סיום')
+  assert.deepEqual(segs, [
+    { type: 'text', content: 'נחשב: 2 ' },
+    { type: 'math', content: '\\;+\\; 3 \\;=\\; 5 .' },
+    { type: 'text', content: ' סיום' },
+  ])
+})
+
 test('splitSegments: trailing whitespace inside a captured run is handed back to the following text segment', () => {
   const segs = splitSegments('\\displaystyle 30\\% . הבא')
   assert.equal(segs[0].type, 'math')
