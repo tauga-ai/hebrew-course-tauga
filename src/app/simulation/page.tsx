@@ -546,6 +546,7 @@ export default function SimulationPage() {
         setCurrentAnswer={setInterviewCurrentAnswer}
         interviewSpeech={interviewSpeech}
         onNextQuestion={interviewNextQuestion}
+        errorBanner={errorBanner(() => finishInterview(interviewAnswers))}
       />
     )
   }
