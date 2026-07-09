@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
 
@@ -18,27 +19,23 @@ interface SetHeader {
   topic: string
 }
 
+interface StudentsData {
+  class_name: string
+  students: StudentRow[]
+  set_headers: SetHeader[]
+}
+
 export default function StudentsPage() {
   const router = useRouter()
   const { email } = useTeacherAuth()
-  const [className, setClassName] = useState('')
-  const [students, setStudents] = useState<StudentRow[]>([])
-  const [setHeaders, setSetHeaders] = useState<SetHeader[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useResource<StudentsData>(email ? '/api/teacher/students' : null)
+  const className = data?.class_name ?? ''
+  const students = data?.students ?? []
+  const setHeaders = data?.set_headers ?? []
 
   useEffect(() => {
-    if (!email) return
-    async function load() {
-      const res = await fetch('/api/teacher/students')
-      const data = await res.json()
-      if (!res.ok) { router.replace('/teacher/login'); return }
-      setClassName(data.class_name)
-      setStudents(data.students)
-      setSetHeaders(data.set_headers)
-      setLoading(false)
-    }
-    load()
-  }, [email, router])
+    if (error) router.replace('/teacher/login')
+  }, [error, router])
 
   if (loading) return <LoadingSpinner />
 
