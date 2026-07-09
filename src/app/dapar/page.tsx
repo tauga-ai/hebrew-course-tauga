@@ -7,6 +7,7 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { scoreColor as sharedScoreColor } from '@/lib/score-color'
 
 export default function DaparPage() {
   const router = useRouter()
@@ -89,7 +90,7 @@ export default function DaparPage() {
   // ── RESULTS SCREEN ──────────────────────────────────────────────────────────
   if (results) {
     const grade = gradeDaparAnswers(results)
-    const scoreColor = grade.pct >= 70 ? 'text-green-600 dark:text-green-400' : grade.pct >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
+    const scoreColor = sharedScoreColor(grade.pct)
 
     return (
       <div className="min-h-screen md:flex">
@@ -106,8 +107,16 @@ export default function DaparPage() {
         {/* Per-section summary */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
           {grade.perSection.map(section => {
-            const color = section.pct >= 70 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : section.pct >= 50 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
-            const textColor = section.pct >= 70 ? 'text-green-700 dark:text-green-400' : section.pct >= 50 ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+            const color = sharedScoreColor(section.pct, {
+              palette: {
+                good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+                ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+                bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+              },
+            })
+            const textColor = sharedScoreColor(section.pct, {
+              palette: { good: 'text-green-700 dark:text-green-400', ok: 'text-yellow-700 dark:text-yellow-400', bad: 'text-red-600 dark:text-red-400' },
+            })
             return (
               <div key={section.label} className={`rounded-xl border p-3 text-center ${color}`}>
                 <div className={`text-2xl font-bold ${textColor}`}>{section.pct}%</div>
