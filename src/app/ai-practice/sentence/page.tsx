@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { AIWordList } from '@/app/api/ai-practice/sentence-words/route'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
-import { speakHebrew } from '@/lib/use-hebrew-tts'
+import { speakHebrew } from '@/lib/tts-client'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
