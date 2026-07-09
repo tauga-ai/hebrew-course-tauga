@@ -33,7 +33,9 @@ export async function GET(req: NextRequest) {
 
   const studentMap = Object.fromEntries((students || []).map(s => [s.id, s.full_name]))
 
-  // Build submission rows
+  // Build submission rows — correct_answers is embedded here (server-side,
+  // already has the full answer key) so the client never needs to import
+  // the answer-bearing module itself just to color-code right/wrong per question.
   const rows = (submissions || []).map(s => ({
     id: s.id,
     student_name: studentMap[s.student_id] || '—',
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest) {
     set_id: s.set_id,
     set_name: PSYCHOTECHNIC_SETS.find(ps => ps.id === s.set_id)?.name || `מקבץ ${s.set_id}`,
     answers: s.answers as number[],
+    correct_answers: getSetById(s.set_id)?.answers || [],
     score: s.score,
     total: s.total,
     pct: Math.round((s.score / s.total) * 100),

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
+import type { PsychotechnicSetMeta } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 import { PageHeader } from '@/components/PageHeader'
@@ -32,9 +32,20 @@ export default function PsychotechnicPage() {
   const [results, setResults] = useState<{ results: QuestionResult[]; score: number; total: number } | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [sets, setSets] = useState<PsychotechnicSetMeta[]>([])
 
-  const selectedSet = PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)
-  const numQuestions = selectedSet?.answers.length || 0
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+    fetch('/api/psychotechnic/sets')
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setSets(data.sets || []) })
+      .catch(() => { if (!cancelled) setSets([]) })
+    return () => { cancelled = true }
+  }, [session])
+
+  const selectedSet = sets.find(s => s.id === selectedSetId)
+  const numQuestions = selectedSet?.questionCount || 0
 
   // Restore an in-progress answer draft, if one was left behind by a refresh/navigation-away.
   useEffect(() => {
@@ -69,8 +80,8 @@ export default function PsychotechnicPage() {
 
   function selectSet(id: number) {
     setSelectedSetId(id)
-    const set = PSYCHOTECHNIC_SETS.find(s => s.id === id)
-    setAnswers(new Array(set?.answers.length || 10).fill(0))
+    const set = sets.find(s => s.id === id)
+    setAnswers(new Array(set?.questionCount || 10).fill(0))
     setPhase('input')
     setResults(null)
   }
@@ -134,12 +145,12 @@ export default function PsychotechnicPage() {
           </div>
           <h2 className="text-base font-semibold text-fg/80 mb-3">בחר מקבץ:</h2>
           <CardGrid>
-            {PSYCHOTECHNIC_SETS.map(set => (
+            {sets.map(set => (
               <Card
                 key={set.id}
                 icon="🧠"
                 title={set.name}
-                subtitle={`${set.answers.length} שאלות`}
+                subtitle={`${set.questionCount} שאלות`}
                 accentColor="psychotechnic"
                 onClick={() => selectSet(set.id)}
                 trailing={<span className="text-accent-psychotechnic">←</span>}

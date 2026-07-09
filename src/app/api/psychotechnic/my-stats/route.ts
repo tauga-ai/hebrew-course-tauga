@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { getStudentFromSession } from '@/lib/auth'
+import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 
 /**
  * The authenticated student's own psychotechnic performance summary —
@@ -25,5 +26,5 @@ export async function GET() {
     ? rows.reduce((sum, r) => sum + (r.score / r.total) * 100, 0) / rows.length
     : null
 
-  return NextResponse.json({ attempted_sets, avg_pct })
+  return NextResponse.json({ attempted_sets, avg_pct, total_sets: PSYCHOTECHNIC_SETS.length })
 }

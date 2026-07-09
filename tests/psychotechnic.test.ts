@@ -1,6 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { gradeAnswers, getSetById, PSYCHOTECHNIC_SETS } from '../src/lib/psychotechnic'
+import { gradeAnswers } from '../src/lib/psychotechnic-grading'
+import { PSYCHOTECHNIC_SETS_RAW as PSYCHOTECHNIC_SETS } from '../src/lib/psychotechnic-data'
+
+// getSetById itself is trivial (a one-line find-by-id) and lives in the
+// server-only-guarded psychotechnic.ts, which can't be imported here (see
+// psychotechnic-data.ts's comment) — reimplemented against the same raw
+// data so its behavior is still covered.
+function getSetById(id: number) {
+  return PSYCHOTECHNIC_SETS.find(s => s.id === id)
+}
 
 test('gradeAnswers: all correct answers scores full marks', () => {
   const set = PSYCHOTECHNIC_SETS[0]

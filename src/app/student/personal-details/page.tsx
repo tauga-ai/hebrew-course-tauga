@@ -5,7 +5,6 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { gradeDaparAnswers } from '@/lib/dapar'
-import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { PracticeSet, Submission } from '@/lib/types'
 
@@ -63,7 +62,7 @@ export default function PersonalDetailsPage() {
         {
           key: 'psychotechnic',
           label: 'פסיכוטכני',
-          value: `${psychoRes?.attempted_sets ?? 0}/${PSYCHOTECHNIC_SETS.length} מקבצים${psychoRes?.avg_pct != null ? ` · ממוצע ${Math.round(psychoRes.avg_pct)}%` : ''}`,
+          value: `${psychoRes?.attempted_sets ?? 0}/${psychoRes?.total_sets ?? 0} מקבצים${psychoRes?.avg_pct != null ? ` · ממוצע ${Math.round(psychoRes.avg_pct)}%` : ''}`,
         },
         {
           key: 'sentence',
