@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PracticeSet, Submission } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
@@ -12,33 +12,22 @@ import { Card } from '@/components/ui/Card'
 export default function Menu() {
   const router = useRouter()
   const { session } = useStudentSession()
-  const [sets, setSets] = useState<PracticeSet[]>([])
-  const [completedCount, setCompletedCount] = useState(0)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!session) return
-
-    async function load() {
-      const [setsRes, subsRes] = await Promise.all([
-        fetch('/api/practice-sets'),
-        fetch(`/api/student/${session!.id}/submissions`),
-      ])
-      const setsData = await setsRes.json()
-      const subsData: { submissions?: Submission[] } = await subsRes.json()
-      setSets(setsData.sets || [])
-      setCompletedCount(subsData.submissions?.length || 0)
-      setLoading(false)
-    }
-    load()
-  }, [session])
+  const { data: setsData, loading: setsLoading } = useResource<{ sets: PracticeSet[] }>(
+    session ? '/api/practice-sets' : null, { fallback: { sets: [] } }
+  )
+  const { data: subsData, loading: subsLoading } = useResource<{ submissions: Submission[] }>(
+    session ? `/api/student/${session.id}/submissions` : null, { fallback: { submissions: [] } }
+  )
+  const sets = setsData?.sets ?? []
+  const completedCount = subsData?.submissions?.length ?? 0
 
   function handleLogout() {
     localStorage.removeItem('student_session')
     router.replace('/student')
   }
 
-  if (loading) return <LoadingSpinner />
+  if (setsLoading || subsLoading) return <LoadingSpinner />
 
   return (
     <div className="min-h-screen md:flex">
