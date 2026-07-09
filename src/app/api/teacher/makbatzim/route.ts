@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const { cls, students, studentIds } = result
 
   if (studentIds.length === 0) {
-    return NextResponse.json({ class_name: cls.name, sets_summary: [], students: [], question_stats: [] })
+    return NextResponse.json({ class_name: cls.name, entities_summary: [], students: [], question_stats: [] })
   }
 
   let query = db.from('makbatzim_results')
@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     class_name: cls.name,
-    sets_summary: report.entities_summary.map(e => ({ set_id: e.entity_id, set_label_he: e.label_he, attempted_count: e.attempted_count, avg_pct: e.avg_pct })),
-    students: report.students.map(s => ({ student_id: s.student_id, student_name: s.student_name, set_id: s.entity_id, set_label_he: s.label_he, correct_count: s.correct_count, total_answered: s.total_answered, pct: s.pct })),
+    entities_summary: report.entities_summary,
+    students: report.students,
     question_stats: report.question_stats,
   })
 }
