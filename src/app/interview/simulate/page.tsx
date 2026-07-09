@@ -6,6 +6,7 @@ import { buildSimulationQuestions, CATEGORY_COLORS, type InterviewQuestion } fro
 import type { InterviewFeedback } from '@/app/api/interview/feedback/route'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { scoreColor as sharedScoreColor } from '@/lib/score-color'
 
 type Phase = 'intro' | 'question' | 'processing' | 'results'
 
@@ -120,8 +121,16 @@ export default function SimulatePage() {
 
   // ── RESULTS ────────────────────────────────────────────────────────────────
   if (phase === 'results' && feedback) {
-    const scoreColor = feedback.score >= 80 ? 'text-green-600 dark:text-green-400' : feedback.score >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-    const scoreBg = feedback.score >= 80 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : feedback.score >= 60 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
+    const THRESHOLDS = { good: 80, ok: 60 }
+    const scoreColor = sharedScoreColor(feedback.score, { thresholds: THRESHOLDS })
+    const scoreBg = sharedScoreColor(feedback.score, {
+      thresholds: THRESHOLDS,
+      palette: {
+        good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+        ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+        bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+      },
+    })
     return (
       <div className="min-h-screen p-4 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mt-4 mb-6">
