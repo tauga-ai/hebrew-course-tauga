@@ -24,11 +24,13 @@ export default function TzavRishonTeacherPage() {
   const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
   const [selectedTopic, setSelectedTopic] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
   const [tab, setTab] = useState<'topics' | 'students' | 'questions'>('topics')
 
   async function loadData(topic: string) {
     const res = await fetch(`/api/teacher/tzav-rishon${topic ? `?topic=${topic}` : ''}`)
-    if (!res.ok) return
+    if (!res.ok) throw new Error('load failed')
     const data = await res.json()
     setClassName(data.class_name)
     setTopicsSummary(data.topics_summary)
@@ -39,26 +41,46 @@ export default function TzavRishonTeacherPage() {
   useEffect(() => {
     if (!email) return
     async function init() {
-      const topicsRes = await fetch('/api/tzav-rishon/topics').then(r => r.json())
-      setAllTopics(topicsRes.topics || [])
-      await loadData('')
-      setLoading(false)
+      try {
+        const topicsRes = await fetch('/api/tzav-rishon/topics')
+        if (!topicsRes.ok) throw new Error('load failed')
+        const topicsData = await topicsRes.json()
+        setAllTopics(topicsData.topics || [])
+        await loadData('')
+      } catch {
+        setError('שגיאה בטעינת הדוח. בדוק חיבור לאינטרנט ונסה שוב.')
+      } finally {
+        setLoading(false)
+      }
     }
     init()
-  }, [email])
+  }, [email, retryToken])
 
   async function handleTopicSelect(topic: string) {
     setSelectedTopic(topic)
     setLoading(true)
-    await loadData(topic)
-    setLoading(false)
-    if (topic) setTab('questions')
+    setError('')
+    try {
+      await loadData(topic)
+      if (topic) setTab('questions')
+    } catch {
+      setError('שגיאה בטעינת הדוח. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const scoreColor = (v: number | null) => {
     if (v === null) return 'text-fg/30'
     return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
   }
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center gap-4 text-center mt-12">
+      <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+      <button onClick={() => { setError(''); setRetryToken(t => t + 1) }} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+    </div>
+  )
 
   if (loading) return <LoadingSpinner />
 
