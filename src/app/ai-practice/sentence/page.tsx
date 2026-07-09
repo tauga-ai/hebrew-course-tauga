@@ -8,6 +8,7 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { scoreColor as sharedScoreColor } from '@/lib/score-color'
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'מילון יומיומי בסיסי: בית, משפחה, בית ספר',
@@ -95,8 +96,16 @@ export default function AISentencePage() {
     } finally { setTtsLoading(false) }
   }
 
-  const scoreColor = (s: number) => s >= 8 ? 'text-green-600 dark:text-green-400' : s >= 6 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : s >= 6 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
+  const THRESHOLDS = { good: 8, ok: 6 }
+  const scoreColor = (s: number) => sharedScoreColor(s, { thresholds: THRESHOLDS })
+  const scoreBg = (s: number) => sharedScoreColor(s, {
+    thresholds: THRESHOLDS,
+    palette: {
+      good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+      ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+      bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+    },
+  })
 
   return (
     <div className="min-h-screen md:flex">
