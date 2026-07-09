@@ -46,6 +46,7 @@ export default function TzavRishonPracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
 
   // Adjusting state when a prop changes (React's recommended pattern for
   // this — https://react.dev/learn/you-might-not-need-an-effect) rather
@@ -64,28 +65,46 @@ export default function TzavRishonPracticePage() {
     let cancelled = false
 
     async function load() {
-      const [qRes, pRes, tRes] = await Promise.all([
-        fetch(`/api/tzav-rishon/questions?topic=${topic}`).then(r => r.json()),
-        fetch(`/api/tzav-rishon/progress?topic=${topic}`).then(r => r.json()),
-        fetch('/api/tzav-rishon/topics').then(r => r.json()),
-      ])
-      if (cancelled) return
-      if (!qRes.questions) { router.replace('/tzav-rishon'); return }
+      try {
+        const [qRes, pRes, tRes] = await Promise.all([
+          fetch(`/api/tzav-rishon/questions?topic=${topic}`),
+          fetch(`/api/tzav-rishon/progress?topic=${topic}`),
+          fetch('/api/tzav-rishon/topics'),
+        ])
+        if (!qRes.ok || !pRes.ok || !tRes.ok) throw new Error('load failed')
+        const [qData, pData, tData] = await Promise.all([qRes.json(), pRes.json(), tRes.json()])
+        if (cancelled) return
+        if (!qData.questions) { router.replace('/tzav-rishon'); return }
 
-      const map: Record<number, ProgressEntry> = {}
-      for (const p of pRes.progress || []) map[p.question_id] = p
+        const map: Record<number, ProgressEntry> = {}
+        for (const p of pData.progress || []) map[p.question_id] = p
 
-      const loaded: QuestionOut[] = qRes.questions
-      const firstUnanswered = loaded.findIndex(q => !(q.id in map))
-      setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
+        const loaded: QuestionOut[] = qData.questions
+        const firstUnanswered = loaded.findIndex(q => !(q.id in map))
+        setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
 
-      setQuestions(loaded)
-      setProgress(map)
-      setTopicMeta((tRes.topics || []).find((t: TopicMeta) => t.key === topic) || null)
+        setQuestions(loaded)
+        setProgress(map)
+        setTopicMeta((tData.topics || []).find((t: TopicMeta) => t.key === topic) || null)
+      } catch {
+        if (!cancelled) setError('שגיאה בטעינת השאלות. בדוק חיבור לאינטרנט ונסה שוב.')
+      }
     }
     load()
     return () => { cancelled = true }
-  }, [session, topic, router])
+  }, [session, topic, router, retryToken])
+
+  if (error && questions === null) {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+          <button onClick={() => { setError(''); setRetryToken(t => t + 1) }} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+        </div>
+      </div>
+    )
+  }
 
   if (sessionLoading || questions === null || topicMeta === null) return <LoadingSpinner />
 
