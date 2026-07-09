@@ -24,11 +24,13 @@ export default function MakbatzimTeacherPage() {
   const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
   const [selectedSet, setSelectedSet] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
   const [tab, setTab] = useState<'sets' | 'students' | 'questions'>('sets')
 
   async function loadData(setId: string) {
     const res = await fetch(`/api/teacher/makbatzim${setId ? `?set_id=${setId}` : ''}`)
-    if (!res.ok) return
+    if (!res.ok) throw new Error('load failed')
     const data = await res.json()
     setClassName(data.class_name)
     setSetsSummary(data.sets_summary)
@@ -39,26 +41,46 @@ export default function MakbatzimTeacherPage() {
   useEffect(() => {
     if (!email) return
     async function init() {
-      const setsRes = await fetch('/api/makbatzim/sets').then(r => r.json())
-      setAllSets(setsRes.sets || [])
-      await loadData('')
-      setLoading(false)
+      try {
+        const setsRes = await fetch('/api/makbatzim/sets')
+        if (!setsRes.ok) throw new Error('load failed')
+        const setsData = await setsRes.json()
+        setAllSets(setsData.sets || [])
+        await loadData('')
+      } catch {
+        setError('שגיאה בטעינת הדוח. בדוק חיבור לאינטרנט ונסה שוב.')
+      } finally {
+        setLoading(false)
+      }
     }
     init()
-  }, [email])
+  }, [email, retryToken])
 
   async function handleSetSelect(setId: string) {
     setSelectedSet(setId)
     setLoading(true)
-    await loadData(setId)
-    setLoading(false)
-    if (setId) setTab('questions')
+    setError('')
+    try {
+      await loadData(setId)
+      if (setId) setTab('questions')
+    } catch {
+      setError('שגיאה בטעינת הדוח. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const scoreColor = (v: number | null) => {
     if (v === null) return 'text-fg/30'
     return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
   }
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center gap-4 text-center mt-12">
+      <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+      <button onClick={() => { setError(''); setRetryToken(t => t + 1) }} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+    </div>
+  )
 
   if (loading) return <LoadingSpinner />
 
