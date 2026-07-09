@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface SessionRow {
   session_id: string; student_name: string; status: string
@@ -50,10 +51,12 @@ export default function SimulationReportPage() {
     ? Math.round(completed.filter(s => s.part_b_pct !== null).reduce((acc, s) => acc + (s.part_b_pct || 0), 0) / completed.filter(s => s.part_b_pct !== null).length)
     : null
 
-  const scoreColor = (v: number | null) => {
-    if (v === null) return 'text-fg/30'
-    return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  }
+  const partCColor = (v: string | null) => scoreColor(v ? parseFloat(v) : null, { thresholds: { good: 7, ok: 5 } })
+  // success_pct uses 70/40 thresholds, while every other 0-100 score on this
+  // page (and the rest of the app) uses 70/50 — a pre-existing divergence,
+  // preserved verbatim rather than silently normalized.
+  const questionSuccessColor = (v: number | null) => scoreColor(v, { thresholds: { good: 70, ok: 40 } })
+  const questionBarColor = (v: number | null) => scoreColor(v, { thresholds: { good: 70, ok: 40 }, palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
 
   return (
     <>
@@ -128,7 +131,7 @@ export default function SimulationReportPage() {
                       {s.part_b_pct !== null ? `${s.part_b_pct}%` : '—'}
                       {s.part_b_correct != null && <span className="text-xs text-fg/40 mr-1">({s.part_b_correct}/{s.part_b_total})</span>}
                     </td>
-                    <td className={`p-3 text-center font-semibold ${s.part_c_avg ? (parseFloat(s.part_c_avg) >= 7 ? 'text-green-600 dark:text-green-400' : parseFloat(s.part_c_avg) >= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400') : 'text-fg/30'}`}>
+                    <td className={`p-3 text-center font-semibold ${partCColor(s.part_c_avg)}`}>
                       {s.part_c_avg ? `${s.part_c_avg}/10` : '—'}
                     </td>
                     <td className={`p-3 text-center font-semibold ${scoreColor(s.part_d_score)}`}>
@@ -162,7 +165,7 @@ export default function SimulationReportPage() {
                         <p className="text-sm text-fg/80 leading-relaxed line-clamp-2">{q.question_text}</p>
                       </div>
                       <div className="text-left flex-shrink-0">
-                        <div className={`text-2xl font-bold ${q.success_pct !== null ? (q.success_pct >= 70 ? 'text-green-600 dark:text-green-400' : q.success_pct >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400') : 'text-fg/30'}`}>
+                        <div className={`text-2xl font-bold ${questionSuccessColor(q.success_pct)}`}>
                           {q.success_pct !== null ? `${q.success_pct}%` : '—'}
                         </div>
                         <div className="text-xs text-fg/40">{q.correct}/{q.attempts}</div>
@@ -170,7 +173,7 @@ export default function SimulationReportPage() {
                     </div>
                     {q.attempts > 0 && (
                       <div className="mt-2 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
-                        <div className={`h-1.5 rounded-full ${(q.success_pct || 0) >= 70 ? 'bg-green-500' : (q.success_pct || 0) >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                        <div className={`h-1.5 rounded-full ${questionBarColor(q.success_pct || 0)}`}
                           style={{ width: `${q.success_pct || 0}%` }} />
                       </div>
                     )}
