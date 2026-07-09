@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getClassAndStudents } from '@/lib/teacher-data'
 import { requireTeacher } from '@/lib/auth'
-import { getQuestionById, getTopicMeta, TOPICS } from '@/lib/tzav-rishon'
+import { getQuestionById, TOPICS } from '@/lib/tzav-rishon'
+import { buildTeacherReport, type TeacherReportRow } from '@/lib/teacher-report'
 
 interface ResultRow {
   student_id: string
@@ -36,87 +37,27 @@ export async function GET(req: NextRequest) {
   if (topicFilter) query = query.eq('topic', topicFilter)
 
   const { data } = await query
-  const rows = (data || []) as ResultRow[]
+  const rows: TeacherReportRow[] = ((data || []) as ResultRow[]).map(r => ({
+    student_id: r.student_id,
+    entity_id: r.topic,
+    question_id: r.question_id,
+    selected_option: r.selected_option,
+    is_correct: r.is_correct,
+  }))
 
   const studentMap = Object.fromEntries((students || []).map(s => [s.id, s.full_name]))
+  const entities = TOPICS.map(t => ({ key: t.key, labelHe: t.labelHe }))
 
-  // Topics summary: activity + accuracy per topic, across the whole class.
-  const topicsSummary = TOPICS.map(t => {
-    const topicRows = rows.filter(r => r.topic === t.key)
-    return {
-      topic: t.key,
-      topic_label_he: t.labelHe,
-      attempted_count: topicRows.length,
-      avg_pct: topicRows.length > 0
-        ? Math.round((topicRows.filter(r => r.is_correct).length / topicRows.length) * 100)
-        : null,
-    }
-  }).filter(t => t.attempted_count > 0)
-
-  // Per-student-per-topic summary (not raw per-question rows).
-  const studentTopicKey = (studentId: string, topic: string) => `${studentId}::${topic}`
-  const studentTopicMap = new Map<string, { correct: number; total: number }>()
-  for (const r of rows) {
-    const key = studentTopicKey(r.student_id, r.topic)
-    const entry = studentTopicMap.get(key) || { correct: 0, total: 0 }
-    entry.total++
-    if (r.is_correct) entry.correct++
-    studentTopicMap.set(key, entry)
-  }
-  const studentsSummary = Array.from(studentTopicMap.entries()).map(([key, { correct, total }]) => {
-    const [studentId, topic] = key.split('::')
-    return {
-      student_id: studentId,
-      student_name: studentMap[studentId] || '—',
-      topic,
-      topic_label_he: getTopicMeta(topic)?.labelHe || topic,
-      correct_count: correct,
-      total_answered: total,
-      pct: Math.round((correct / total) * 100),
-    }
-  })
-
-  // Per-question distribution, only computed for a specific topic (avoids
-  // mixing question numbers across topics, which would be meaningless).
-  let questionStats: {
-    question_id: number
-    correct_answer: number
-    total_answers: number
-    correct_count: number
-    success_pct: number | null
-    distribution: Record<number, number>
-  }[] = []
-  if (topicFilter) {
-    const byQuestion = new Map<number, ResultRow[]>()
-    for (const r of rows) {
-      if (r.topic !== topicFilter) continue
-      const list = byQuestion.get(r.question_id) || []
-      list.push(r)
-      byQuestion.set(r.question_id, list)
-    }
-    questionStats = Array.from(byQuestion.entries()).map(([questionId, qRows]) => {
-      const question = getQuestionById(topicFilter, questionId)
-      const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
-      let correctCount = 0
-      for (const r of qRows) {
-        if (r.selected_option >= 1 && r.selected_option <= 4) dist[r.selected_option]++
-        if (r.is_correct) correctCount++
-      }
-      return {
-        question_id: questionId,
-        correct_answer: question?.correctOption ?? 0,
-        total_answers: qRows.length,
-        correct_count: correctCount,
-        success_pct: qRows.length > 0 ? Math.round((correctCount / qRows.length) * 100) : null,
-        distribution: dist,
-      }
-    }).sort((a, b) => a.question_id - b.question_id)
-  }
+  const report = buildTeacherReport(
+    rows, entities, studentMap,
+    (topic, questionId) => getQuestionById(topic, questionId)?.correctOption,
+    topicFilter || undefined
+  )
 
   return NextResponse.json({
     class_name: cls.name,
-    topics_summary: topicsSummary,
-    students: studentsSummary,
-    question_stats: questionStats,
+    topics_summary: report.entities_summary.map(e => ({ topic: e.entity_id, topic_label_he: e.label_he, attempted_count: e.attempted_count, avg_pct: e.avg_pct })),
+    students: report.students.map(s => ({ student_id: s.student_id, student_name: s.student_name, topic: s.entity_id, topic_label_he: s.label_he, correct_count: s.correct_count, total_answered: s.total_answered, pct: s.pct })),
+    question_stats: report.question_stats,
   })
 }
