@@ -3,6 +3,22 @@
 import type { ReactNode } from 'react'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import type { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
+import { scoreColor } from '@/lib/score-color'
+
+// 2-tier (good/ok only, no "bad" tier exists on this screen) — ok: -Infinity
+// makes every score below `good` fall into the ok tier instead of bad.
+const sentenceCardColor = (score: number) => scoreColor(score, {
+  thresholds: { good: 7, ok: -Infinity },
+  palette: {
+    good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+    ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+    bad: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+  },
+})
+const sentenceTextColor = (score: number) => scoreColor(score, {
+  thresholds: { good: 7, ok: -Infinity },
+  palette: { good: 'text-green-600 dark:text-green-400', ok: 'text-yellow-600 dark:text-yellow-400', bad: 'text-yellow-600 dark:text-yellow-400' },
+})
 
 interface SimExercise {
   id: number; ex_order: number
@@ -81,8 +97,8 @@ export function SentencePhase({
         </>
       ) : (
         <>
-          <div className={`rounded-2xl border p-4 text-center mb-3 ${currentFeedback.score >= 7 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800'}`}>
-            <div className={`text-4xl font-bold ${currentFeedback.score >= 7 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>{currentFeedback.score}/10</div>
+          <div className={`rounded-2xl border p-4 text-center mb-3 ${sentenceCardColor(currentFeedback.score)}`}>
+            <div className={`text-4xl font-bold ${sentenceTextColor(currentFeedback.score)}`}>{currentFeedback.score}/10</div>
           </div>
           <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
             <p className="text-xs text-fg/40 mb-1">המשפט שלך</p>
