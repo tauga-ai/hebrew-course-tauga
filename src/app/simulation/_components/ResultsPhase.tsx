@@ -2,6 +2,7 @@
 
 import type { StudentSession } from '@/lib/types'
 import type { SimulationResults } from '../page'
+import { scoreColor } from '@/lib/score-color'
 
 interface ResultsPhaseProps {
   session: StudentSession | null
@@ -44,8 +45,14 @@ export function ResultsPhase({ session, results, onBackToMenu }: ResultsPhasePro
       </div>
 
       {/* Interview score */}
-      <div className={`rounded-2xl border p-4 text-center mb-5 ${results.part_d.score >= 70 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : results.part_d.score >= 50 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'}`}>
-        <div className={`text-4xl font-bold ${results.part_d.score >= 70 ? 'text-green-600 dark:text-green-400' : results.part_d.score >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>{results.part_d.score}/100</div>
+      <div className={`rounded-2xl border p-4 text-center mb-5 ${scoreColor(results.part_d.score, {
+        palette: {
+          good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+          ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+          bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+        },
+      })}`}>
+        <div className={`text-4xl font-bold ${scoreColor(results.part_d.score)}`}>{results.part_d.score}/100</div>
         <div className="text-sm text-fg/70 mt-1">ראיון אישי: {results.part_d.level}</div>
         <p className="text-fg/70 text-sm mt-2 leading-relaxed">{results.part_d.summary}</p>
       </div>
