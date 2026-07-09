@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Minimal shape of the Web Speech API surface this hook actually touches.
 // Written locally instead of relying on `any` — TS's DOM lib does not ship these types.
@@ -78,7 +78,7 @@ export function useSpeechToText({ onTranscript, continuous = true, appendMode = 
     setIsListening(true)
   }
 
-  function stop() {
+  const stop = useCallback(() => {
     acceptRef.current = false
     if (recognitionRef.current) {
       recognitionRef.current.onresult = null
@@ -88,7 +88,16 @@ export function useSpeechToText({ onTranscript, continuous = true, appendMode = 
       recognitionRef.current = null
     }
     setIsListening(false)
-  }
+  }, [])
+
+  // Stops any live recognition on unmount (e.g. navigating away mid-dictation)
+  // — without this, the mic stayed active and callbacks kept firing into a
+  // component instance that no longer exists. stop() is already a no-op if
+  // nothing is listening, so this is safe on every mount/unmount, including
+  // React 18 StrictMode's dev double-invoke.
+  useEffect(() => {
+    return () => stop()
+  }, [stop])
 
   return { isListening, start, stop, supported }
 }
