@@ -15,9 +15,12 @@ export function useTeacherAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     async function check() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled) return
       if (!user) {
         router.replace('/teacher/login')
         return
@@ -26,6 +29,9 @@ export function useTeacherAuth() {
       setLoading(false)
     }
     check()
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
   return { email, loading }
