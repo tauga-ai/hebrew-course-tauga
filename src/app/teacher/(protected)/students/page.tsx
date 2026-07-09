@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface StudentRow {
   student_id: string
@@ -73,7 +74,7 @@ export default function StudentsPage() {
                     return (
                       <td key={h.set_number} className="p-3 text-center border-b border-card-border">
                         {result ? (
-                          <span className={`font-semibold ${result.score_percentage >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                          <span className={`font-semibold ${scoreColor(result.score_percentage, { thresholds: { good: 70, ok: 70 } })}`}>
                             {Math.round(result.score_percentage)}%
                           </span>
                         ) : (
@@ -84,7 +85,7 @@ export default function StudentsPage() {
                   })}
                   <td className="p-3 text-center border-b border-card-border">
                     {st.overall_avg !== null ? (
-                      <span className={`font-bold ${st.overall_avg >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                      <span className={`font-bold ${scoreColor(st.overall_avg, { thresholds: { good: 70, ok: 70 } })}`}>
                         {Math.round(st.overall_avg)}%
                       </span>
                     ) : (
