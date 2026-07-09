@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
@@ -18,17 +18,8 @@ interface SetMeta {
 export default function MakbatzimSetsPage() {
   const router = useRouter()
   const { session, loading: sessionLoading } = useStudentSession()
-  const [sets, setSets] = useState<SetMeta[] | null>(null)
-
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-    fetch('/api/makbatzim/sets')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setSets(data.sets || []) })
-      .catch(() => { if (!cancelled) setSets([]) })
-    return () => { cancelled = true }
-  }, [session])
+  const { data } = useResource<{ sets: SetMeta[] }>(session ? '/api/makbatzim/sets' : null, { fallback: { sets: [] } })
+  const sets = data?.sets ?? null
 
   if (sessionLoading || sets === null) return <LoadingSpinner />
 
