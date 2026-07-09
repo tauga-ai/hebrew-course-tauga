@@ -31,6 +31,7 @@ export default function PsychotechnicPage() {
   const [answers, setAnswers] = useState<number[]>([])
   const [results, setResults] = useState<{ results: QuestionResult[]; score: number; total: number } | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const selectedSet = PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)
   const numQuestions = selectedSet?.answers.length || 0
@@ -90,19 +91,26 @@ export default function PsychotechnicPage() {
       return
     }
     setSubmitting(true)
-    const res = await fetch('/api/psychotechnic/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        set_id: selectedSetId,
-        answers,
-      }),
-    })
-    const data = await res.json()
-    if (session) clearDraft(draftKey(session.id))
-    setResults(data)
-    setPhase('result')
-    setSubmitting(false)
+    setError('')
+    try {
+      const res = await fetch('/api/psychotechnic/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          set_id: selectedSetId,
+          answers,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה בשליחת התשובות')
+      if (session) clearDraft(draftKey(session.id))
+      setResults(data)
+      setPhase('result')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובות')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const answeredCount = answers.filter(a => a > 0).length
@@ -181,6 +189,7 @@ export default function PsychotechnicPage() {
             className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg">
             {submitting ? 'שולח...' : `הגש (${answeredCount}/${numQuestions})`}
           </button>
+          {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-2">{error}</p>}
           {answeredCount < numQuestions && (
             <p className="text-center text-orange-500 text-xs mt-2">יש עוד {numQuestions - answeredCount} שאלות ללא תשובה</p>
           )}
