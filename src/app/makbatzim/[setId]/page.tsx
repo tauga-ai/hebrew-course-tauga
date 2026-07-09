@@ -44,6 +44,7 @@ export default function MakbatzimPracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
 
   // Adjusting state when a prop changes (React's recommended pattern for
   // this — https://react.dev/learn/you-might-not-need-an-effect) rather
@@ -62,28 +63,46 @@ export default function MakbatzimPracticePage() {
     let cancelled = false
 
     async function load() {
-      const [qRes, pRes, sRes] = await Promise.all([
-        fetch(`/api/makbatzim/questions?set_id=${setId}`).then(r => r.json()),
-        fetch(`/api/makbatzim/progress?set_id=${setId}`).then(r => r.json()),
-        fetch('/api/makbatzim/sets').then(r => r.json()),
-      ])
-      if (cancelled) return
-      if (!qRes.questions) { router.replace('/makbatzim'); return }
+      try {
+        const [qRes, pRes, sRes] = await Promise.all([
+          fetch(`/api/makbatzim/questions?set_id=${setId}`),
+          fetch(`/api/makbatzim/progress?set_id=${setId}`),
+          fetch('/api/makbatzim/sets'),
+        ])
+        if (!qRes.ok || !pRes.ok || !sRes.ok) throw new Error('load failed')
+        const [qData, pData, sData] = await Promise.all([qRes.json(), pRes.json(), sRes.json()])
+        if (cancelled) return
+        if (!qData.questions) { router.replace('/makbatzim'); return }
 
-      const map: Record<number, ProgressEntry> = {}
-      for (const p of pRes.progress || []) map[p.question_id] = p
+        const map: Record<number, ProgressEntry> = {}
+        for (const p of pData.progress || []) map[p.question_id] = p
 
-      const loaded: QuestionOut[] = qRes.questions
-      const firstUnanswered = loaded.findIndex(q => !(q.id in map))
-      setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
+        const loaded: QuestionOut[] = qData.questions
+        const firstUnanswered = loaded.findIndex(q => !(q.id in map))
+        setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
 
-      setQuestions(loaded)
-      setProgress(map)
-      setSetMeta((sRes.sets || []).find((s: SetMeta) => s.key === setId) || null)
+        setQuestions(loaded)
+        setProgress(map)
+        setSetMeta((sData.sets || []).find((s: SetMeta) => s.key === setId) || null)
+      } catch {
+        if (!cancelled) setError('שגיאה בטעינת השאלות. בדוק חיבור לאינטרנט ונסה שוב.')
+      }
     }
     load()
     return () => { cancelled = true }
-  }, [session, setId, router])
+  }, [session, setId, router, retryToken])
+
+  if (error && questions === null) {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+          <button onClick={() => { setError(''); setRetryToken(t => t + 1) }} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+        </div>
+      </div>
+    )
+  }
 
   if (sessionLoading || questions === null || setMeta === null) return <LoadingSpinner />
 
