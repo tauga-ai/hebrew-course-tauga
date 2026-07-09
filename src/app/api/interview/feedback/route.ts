@@ -18,9 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { student_name, qa_pairs } = await req.json() as {
-    student_name: string
-    qa_pairs: { question: string; answer: string }[]
+  let student_name: string, qa_pairs: { question: string; answer: string }[]
+  try {
+    ({ student_name, qa_pairs } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
+  }
+  if (!Array.isArray(qa_pairs) || qa_pairs.length === 0) {
+    return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
 
   const qaText = qa_pairs

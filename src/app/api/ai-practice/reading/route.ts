@@ -24,7 +24,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { level } = await req.json() as { level: number }
+  let level: number
+  try {
+    ({ level } = await req.json() as { level: number })
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
+  }
   if (!level || level < 1 || level > 5) {
     return NextResponse.json({ error: 'רמה לא תקינה' }, { status: 400 })
   }

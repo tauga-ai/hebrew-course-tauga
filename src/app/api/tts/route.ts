@@ -8,7 +8,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { text, voice = 'he-IL-Wavenet-D' } = await req.json()
+  let text, voice
+  try {
+    ({ text, voice = 'he-IL-Wavenet-D' } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'גוף בקשה לא תקין' }, { status: 400 })
+  }
   if (!text) return NextResponse.json({ error: 'טקסט חסר' }, { status: 400 })
 
   const res = await fetch(
