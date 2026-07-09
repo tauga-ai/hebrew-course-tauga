@@ -73,7 +73,15 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (subError) return NextResponse.json({ error: subError.message }, { status: 500 })
+  if (subError) {
+    // 23505 = Postgres unique_violation — a concurrent duplicate submit slipped
+    // past the check above between the select and this insert (TOCTOU); the
+    // UNIQUE(student_id, practice_set_id) constraint is the real guard.
+    if (subError.code === '23505') {
+      return NextResponse.json({ error: 'כבר הגשת סט זה' }, { status: 409 })
+    }
+    return NextResponse.json({ error: subError.message }, { status: 500 })
+  }
 
   // Save answers
   const { error: ansError } = await db.from('student_answers').insert(
