@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
 
@@ -33,20 +34,11 @@ export default function SetAnalyticsPage() {
   const setId = params.setId as string
   const { email } = useTeacherAuth()
 
-  const [data, setData] = useState<SetData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useResource<SetData>(email ? `/api/teacher/sets/${setId}` : null)
 
   useEffect(() => {
-    if (!email) return
-    async function load() {
-      const res = await fetch(`/api/teacher/sets/${setId}`)
-      if (!res.ok) { router.replace('/teacher/dashboard'); return }
-      const d = await res.json()
-      setData(d)
-      setLoading(false)
-    }
-    load()
-  }, [setId, email, router])
+    if (error) router.replace('/teacher/dashboard')
+  }, [error, router])
 
   if (loading) return <LoadingSpinner />
   if (!data) return null
