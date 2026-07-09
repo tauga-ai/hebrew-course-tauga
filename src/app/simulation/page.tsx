@@ -183,15 +183,22 @@ export default function SimulationPage() {
   async function startSimulation() {
     if (!session) return
     setPhase('starting')
-    const res = await fetch('/api/simulation/start', { method: 'POST' })
-    const data = await res.json()
-    setSimSessionId(data.session_id)
-    setPartA(data.part_a)
-    setPartB(data.part_b)
-    setPartC(data.part_c)
-    setCurrentQ(0)
-    setReadingAnswers({})
-    setPhase('a')
+    setSubmitError(null)
+    try {
+      const res = await fetch('/api/simulation/start', { method: 'POST' })
+      if (!res.ok) throw new Error('start failed')
+      const data = await res.json()
+      setSimSessionId(data.session_id)
+      setPartA(data.part_a)
+      setPartB(data.part_b)
+      setPartC(data.part_c)
+      setCurrentQ(0)
+      setReadingAnswers({})
+      setPhase('a')
+    } catch {
+      setSubmitError('שגיאה בטעינת הסימולציה. בדוק חיבור לאינטרנט ונסה שוב.')
+      setPhase('intro')
+    }
   }
 
   // ── READING (Part A & B) ───────────────────────────────────────────────────
@@ -444,6 +451,7 @@ export default function SimulationPage() {
         <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800 rounded-xl p-3 mb-6 text-xs text-yellow-800 dark:text-yellow-400 text-right">
           ⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.
         </div>
+        {errorBanner(startSimulation)}
         <button onClick={startSimulation}
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
           התחל סימולציה
