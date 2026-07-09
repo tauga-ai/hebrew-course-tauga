@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
 
@@ -15,28 +16,24 @@ interface SetStats {
   avg_score: number | null
 }
 
+interface TeacherStats {
+  class_name: string
+  join_code: string
+  stats: SetStats[]
+}
+
 export default function TeacherDashboard() {
   const router = useRouter()
   const { email } = useTeacherAuth()
-  const [className, setClassName] = useState('')
-  const [joinCode, setJoinCode] = useState('')
-  const [stats, setStats] = useState<SetStats[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useResource<TeacherStats>(email ? '/api/teacher/stats' : null)
+  const className = data?.class_name ?? ''
+  const joinCode = data?.join_code ?? ''
+  const stats = data?.stats ?? []
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (!email) return
-    async function load() {
-      const res = await fetch('/api/teacher/stats')
-      const data = await res.json()
-      if (!res.ok) { router.replace('/teacher/login'); return }
-      setClassName(data.class_name)
-      setJoinCode(data.join_code)
-      setStats(data.stats)
-      setLoading(false)
-    }
-    load()
-  }, [email, router])
+    if (error) router.replace('/teacher/login')
+  }, [error, router])
 
   function handleCopyCode() {
     navigator.clipboard.writeText(joinCode)
