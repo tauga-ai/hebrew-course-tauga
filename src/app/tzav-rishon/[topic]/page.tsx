@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { Segments } from '@/components/tzav-rishon/Segments'
@@ -35,78 +36,69 @@ interface TopicMeta {
 
 export default function TzavRishonPracticePage() {
   const params = useParams()
-  const router = useRouter()
   const topic = String(params.topic)
   const { session, loading: sessionLoading } = useStudentSession()
   const { language, setLanguage } = useLanguage()
 
-  const [questions, setQuestions] = useState<QuestionOut[] | null>(null)
-  const [topicMeta, setTopicMeta] = useState<TopicMeta | null>(null)
-  const [progress, setProgress] = useState<Record<number, ProgressEntry>>({})
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [seededForTopic, setSeededForTopic] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [retryToken, setRetryToken] = useState(0)
+  // selectOption applies its result here immediately, ahead of the next
+  // progress refetch (there isn't one — this page never refetches
+  // progress after mount) — cleared whenever topic changes.
+  const [optimisticProgress, setOptimisticProgress] = useState<Record<number, ProgressEntry>>({})
+  const retry = `&_r=${retryToken}`
 
-  // Adjusting state when a prop changes (React's recommended pattern for
-  // this — https://react.dev/learn/you-might-not-need-an-effect) rather
-  // than resetting inside the effect below: keeps stale percentages-topic
-  // data from ever being shown, mislabeled, while averages is loading.
-  const [loadedForTopic, setLoadedForTopic] = useState(topic)
-  if (topic !== loadedForTopic) {
-    setLoadedForTopic(topic)
-    setQuestions(null)
-    setProgress({})
-    setError('')
+  const { data: qData, loading: qLoading, error: qError } = useResource<{ questions: QuestionOut[] }>(
+    session ? `/api/tzav-rishon/questions?topic=${topic}${retry}` : null
+  )
+  const { data: pData, loading: pLoading, error: pError } = useResource<{ progress: ProgressEntry[] }>(
+    session ? `/api/tzav-rishon/progress?topic=${topic}${retry}` : null
+  )
+  const { data: tData, loading: tLoading, error: tError } = useResource<{ topics: TopicMeta[] }>(
+    session ? `/api/tzav-rishon/topics?_r=${retryToken}` : null
+  )
+
+  const questions = qData?.questions ?? null
+  const topicMeta = tData?.topics.find(t => t.key === topic) ?? null
+  const progress: Record<number, ProgressEntry> = {}
+  for (const p of pData?.progress ?? []) progress[p.question_id] = p
+  Object.assign(progress, optimisticProgress)
+
+  const loadError = qError || pError || tError
+
+  // Adjusting state when a prop changes (React's recommended pattern —
+  // https://react.dev/learn/you-might-not-need-an-effect) rather than an
+  // effect: optimistic overrides are specific to the topic that was
+  // answered, dropped when navigating to a different topic; currentIndex
+  // is seeded to the first unanswered question exactly once per topic, as
+  // soon as both questions and progress have finished loading (not on
+  // every later progress update, e.g. right after answering, which would
+  // jump the student back to an earlier question).
+  if (Object.keys(optimisticProgress).length > 0 && seededForTopic !== topic) {
+    setOptimisticProgress({})
+  }
+  if (questions && pData && seededForTopic !== topic) {
+    const firstUnanswered = questions.findIndex(q => !(q.id in progress))
+    setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
+    setSeededForTopic(topic)
   }
 
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-
-    async function load() {
-      try {
-        const [qRes, pRes, tRes] = await Promise.all([
-          fetch(`/api/tzav-rishon/questions?topic=${topic}`),
-          fetch(`/api/tzav-rishon/progress?topic=${topic}`),
-          fetch('/api/tzav-rishon/topics'),
-        ])
-        if (!qRes.ok || !pRes.ok || !tRes.ok) throw new Error('load failed')
-        const [qData, pData, tData] = await Promise.all([qRes.json(), pRes.json(), tRes.json()])
-        if (cancelled) return
-        if (!qData.questions) { router.replace('/tzav-rishon'); return }
-
-        const map: Record<number, ProgressEntry> = {}
-        for (const p of pData.progress || []) map[p.question_id] = p
-
-        const loaded: QuestionOut[] = qData.questions
-        const firstUnanswered = loaded.findIndex(q => !(q.id in map))
-        setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
-
-        setQuestions(loaded)
-        setProgress(map)
-        setTopicMeta((tData.topics || []).find((t: TopicMeta) => t.key === topic) || null)
-      } catch {
-        if (!cancelled) setError('שגיאה בטעינת השאלות. בדוק חיבור לאינטרנט ונסה שוב.')
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [session, topic, router, retryToken])
-
-  if (error && questions === null) {
+  if (loadError && questions === null) {
     return (
       <div className="min-h-screen md:flex">
         <StudentSidebar />
         <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
-          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
-          <button onClick={() => { setError(''); setRetryToken(t => t + 1) }} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+          <p className="text-red-500 dark:text-red-400 text-sm">{loadError}</p>
+          <button onClick={() => setRetryToken(t => t + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
         </div>
       </div>
     )
   }
 
-  if (sessionLoading || questions === null || topicMeta === null) return <LoadingSpinner />
+  if (sessionLoading || qLoading || pLoading || tLoading || questions === null || topicMeta === null || seededForTopic !== topic) return <LoadingSpinner />
 
   const isAr = language === 'ar'
   const current = questions[currentIndex]
@@ -126,7 +118,7 @@ export default function TzavRishonPracticePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
-      setProgress(prev => ({
+      setOptimisticProgress(prev => ({
         ...prev,
         [current.id]: {
           question_id: current.id,
