@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getSetById, PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
 import { getClassAndStudents } from '@/lib/teacher-data'
 import { requireTeacher } from '@/lib/auth'

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { listClasses } from '@/lib/teacher-data'
 import { requireTeacher } from '@/lib/auth'
 

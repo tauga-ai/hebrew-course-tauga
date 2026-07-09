@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
