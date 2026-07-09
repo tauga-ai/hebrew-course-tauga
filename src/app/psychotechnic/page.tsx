@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PsychotechnicSetMeta } from '@/lib/psychotechnic'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/draft-storage'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
@@ -33,17 +34,8 @@ export default function PsychotechnicPage() {
   const [results, setResults] = useState<{ results: QuestionResult[]; score: number; total: number } | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [sets, setSets] = useState<PsychotechnicSetMeta[]>([])
-
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-    fetch('/api/psychotechnic/sets')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setSets(data.sets || []) })
-      .catch(() => { if (!cancelled) setSets([]) })
-    return () => { cancelled = true }
-  }, [session])
+  const { data: setsData } = useResource<{ sets: PsychotechnicSetMeta[] }>(session ? '/api/psychotechnic/sets' : null, { fallback: { sets: [] } })
+  const sets = setsData?.sets ?? []
 
   const selectedSet = sets.find(s => s.id === selectedSetId)
   const numQuestions = selectedSet?.questionCount || 0
