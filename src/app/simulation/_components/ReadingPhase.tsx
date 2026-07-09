@@ -35,11 +35,16 @@ interface ReadingPhaseProps {
 
 /** Shared UI for Parts A and B — multiple-choice reading comprehension questions. */
 export function ReadingPhase({
-  stepHeader, progressBar, keyPrefix, questions, currentQ, setCurrentQ,
+  stepHeader, progressBar, keyPrefix, questions: questionsProp, currentQ, setCurrentQ,
   readingAnswers, setReadingAnswers, getShuffledOptions,
   groupByPassage, showUnansweredWarning, finishLabel, onFinish,
   submitting, errorBanner,
 }: ReadingPhaseProps) {
+  // Defends against a corrupted/stale localStorage draft (resumeDraft in the
+  // parent restores this from storage with no validation) — turns what would
+  // otherwise be a hard crash (questions[currentQ] on undefined) into a
+  // harmless "0 questions" render.
+  const questions = questionsProp ?? []
   const q = questions[currentQ]
   const opts = q ? getShuffledOptions(q) : []
   const answered = questions.filter(qq => readingAnswers[qq.id] !== undefined).length
