@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PracticeSet, Submission } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
@@ -13,38 +14,24 @@ import { Card } from '@/components/ui/Card'
 export default function ReadingSetsPage() {
   const router = useRouter()
   const { session } = useStudentSession()
-  const [sets, setSets] = useState<PracticeSet[]>([])
-  const [completedSetIds, setCompletedSetIds] = useState<Set<number>>(new Set())
-  const [submissions, setSubmissions] = useState<Record<number, Submission>>({})
-  const [loading, setLoading] = useState(true)
   const [difficultyFilter, setDifficultyFilter] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (!session) return
+  const { data: setsData, loading: setsLoading } = useResource<{ sets: PracticeSet[] }>(
+    session ? '/api/practice-sets' : null, { fallback: { sets: [] } }
+  )
+  const { data: subsData, loading: subsLoading } = useResource<{ submissions: Submission[] }>(
+    session ? `/api/student/${session.id}/submissions` : null, { fallback: { submissions: [] } }
+  )
 
-    async function load() {
-      const [setsRes, subsRes] = await Promise.all([
-        fetch('/api/practice-sets'),
-        fetch(`/api/student/${session!.id}/submissions`),
-      ])
-      const setsData = await setsRes.json()
-      const subsData = await subsRes.json()
-      setSets(setsData.sets || [])
+  const sets = setsData?.sets ?? []
+  const submissions: Record<number, Submission> = {}
+  const completedSetIds = new Set<number>()
+  for (const sub of subsData?.submissions ?? []) {
+    submissions[sub.practice_set_id] = sub
+    completedSetIds.add(sub.practice_set_id)
+  }
 
-      const subMap: Record<number, Submission> = {}
-      const doneIds = new Set<number>()
-      for (const sub of subsData.submissions || []) {
-        subMap[sub.practice_set_id] = sub
-        doneIds.add(sub.practice_set_id)
-      }
-      setSubmissions(subMap)
-      setCompletedSetIds(doneIds)
-      setLoading(false)
-    }
-    load()
-  }, [session])
-
-  if (loading) return <LoadingSpinner />
+  if (setsLoading || subsLoading) return <LoadingSpinner />
 
   const availableDifficulties = Array.from(new Set(sets.map(s => s.difficulty_level))).sort((a, b) => a - b)
   const filteredSets = difficultyFilter === null ? sets : sets.filter(s => s.difficulty_level === difficultyFilter)
