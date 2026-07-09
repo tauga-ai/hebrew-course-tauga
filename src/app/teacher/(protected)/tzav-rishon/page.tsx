@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface TopicSummary { topic: string; topic_label_he: string; attempted_count: number; avg_pct: number | null }
 interface StudentSummary {
@@ -70,10 +71,7 @@ export default function TzavRishonTeacherPage() {
     }
   }
 
-  const scoreColor = (v: number | null) => {
-    if (v === null) return 'text-fg/30'
-    return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  }
+  const barColor = (v: number | null) => scoreColor(v, { palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
 
   if (error) return (
     <div className="flex flex-col items-center justify-center gap-4 text-center mt-12">
@@ -149,7 +147,7 @@ export default function TzavRishonTeacherPage() {
                 </div>
                 {t.avg_pct !== null && (
                   <div className="mt-2 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${t.avg_pct >= 70 ? 'bg-green-500' : t.avg_pct >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                    <div className={`h-1.5 rounded-full ${barColor(t.avg_pct)}`}
                       style={{ width: `${t.avg_pct}%` }} />
                   </div>
                 )}
