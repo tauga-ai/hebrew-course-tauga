@@ -38,12 +38,13 @@ interface InterviewPhaseProps {
   setCurrentAnswer: (value: string) => void
   interviewSpeech: ReturnType<typeof useSpeechToText>
   onNextQuestion: () => void
+  errorBanner?: ReactNode
 }
 
 /** Part D — one interview question at a time, with a processing screen while feedback is generated. */
 export function InterviewPhase({
   stepHeader, progressBar, processing, questions, currentIdx,
-  currentAnswer, setCurrentAnswer, interviewSpeech, onNextQuestion,
+  currentAnswer, setCurrentAnswer, interviewSpeech, onNextQuestion, errorBanner,
 }: InterviewPhaseProps) {
   if (processing) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -58,6 +59,7 @@ export function InterviewPhase({
     <div className="min-h-screen p-4 max-w-2xl mx-auto">
       {stepHeader}
       {progressBar}
+      {errorBanner}
       <div className="flex justify-between text-sm text-fg/60 mb-4">
         <span>שאלה {currentIdx + 1} / {questions.length}</span>
       </div>
