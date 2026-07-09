@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
+import { scoreColor } from '@/lib/score-color'
 
 type Phase = 'select' | 'input' | 'result'
 
@@ -211,14 +212,15 @@ export default function PsychotechnicPage() {
       {phase === 'result' && results && selectedSet && (
         <>
           {/* Score */}
-          <div className={`rounded-2xl border p-6 text-center mb-4 ${
-            results.score / results.total >= 0.7 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' :
-            results.score / results.total >= 0.5 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
-          }`}>
-            <div className={`text-6xl font-bold ${
-              results.score / results.total >= 0.7 ? 'text-green-600 dark:text-green-400' :
-              results.score / results.total >= 0.5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-            }`}>{results.score}/{results.total}</div>
+          <div className={`rounded-2xl border p-6 text-center mb-4 ${scoreColor(results.score / results.total, {
+            thresholds: { good: 0.7, ok: 0.5 },
+            palette: {
+              good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+              ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+              bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+            },
+          })}`}>
+            <div className={`text-6xl font-bold ${scoreColor(results.score / results.total, { thresholds: { good: 0.7, ok: 0.5 } })}`}>{results.score}/{results.total}</div>
             <div className="text-fg/60 text-sm mt-1">{Math.round((results.score / results.total) * 100)}% נכון</div>
             <div className="text-fg/70 text-sm font-medium mt-1">{selectedSet.name}</div>
           </div>
