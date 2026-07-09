@@ -336,39 +336,48 @@ export default function SimulationPage() {
 
   async function finishInterview(allAnswers: string[]) {
     setInterviewProcessing(true)
-    const qa_pairs = interviewQuestions.map((q, i) => ({ question: q, answer: allAnswers[i] || '' }))
-    const res = await fetch('/api/interview/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ student_name: session?.full_name, qa_pairs }),
-    })
-    const data = await res.json()
-    const fb = data.feedback
+    setSubmitError(null)
+    try {
+      const qa_pairs = interviewQuestions.map((q, i) => ({ question: q, answer: allAnswers[i] || '' }))
+      const res = await fetch('/api/interview/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_name: session?.full_name, qa_pairs }),
+      })
+      if (!res.ok) throw new Error('interview feedback failed')
+      const data = await res.json()
+      const fb = data.feedback
+      if (!fb) throw new Error('interview feedback missing')
 
-    await fetch('/api/simulation/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: simSessionId, type: 'interview',
-        score: fb.score, level: fb.level, summary: fb.summary,
-      }),
-    })
+      const submitRes = await fetch('/api/simulation/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: simSessionId, type: 'interview',
+          score: fb.score, level: fb.level, summary: fb.summary,
+        }),
+      })
+      if (!submitRes.ok) throw new Error('interview submit failed')
 
-    // Compute results
-    const aCorrect = partA.filter(q => readingAnswers[q.id] === q.correct_answer).length
-    const bCorrect = partB.filter(q => readingAnswers[q.id] === q.correct_answer).length
-    const cAvg = sentenceResults.length > 0
-      ? sentenceResults.reduce((s, r) => s + r.score, 0) / sentenceResults.length : 0
+      // Compute results
+      const aCorrect = partA.filter(q => readingAnswers[q.id] === q.correct_answer).length
+      const bCorrect = partB.filter(q => readingAnswers[q.id] === q.correct_answer).length
+      const cAvg = sentenceResults.length > 0
+        ? sentenceResults.reduce((s, r) => s + r.score, 0) / sentenceResults.length : 0
 
-    setResults({
-      part_a: { correct: aCorrect, total: partA.length, pct: Math.round((aCorrect / partA.length) * 100) },
-      part_b: { correct: bCorrect, total: partB.length, pct: Math.round((bCorrect / partB.length) * 100) },
-      part_c: { avg: cAvg.toFixed(1), results: sentenceResults },
-      part_d: { score: fb.score, level: fb.level, summary: fb.summary },
-    })
-    if (session) clearDraft(draftKey(session.id))
-    setInterviewProcessing(false)
-    setPhase('results')
+      setResults({
+        part_a: { correct: aCorrect, total: partA.length, pct: Math.round((aCorrect / partA.length) * 100) },
+        part_b: { correct: bCorrect, total: partB.length, pct: Math.round((bCorrect / partB.length) * 100) },
+        part_c: { avg: cAvg.toFixed(1), results: sentenceResults },
+        part_d: { score: fb.score, level: fb.level, summary: fb.summary },
+      })
+      if (session) clearDraft(draftKey(session.id))
+      setPhase('results')
+    } catch {
+      setSubmitError('שגיאה בקבלת המשוב על הראיון. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setInterviewProcessing(false)
+    }
   }
 
   // ── RENDER HELPERS ─────────────────────────────────────────────────────────
