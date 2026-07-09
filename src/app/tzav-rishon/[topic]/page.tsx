@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useQuizEngine } from '@/lib/hooks/use-quiz-engine'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { Segments } from '@/components/tzav-rishon/Segments'
@@ -12,18 +12,12 @@ import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import type { Segment } from '@/data/tzav-rishon/types'
 
+interface Bilingual { he: Segment[]; ar: Segment[] }
+
 interface QuestionOut {
   id: number
-  question: { he: Segment[]; ar: Segment[] }
-  options: { he: Segment[]; ar: Segment[] }[]
-}
-
-interface ProgressEntry {
-  question_id: number
-  selected_option: number
-  is_correct: boolean
-  correct_option: number | null
-  explanation: { he: Segment[]; ar: Segment[] } | null
+  question: Bilingual
+  options: Bilingual[]
 }
 
 interface TopicMeta {
@@ -35,98 +29,38 @@ interface TopicMeta {
 
 export default function TzavRishonPracticePage() {
   const params = useParams()
-  const router = useRouter()
   const topic = String(params.topic)
   const { session, loading: sessionLoading } = useStudentSession()
   const { language, setLanguage } = useLanguage()
-
-  const [questions, setQuestions] = useState<QuestionOut[] | null>(null)
-  const [topicMeta, setTopicMeta] = useState<TopicMeta | null>(null)
-  const [progress, setProgress] = useState<Record<number, ProgressEntry>>({})
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  // Adjusting state when a prop changes (React's recommended pattern for
-  // this — https://react.dev/learn/you-might-not-need-an-effect) rather
-  // than resetting inside the effect below: keeps stale percentages-topic
-  // data from ever being shown, mislabeled, while averages is loading.
-  const [loadedForTopic, setLoadedForTopic] = useState(topic)
-  if (topic !== loadedForTopic) {
-    setLoadedForTopic(topic)
-    setQuestions(null)
-    setProgress({})
-    setError('')
-  }
-
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-
-    async function load() {
-      const [qRes, pRes, tRes] = await Promise.all([
-        fetch(`/api/tzav-rishon/questions?topic=${topic}`).then(r => r.json()),
-        fetch(`/api/tzav-rishon/progress?topic=${topic}`).then(r => r.json()),
-        fetch('/api/tzav-rishon/topics').then(r => r.json()),
-      ])
-      if (cancelled) return
-      if (!qRes.questions) { router.replace('/tzav-rishon'); return }
-
-      const map: Record<number, ProgressEntry> = {}
-      for (const p of pRes.progress || []) map[p.question_id] = p
-
-      const loaded: QuestionOut[] = qRes.questions
-      const firstUnanswered = loaded.findIndex(q => !(q.id in map))
-      setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
-
-      setQuestions(loaded)
-      setProgress(map)
-      setTopicMeta((tRes.topics || []).find((t: TopicMeta) => t.key === topic) || null)
-    }
-    load()
-    return () => { cancelled = true }
-  }, [session, topic, router])
-
-  if (sessionLoading || questions === null || topicMeta === null) return <LoadingSpinner />
-
   const isAr = language === 'ar'
-  const current = questions[currentIndex]
-  const answered = progress[current.id]
-  const total = questions.length
-  const answeredCount = Object.keys(progress).length
 
-  async function selectOption(optionNum: number) {
-    if (submitting) return
-    setSubmitting(true)
-    setError('')
-    try {
-      const res = await fetch('/api/tzav-rishon/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, question_id: current.id, selected_option: optionNum }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
-      setProgress(prev => ({
-        ...prev,
-        [current.id]: {
-          question_id: current.id,
-          selected_option: optionNum,
-          is_correct: data.is_correct,
-          correct_option: data.correct_option,
-          explanation: data.explanation,
-        },
-      }))
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : (isAr ? 'خطأ في الإرسال' : 'שגיאה בשליחה'))
-    } finally {
-      setSubmitting(false)
-    }
+  const engine = useQuizEngine<QuestionOut, TopicMeta, Bilingual>({
+    entityId: topic,
+    session,
+    questionsUrl: `/api/tzav-rishon/questions?topic=${topic}`,
+    progressUrl: `/api/tzav-rishon/progress?topic=${topic}`,
+    entityMetaUrl: '/api/tzav-rishon/topics',
+    entityMetaKey: 'topics',
+    submitUrl: '/api/tzav-rishon/submit',
+    submitBodyExtra: { topic },
+    submitErrorMessage: isAr ? 'خطأ في الإرسال' : 'שגיאה בשליחה',
+  })
+
+  if (engine.loadError && engine.questions === null) {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-red-500 dark:text-red-400 text-sm">{engine.loadError}</p>
+          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+        </div>
+      </div>
+    )
   }
 
-  const resultsByQuestion = Object.fromEntries(
-    Object.entries(progress).map(([qid, p]) => [qid, p.is_correct])
-  )
+  if (sessionLoading || engine.loading || !engine.current || !engine.entityMeta) return <LoadingSpinner />
+
+  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, entityMeta: topicMeta } = engine
 
   return (
     <div className="min-h-screen md:flex">
@@ -192,7 +126,7 @@ export default function TzavRishonPracticePage() {
           return (
             <button
               key={i}
-              onClick={() => !answered && selectOption(optionNum)}
+              onClick={() => !answered && engine.selectOption(optionNum)}
               disabled={!!answered || submitting}
               className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
             >
@@ -224,14 +158,14 @@ export default function TzavRishonPracticePage() {
 
       <div className="flex justify-between items-center mb-4">
         <button
-          onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
+          onClick={engine.goPrev}
           disabled={currentIndex === 0}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
           {isAr ? '← السابق' : '← הקודמת'}
         </button>
         <button
-          onClick={() => setCurrentIndex(i => Math.min(total - 1, i + 1))}
+          onClick={engine.goNext}
           disabled={currentIndex === total - 1}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
@@ -239,7 +173,7 @@ export default function TzavRishonPracticePage() {
         </button>
       </div>
 
-      <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={setCurrentIndex} />
+      <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={engine.jumpTo} />
       </div>
     </div>
   )

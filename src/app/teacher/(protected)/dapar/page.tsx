@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DAPAR_SECTIONS, DAPAR_TOTAL, gradeDaparAnswers } from '@/lib/dapar'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface Submission {
   id: string; student_name: string; student_id: string
@@ -53,10 +54,14 @@ export default function TeacherDaparPage() {
     init()
   }, [email, router])
 
-  const scoreColor = (v: number | null) => {
-    if (v === null) return 'text-fg/30'
-    return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  }
+  const barColor = (v: number | null) => scoreColor(v, { palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
+  const sectionColor = (v: number) => scoreColor(v, {
+    palette: {
+      good: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400',
+      ok: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400',
+      bad: 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400',
+    },
+  })
 
   const filteredQuestions = selectedSection !== null
     ? questionStats.filter(q => {
@@ -107,7 +112,7 @@ export default function TeacherDaparPage() {
                 </div>
                 {s.avg_pct !== null && (
                   <div className="mt-2 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${s.avg_pct >= 70 ? 'bg-green-500' : s.avg_pct >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                    <div className={`h-1.5 rounded-full ${barColor(s.avg_pct)}`}
                       style={{ width: `${s.avg_pct}%` }} />
                   </div>
                 )}
@@ -138,7 +143,7 @@ export default function TeacherDaparPage() {
                   </div>
                   <div className="grid grid-cols-5 gap-2">
                     {sectionScores.map(sec => (
-                      <div key={sec.label} className={`rounded-lg p-2 text-center text-xs ${sec.pct >= 70 ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400' : sec.pct >= 50 ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'}`}>
+                      <div key={sec.label} className={`rounded-lg p-2 text-center text-xs ${sectionColor(sec.pct)}`}>
                         <div className="font-bold text-base">{sec.pct}%</div>
                         <div className="leading-tight mt-0.5">{sec.label}</div>
                       </div>

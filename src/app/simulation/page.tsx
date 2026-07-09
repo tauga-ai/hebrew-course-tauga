@@ -183,15 +183,22 @@ export default function SimulationPage() {
   async function startSimulation() {
     if (!session) return
     setPhase('starting')
-    const res = await fetch('/api/simulation/start', { method: 'POST' })
-    const data = await res.json()
-    setSimSessionId(data.session_id)
-    setPartA(data.part_a)
-    setPartB(data.part_b)
-    setPartC(data.part_c)
-    setCurrentQ(0)
-    setReadingAnswers({})
-    setPhase('a')
+    setSubmitError(null)
+    try {
+      const res = await fetch('/api/simulation/start', { method: 'POST' })
+      if (!res.ok) throw new Error('start failed')
+      const data = await res.json()
+      setSimSessionId(data.session_id)
+      setPartA(data.part_a)
+      setPartB(data.part_b)
+      setPartC(data.part_c)
+      setCurrentQ(0)
+      setReadingAnswers({})
+      setPhase('a')
+    } catch {
+      setSubmitError('שגיאה בטעינת הסימולציה. בדוק חיבור לאינטרנט ונסה שוב.')
+      setPhase('intro')
+    }
   }
 
   // ── READING (Part A & B) ───────────────────────────────────────────────────
@@ -336,39 +343,48 @@ export default function SimulationPage() {
 
   async function finishInterview(allAnswers: string[]) {
     setInterviewProcessing(true)
-    const qa_pairs = interviewQuestions.map((q, i) => ({ question: q, answer: allAnswers[i] || '' }))
-    const res = await fetch('/api/interview/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ student_name: session?.full_name, qa_pairs }),
-    })
-    const data = await res.json()
-    const fb = data.feedback
+    setSubmitError(null)
+    try {
+      const qa_pairs = interviewQuestions.map((q, i) => ({ question: q, answer: allAnswers[i] || '' }))
+      const res = await fetch('/api/interview/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_name: session?.full_name, qa_pairs }),
+      })
+      if (!res.ok) throw new Error('interview feedback failed')
+      const data = await res.json()
+      const fb = data.feedback
+      if (!fb) throw new Error('interview feedback missing')
 
-    await fetch('/api/simulation/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: simSessionId, type: 'interview',
-        score: fb.score, level: fb.level, summary: fb.summary,
-      }),
-    })
+      const submitRes = await fetch('/api/simulation/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: simSessionId, type: 'interview',
+          score: fb.score, level: fb.level, summary: fb.summary,
+        }),
+      })
+      if (!submitRes.ok) throw new Error('interview submit failed')
 
-    // Compute results
-    const aCorrect = partA.filter(q => readingAnswers[q.id] === q.correct_answer).length
-    const bCorrect = partB.filter(q => readingAnswers[q.id] === q.correct_answer).length
-    const cAvg = sentenceResults.length > 0
-      ? sentenceResults.reduce((s, r) => s + r.score, 0) / sentenceResults.length : 0
+      // Compute results
+      const aCorrect = partA.filter(q => readingAnswers[q.id] === q.correct_answer).length
+      const bCorrect = partB.filter(q => readingAnswers[q.id] === q.correct_answer).length
+      const cAvg = sentenceResults.length > 0
+        ? sentenceResults.reduce((s, r) => s + r.score, 0) / sentenceResults.length : 0
 
-    setResults({
-      part_a: { correct: aCorrect, total: partA.length, pct: Math.round((aCorrect / partA.length) * 100) },
-      part_b: { correct: bCorrect, total: partB.length, pct: Math.round((bCorrect / partB.length) * 100) },
-      part_c: { avg: cAvg.toFixed(1), results: sentenceResults },
-      part_d: { score: fb.score, level: fb.level, summary: fb.summary },
-    })
-    if (session) clearDraft(draftKey(session.id))
-    setInterviewProcessing(false)
-    setPhase('results')
+      setResults({
+        part_a: { correct: aCorrect, total: partA.length, pct: Math.round((aCorrect / partA.length) * 100) },
+        part_b: { correct: bCorrect, total: partB.length, pct: Math.round((bCorrect / partB.length) * 100) },
+        part_c: { avg: cAvg.toFixed(1), results: sentenceResults },
+        part_d: { score: fb.score, level: fb.level, summary: fb.summary },
+      })
+      if (session) clearDraft(draftKey(session.id))
+      setPhase('results')
+    } catch {
+      setSubmitError('שגיאה בקבלת המשוב על הראיון. בדוק חיבור לאינטרנט ונסה שוב.')
+    } finally {
+      setInterviewProcessing(false)
+    }
   }
 
   // ── RENDER HELPERS ─────────────────────────────────────────────────────────
@@ -435,6 +451,7 @@ export default function SimulationPage() {
         <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800 rounded-xl p-3 mb-6 text-xs text-yellow-800 dark:text-yellow-400 text-right">
           ⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.
         </div>
+        {errorBanner(startSimulation)}
         <button onClick={startSimulation}
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
           התחל סימולציה
@@ -537,6 +554,7 @@ export default function SimulationPage() {
         setCurrentAnswer={setInterviewCurrentAnswer}
         interviewSpeech={interviewSpeech}
         onNextQuestion={interviewNextQuestion}
+        errorBanner={errorBanner(() => finishInterview(interviewAnswers))}
       />
     )
   }

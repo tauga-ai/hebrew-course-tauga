@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
 import { getTotalQuestionCount } from '@/lib/makbatzim'
+import { computeStats } from '@/lib/quiz-progress'
 
 /** The authenticated student's own "שאלות שעדי שלחה" performance summary, across all 6 sets. */
 export async function GET() {
@@ -16,11 +17,5 @@ export async function GET() {
     .select('is_correct')
     .eq('student_id', session.student.id)
 
-  const rows = data || []
-  const attempted = rows.length
-  const avg_pct = attempted > 0
-    ? (rows.filter(r => r.is_correct).length / attempted) * 100
-    : null
-
-  return NextResponse.json({ attempted, total: getTotalQuestionCount(), avg_pct })
+  return NextResponse.json(computeStats(data || [], getTotalQuestionCount()))
 }

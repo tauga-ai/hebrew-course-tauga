@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface SentenceStat { set_id: number; attempts: number; avg_score: number | null }
 interface InterviewStat { total: number; avg_score: number | null }
@@ -37,10 +38,10 @@ export default function ActivityPage() {
 
   if (loading) return <LoadingSpinner />
 
-  const scoreColor = (s: number | null) => {
-    if (s === null) return 'text-fg/40'
-    return s >= 7 ? 'text-green-600 dark:text-green-400' : s >= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  }
+  // Thresholds (7/5) and empty-value fallback (text-fg/40, vs. the app's
+  // usual text-fg/30) are pre-existing divergences from other pages —
+  // preserved verbatim here, not silently normalized.
+  const activityScoreColor = (s: number | null) => scoreColor(s, { thresholds: { good: 7, ok: 5 }, emptyClass: 'text-fg/40' })
 
   return (
     <>
@@ -55,7 +56,7 @@ export default function ActivityPage() {
             <div className="text-xs text-fg/60">ניסיונות</div>
           </div>
           <div>
-            <div className={`text-2xl font-bold ${scoreColor(interviewStats?.avg_score ?? null)}`}>
+            <div className={`text-2xl font-bold ${activityScoreColor(interviewStats?.avg_score ?? null)}`}>
               {interviewStats?.avg_score != null ? `${Math.round(interviewStats.avg_score)}/100` : '—'}
             </div>
             <div className="text-xs text-fg/60">ממוצע</div>
@@ -70,7 +71,7 @@ export default function ActivityPage() {
           {sentenceStats.map(s => (
             <div key={s.set_id} className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
               <div className="text-xs text-fg/60 mb-1">סט {s.set_id}</div>
-              <div className={`text-lg font-bold ${scoreColor(s.avg_score)}`}>
+              <div className={`text-lg font-bold ${activityScoreColor(s.avg_score)}`}>
                 {s.avg_score != null ? `${s.avg_score.toFixed(1)}/10` : '—'}
               </div>
               <div className="text-xs text-fg/40">{s.attempts} ניסיונות</div>
@@ -101,11 +102,11 @@ export default function ActivityPage() {
                   <tr key={st.id} className={i % 2 === 0 ? 'bg-surface' : 'bg-black/5 dark:bg-white/5'}>
                     <td className="p-2 font-medium text-fg">{st.name}</td>
                     <td className="p-2 text-center text-fg/70">{st.sentence_attempts}</td>
-                    <td className={`p-2 text-center font-semibold ${scoreColor(st.sentence_avg)}`}>
+                    <td className={`p-2 text-center font-semibold ${activityScoreColor(st.sentence_avg)}`}>
                       {st.sentence_avg != null ? `${st.sentence_avg.toFixed(1)}/10` : '—'}
                     </td>
                     <td className="p-2 text-center text-fg/70">{st.interview_count}</td>
-                    <td className={`p-2 text-center font-semibold ${scoreColor(st.interview_avg != null ? st.interview_avg / 10 : null)}`}>
+                    <td className={`p-2 text-center font-semibold ${activityScoreColor(st.interview_avg != null ? st.interview_avg / 10 : null)}`}>
                       {st.interview_avg != null ? `${Math.round(st.interview_avg)}/100` : '—'}
                     </td>
                   </tr>

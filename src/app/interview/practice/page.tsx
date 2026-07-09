@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ALL_PRACTICE_QUESTIONS, CATEGORY_COLORS, type InterviewQuestion } from '@/lib/interview-questions'
-import { stopSpeaking } from '@/lib/use-hebrew-tts'
+import { stopSpeaking } from '@/lib/tts-client'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'

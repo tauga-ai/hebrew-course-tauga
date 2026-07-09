@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getStudentFromSession } from '@/lib/auth'
 
 export interface AIWordItem { text: string; starred: boolean }
 export interface AIWordList { theme: string; words: AIWordItem[] }
@@ -13,6 +14,11 @@ const LEVEL_DESCRIPTIONS: Record<number, string> = {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
   const { level } = await req.json() as { level: number }
   if (!level || level < 1 || level > 5) {
     return NextResponse.json({ error: 'רמה לא תקינה' }, { status: 400 })

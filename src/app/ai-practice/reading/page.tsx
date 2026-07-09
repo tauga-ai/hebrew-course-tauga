@@ -48,7 +48,11 @@ export default function AIReadingPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setQuestion(data.question)
+      const q = data.question as AIReadingQuestion
+      if (!Array.isArray(q?.options) || q.options.length !== 4 || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) {
+        throw new Error('שאלה לא תקינה')
+      }
+      setQuestion(q)
       setPhase('question')
     } catch {
       setError('שגיאה ביצירת השאלה. נסה שוב.')

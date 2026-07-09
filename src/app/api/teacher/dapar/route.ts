@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { DAPAR_CORRECT_ANSWERS, DAPAR_SECTIONS as SECTIONS, DAPAR_TOTAL, gradeDaparAnswers } from '@/lib/dapar'
 import { getClassAndStudents } from '@/lib/teacher-data'
 import { requireTeacher } from '@/lib/auth'

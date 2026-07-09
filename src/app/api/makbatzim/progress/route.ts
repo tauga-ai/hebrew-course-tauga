@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
 import { getQuestionById } from '@/lib/makbatzim'
+import { enrichProgress } from '@/lib/quiz-progress'
 
 /**
  * The authenticated student's own already-answered questions for one set —
@@ -30,14 +31,7 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const progress = (data || []).map(row => {
-    const question = getQuestionById(setId, row.question_id)
-    return {
-      ...row,
-      correct_option: question?.correctOption ?? null,
-      explanation: question?.explanation ?? null,
-    }
-  })
+  const progress = enrichProgress(data || [], id => getQuestionById(setId, id))
 
   return NextResponse.json({ progress })
 }

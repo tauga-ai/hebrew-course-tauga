@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
@@ -21,17 +21,8 @@ export default function TzavRishonTopicsPage() {
   const router = useRouter()
   const { session, loading: sessionLoading } = useStudentSession()
   const { language, setLanguage } = useLanguage()
-  const [topics, setTopics] = useState<TopicMeta[] | null>(null)
-
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
-    fetch('/api/tzav-rishon/topics')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setTopics(data.topics || []) })
-      .catch(() => { if (!cancelled) setTopics([]) })
-    return () => { cancelled = true }
-  }, [session])
+  const { data } = useResource<{ topics: TopicMeta[] }>(session ? '/api/tzav-rishon/topics' : null, { fallback: { topics: [] } })
+  const topics = data?.topics ?? null
 
   if (sessionLoading || topics === null) return <LoadingSpinner />
 

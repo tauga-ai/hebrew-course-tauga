@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
-import { speakHebrew } from '@/lib/use-hebrew-tts'
+import { speakHebrew } from '@/lib/tts-client'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { scoreColor } from '@/lib/score-color'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -101,8 +102,16 @@ export default function SentenceSetPage() {
     }
   }
 
-  const scoreColor = (s: number) => s >= 8 ? 'text-green-600 dark:text-green-400' : s >= 6 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  const scoreBg   = (s: number) => s >= 8 ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : s >= 6 ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'
+  const THRESHOLDS = { good: 8, ok: 6 }
+  const scoreTextColor = (s: number) => scoreColor(s, { thresholds: THRESHOLDS })
+  const scoreBg = (s: number) => scoreColor(s, {
+    thresholds: THRESHOLDS,
+    palette: {
+      good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+      ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+      bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+    },
+  })
   const scoreLabel = (s: number) => s >= 9 ? 'מצוין!' : s >= 7 ? 'טוב מאוד' : s >= 5 ? 'סביר' : 'צריך שיפור'
 
   return (
@@ -226,9 +235,9 @@ export default function SentenceSetPage() {
         <>
           {/* Score card */}
           <div className={`rounded-2xl border p-5 text-center mb-4 ${scoreBg(feedback.score)}`}>
-            <div className={`text-6xl font-bold ${scoreColor(feedback.score)}`}>{feedback.score}</div>
+            <div className={`text-6xl font-bold ${scoreTextColor(feedback.score)}`}>{feedback.score}</div>
             <div className="text-fg/60 text-sm">מתוך 10</div>
-            <div className={`text-lg font-semibold mt-1 ${scoreColor(feedback.score)}`}>
+            <div className={`text-lg font-semibold mt-1 ${scoreTextColor(feedback.score)}`}>
               {scoreLabel(feedback.score)}
             </div>
             <div className="mt-2 text-xs text-fg/60 space-y-0.5">

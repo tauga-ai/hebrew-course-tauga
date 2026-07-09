@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { Student } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 

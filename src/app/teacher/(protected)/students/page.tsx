@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface StudentRow {
   student_id: string
@@ -17,27 +19,23 @@ interface SetHeader {
   topic: string
 }
 
+interface StudentsData {
+  class_name: string
+  students: StudentRow[]
+  set_headers: SetHeader[]
+}
+
 export default function StudentsPage() {
   const router = useRouter()
   const { email } = useTeacherAuth()
-  const [className, setClassName] = useState('')
-  const [students, setStudents] = useState<StudentRow[]>([])
-  const [setHeaders, setSetHeaders] = useState<SetHeader[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useResource<StudentsData>(email ? '/api/teacher/students' : null)
+  const className = data?.class_name ?? ''
+  const students = data?.students ?? []
+  const setHeaders = data?.set_headers ?? []
 
   useEffect(() => {
-    if (!email) return
-    async function load() {
-      const res = await fetch('/api/teacher/students')
-      const data = await res.json()
-      if (!res.ok) { router.replace('/teacher/login'); return }
-      setClassName(data.class_name)
-      setStudents(data.students)
-      setSetHeaders(data.set_headers)
-      setLoading(false)
-    }
-    load()
-  }, [email, router])
+    if (error) router.replace('/teacher/login')
+  }, [error, router])
 
   if (loading) return <LoadingSpinner />
 
@@ -73,7 +71,7 @@ export default function StudentsPage() {
                     return (
                       <td key={h.set_number} className="p-3 text-center border-b border-card-border">
                         {result ? (
-                          <span className={`font-semibold ${result.score_percentage >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                          <span className={`font-semibold ${scoreColor(result.score_percentage, { thresholds: { good: 70, ok: 70 } })}`}>
                             {Math.round(result.score_percentage)}%
                           </span>
                         ) : (
@@ -84,7 +82,7 @@ export default function StudentsPage() {
                   })}
                   <td className="p-3 text-center border-b border-card-border">
                     {st.overall_avg !== null ? (
-                      <span className={`font-bold ${st.overall_avg >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                      <span className={`font-bold ${scoreColor(st.overall_avg, { thresholds: { good: 70, ok: 70 } })}`}>
                         {Math.round(st.overall_avg)}%
                       </span>
                     ) : (

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useQuizEngine } from '@/lib/hooks/use-quiz-engine'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { Segments } from '@/components/makbatzim/Segments'
@@ -18,14 +18,6 @@ interface QuestionOut {
   options: Segment[][]
 }
 
-interface ProgressEntry {
-  question_id: number
-  selected_option: number
-  is_correct: boolean
-  correct_option: number | null
-  explanation: Segment[] | null
-}
-
 interface SetMeta {
   key: string
   labelHe: string
@@ -34,96 +26,36 @@ interface SetMeta {
 
 export default function MakbatzimPracticePage() {
   const params = useParams()
-  const router = useRouter()
   const setId = String(params.setId)
   const { session, loading: sessionLoading } = useStudentSession()
 
-  const [questions, setQuestions] = useState<QuestionOut[] | null>(null)
-  const [setMeta, setSetMeta] = useState<SetMeta | null>(null)
-  const [progress, setProgress] = useState<Record<number, ProgressEntry>>({})
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const engine = useQuizEngine<QuestionOut, SetMeta, Segment[]>({
+    entityId: setId,
+    session,
+    questionsUrl: `/api/makbatzim/questions?set_id=${setId}`,
+    progressUrl: `/api/makbatzim/progress?set_id=${setId}`,
+    entityMetaUrl: '/api/makbatzim/sets',
+    entityMetaKey: 'sets',
+    submitUrl: '/api/makbatzim/submit',
+    submitBodyExtra: { set_id: setId },
+    submitErrorMessage: 'שגיאה בשליחה',
+  })
 
-  // Adjusting state when a prop changes (React's recommended pattern for
-  // this — https://react.dev/learn/you-might-not-need-an-effect) rather
-  // than resetting inside the effect below: keeps stale data from a
-  // previous set from ever being shown, mislabeled, while the next loads.
-  const [loadedForSet, setLoadedForSet] = useState(setId)
-  if (setId !== loadedForSet) {
-    setLoadedForSet(setId)
-    setQuestions(null)
-    setProgress({})
-    setError('')
+  if (engine.loadError && engine.questions === null) {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-red-500 dark:text-red-400 text-sm">{engine.loadError}</p>
+          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+        </div>
+      </div>
+    )
   }
 
-  useEffect(() => {
-    if (!session) return
-    let cancelled = false
+  if (sessionLoading || engine.loading || !engine.current || !engine.entityMeta) return <LoadingSpinner />
 
-    async function load() {
-      const [qRes, pRes, sRes] = await Promise.all([
-        fetch(`/api/makbatzim/questions?set_id=${setId}`).then(r => r.json()),
-        fetch(`/api/makbatzim/progress?set_id=${setId}`).then(r => r.json()),
-        fetch('/api/makbatzim/sets').then(r => r.json()),
-      ])
-      if (cancelled) return
-      if (!qRes.questions) { router.replace('/makbatzim'); return }
-
-      const map: Record<number, ProgressEntry> = {}
-      for (const p of pRes.progress || []) map[p.question_id] = p
-
-      const loaded: QuestionOut[] = qRes.questions
-      const firstUnanswered = loaded.findIndex(q => !(q.id in map))
-      setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered)
-
-      setQuestions(loaded)
-      setProgress(map)
-      setSetMeta((sRes.sets || []).find((s: SetMeta) => s.key === setId) || null)
-    }
-    load()
-    return () => { cancelled = true }
-  }, [session, setId, router])
-
-  if (sessionLoading || questions === null || setMeta === null) return <LoadingSpinner />
-
-  const current = questions[currentIndex]
-  const answered = progress[current.id]
-  const total = questions.length
-  const answeredCount = Object.keys(progress).length
-
-  async function selectOption(optionNum: number) {
-    if (submitting) return
-    setSubmitting(true)
-    setError('')
-    try {
-      const res = await fetch('/api/makbatzim/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ set_id: setId, question_id: current.id, selected_option: optionNum }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
-      setProgress(prev => ({
-        ...prev,
-        [current.id]: {
-          question_id: current.id,
-          selected_option: optionNum,
-          is_correct: data.is_correct,
-          correct_option: data.correct_option,
-          explanation: data.explanation,
-        },
-      }))
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'שגיאה בשליחה')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const resultsByQuestion = Object.fromEntries(
-    Object.entries(progress).map(([qid, p]) => [qid, p.is_correct])
-  )
+  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, entityMeta: setMeta } = engine
 
   return (
     <div className="min-h-screen md:flex">
@@ -169,7 +101,7 @@ export default function MakbatzimPracticePage() {
           return (
             <button
               key={i}
-              onClick={() => !answered && selectOption(optionNum)}
+              onClick={() => !answered && engine.selectOption(optionNum)}
               disabled={!!answered || submitting}
               className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
             >
@@ -199,14 +131,14 @@ export default function MakbatzimPracticePage() {
 
       <div className="flex justify-between items-center mb-4">
         <button
-          onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
+          onClick={engine.goPrev}
           disabled={currentIndex === 0}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
           ← הקודמת
         </button>
         <button
-          onClick={() => setCurrentIndex(i => Math.min(total - 1, i + 1))}
+          onClick={engine.goNext}
           disabled={currentIndex === total - 1}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
@@ -214,7 +146,7 @@ export default function MakbatzimPracticePage() {
         </button>
       </div>
 
-      <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={setCurrentIndex} />
+      <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={engine.jumpTo} />
       </div>
     </div>
   )

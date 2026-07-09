@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import type { Question, PracticeSet } from '@/lib/types'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
@@ -15,26 +16,20 @@ export default function PracticePage() {
   const setId = Number(params.setId)
   const { session } = useStudentSession()
 
-  const [practiceSet, setPracticeSet] = useState<PracticeSet | null>(null)
-  const [questions, setQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<Record<number, number>>({})
-  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [currentIdx, setCurrentIdx] = useState(0)
 
+  const { data, loading, error: loadError } = useResource<{ set: PracticeSet; questions: Question[] }>(
+    session ? `/api/practice-sets/${setId}` : null
+  )
+  const practiceSet = data?.set ?? null
+  const questions = data?.questions ?? []
+
   useEffect(() => {
-    if (!session) return
-    async function load() {
-      const res = await fetch(`/api/practice-sets/${setId}`)
-      const data = await res.json()
-      if (!res.ok || !data.set) { router.replace('/menu'); return }
-      setPracticeSet(data.set)
-      setQuestions(data.questions || [])
-      setLoading(false)
-    }
-    load()
-  }, [setId, session, router])
+    if (loadError) router.replace('/menu')
+  }, [loadError, router])
 
   const q = questions[currentIdx]
   const total = questions.length

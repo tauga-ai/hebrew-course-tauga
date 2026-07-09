@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
+import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface QuestionAnalytics {
   id: number
@@ -32,20 +34,11 @@ export default function SetAnalyticsPage() {
   const setId = params.setId as string
   const { email } = useTeacherAuth()
 
-  const [data, setData] = useState<SetData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useResource<SetData>(email ? `/api/teacher/sets/${setId}` : null)
 
   useEffect(() => {
-    if (!email) return
-    async function load() {
-      const res = await fetch(`/api/teacher/sets/${setId}`)
-      if (!res.ok) { router.replace('/teacher/dashboard'); return }
-      const d = await res.json()
-      setData(d)
-      setLoading(false)
-    }
-    load()
-  }, [setId, email, router])
+    if (error) router.replace('/teacher/dashboard')
+  }, [error, router])
 
   if (loading) return <LoadingSpinner />
   if (!data) return null
@@ -64,10 +57,7 @@ export default function SetAnalyticsPage() {
           </div>
           <div>
             <span className="text-fg/60">ממוצע: </span>
-            <span className={`font-bold ${
-              data.avg_score === null ? 'text-fg/40' :
-              data.avg_score >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-            }`}>
+            <span className={`font-bold ${scoreColor(data.avg_score, { thresholds: { good: 70, ok: 70 }, emptyClass: 'text-fg/40' })}`}>
               {data.avg_score === null ? '—' : `${Math.round(data.avg_score)}%`}
             </span>
           </div>
@@ -88,11 +78,14 @@ export default function SetAnalyticsPage() {
                   שאלה {qi + 1}
                 </span>
                 {total > 0 && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    correctPct !== null && correctPct >= 70
-                      ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
-                  }`}>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreColor(correctPct, {
+                    thresholds: { good: 70, ok: 70 },
+                    palette: {
+                      good: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400',
+                      ok: 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400',
+                      bad: 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400',
+                    },
+                  })}`}>
                     {correctPct}% ענו נכון ({q.correct_count}/{total})
                   </span>
                 )}

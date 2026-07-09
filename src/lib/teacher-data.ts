@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export interface TeacherClass {
   id: number

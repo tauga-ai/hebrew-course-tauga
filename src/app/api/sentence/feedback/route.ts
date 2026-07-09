@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getStudentFromSession } from '@/lib/auth'
 
 export interface SentenceFeedback {
   used_all_starred: boolean
@@ -12,6 +13,11 @@ export interface SentenceFeedback {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getStudentFromSession()
+  if (session.status !== 'ok') {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
   let sentence: string, starred_words: string[], all_words: string[]
   try {
     ({ sentence, starred_words, all_words } = await req.json())

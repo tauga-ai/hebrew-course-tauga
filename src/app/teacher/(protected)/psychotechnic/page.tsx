@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PSYCHOTECHNIC_SETS } from '@/lib/psychotechnic'
+import type { PsychotechnicSetMeta } from '@/lib/psychotechnic'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { scoreColor } from '@/lib/score-color'
 
 interface Submission {
   id: string; student_name: string; student_id: string
   set_id: number; set_name: string
-  answers: number[]; score: number; total: number; pct: number; submitted_at: string
+  answers: number[]; correct_answers: number[]; score: number; total: number; pct: number; submitted_at: string
 }
 interface QuestionStat {
   question: number; correct_answer: number; total_answers: number
@@ -28,6 +29,7 @@ export default function PsychotechnicTeacherPage() {
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'sets' | 'students' | 'questions'>('sets')
+  const [allSets, setAllSets] = useState<PsychotechnicSetMeta[]>([])
 
   async function loadData(setId: number | null) {
     const url = `/api/teacher/psychotechnic${setId ? `?set_id=${setId}` : ''}`
@@ -43,13 +45,18 @@ export default function PsychotechnicTeacherPage() {
   useEffect(() => {
     if (!email) return
     async function init() {
-      const res = await fetch('/api/teacher/psychotechnic')
+      const [res, setsRes] = await Promise.all([
+        fetch('/api/teacher/psychotechnic'),
+        fetch('/api/psychotechnic/sets'),
+      ])
       if (!res.ok) { router.replace('/teacher/dashboard'); return }
       const data = await res.json()
+      const setsData = setsRes.ok ? await setsRes.json() : { sets: [] }
       setClassName(data.class_name)
       setSubmissions(data.submissions)
       setQuestionStats(data.question_stats)
       setSetsSummary(data.sets_summary)
+      setAllSets(setsData.sets || [])
       setLoading(false)
     }
     init()
@@ -63,15 +70,12 @@ export default function PsychotechnicTeacherPage() {
     if (id) setTab('questions')
   }
 
-  const scoreColor = (v: number | null) => {
-    if (v === null) return 'text-fg/30'
-    return v >= 70 ? 'text-green-600 dark:text-green-400' : v >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'
-  }
+  const barColor = (v: number | null) => scoreColor(v, { palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
 
   if (loading) return <LoadingSpinner />
 
   const filteredSubs = selectedSetId ? submissions.filter(s => s.set_id === selectedSetId) : submissions
-  const selectedSetName = selectedSetId ? PSYCHOTECHNIC_SETS.find(s => s.id === selectedSetId)?.name : null
+  const selectedSetName = selectedSetId ? allSets.find(s => s.id === selectedSetId)?.name : null
 
   return (
     <>
@@ -88,7 +92,7 @@ export default function PsychotechnicTeacherPage() {
           className="w-full border border-card-border rounded-lg px-3 py-2 text-right bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-400"
         >
           <option value="">כל המקבצים</option>
-          {PSYCHOTECHNIC_SETS.map(s => (
+          {allSets.map(s => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
@@ -138,7 +142,7 @@ export default function PsychotechnicTeacherPage() {
                 </div>
                 {s.avg_pct !== null && (
                   <div className="mt-2 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${s.avg_pct >= 70 ? 'bg-green-500' : s.avg_pct >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                    <div className={`h-1.5 rounded-full ${barColor(s.avg_pct)}`}
                       style={{ width: `${s.avg_pct}%` }} />
                   </div>
                 )}
@@ -174,8 +178,7 @@ export default function PsychotechnicTeacherPage() {
                     <td className="p-3 text-center">
                       <div className="flex gap-1 justify-center flex-wrap">
                         {(s.answers as number[]).map((a, qi) => {
-                          const set = PSYCHOTECHNIC_SETS.find(ps => ps.id === s.set_id)
-                          const correct = set?.answers[qi]
+                          const correct = s.correct_answers[qi]
                           return (
                             <span key={qi} className={`text-xs px-1.5 py-0.5 rounded font-bold ${
                               a === correct ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
