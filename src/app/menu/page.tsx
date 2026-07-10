@@ -92,8 +92,8 @@ export default function Menu() {
     },
     {
       icon: '🤖',
-      title: 'הבנת הנקרא',
-      subtitle: 'תרגול עם AI',
+      title: 'הבנת הנקרא תרגול עם AI',
+      subtitle: '',
       accentColor: 'ai-reading',
       href: '/ai-practice/reading',
     },
