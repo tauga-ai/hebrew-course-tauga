@@ -55,6 +55,7 @@ export default function Menu() {
             title="סימולציה עברית"
             subtitle="חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון"
             accentColor="simulation"
+            href="/simulation"
             onClick={() => router.push('/simulation')}
           />
           <Card
@@ -62,6 +63,7 @@ export default function Menu() {
             title="ראיון אישי"
             subtitle="סימולציית AI"
             accentColor="interview"
+            href="/interview"
             onClick={() => router.push('/interview')}
           />
           <Card
@@ -69,6 +71,7 @@ export default function Menu() {
             title="בניית משפטים"
             subtitle="9 סטים, ציון ושיפור"
             accentColor="sentence"
+            href="/sentence"
             onClick={() => router.push('/sentence')}
           />
           <Card
@@ -76,6 +79,7 @@ export default function Menu() {
             title='דפ"ר לצו ראשון'
             subtitle="300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות"
             accentColor="tzav-rishon"
+            href="/tzav-rishon"
             onClick={() => router.push('/tzav-rishon')}
           />
           <Card
@@ -83,6 +87,7 @@ export default function Menu() {
             title="סטי הבנת הנקרא"
             subtitle={`${completedCount}/${sets.length} סטים הושלמו`}
             accentColor="reading"
+            href="/reading-sets"
             onClick={() => router.push('/reading-sets')}
           />
           <Card
@@ -90,6 +95,7 @@ export default function Menu() {
             title="הבנת הנקרא"
             subtitle="תרגול עם AI"
             accentColor="ai-reading"
+            href="/ai-practice/reading"
             onClick={() => router.push('/ai-practice/reading')}
           />
           <Card
@@ -97,6 +103,7 @@ export default function Menu() {
             title="בניית משפט"
             subtitle="תרגול עם AI"
             accentColor="ai-sentence"
+            href="/ai-practice/sentence"
             onClick={() => router.push('/ai-practice/sentence')}
           />
           <Card
@@ -104,6 +111,7 @@ export default function Menu() {
             title="שאלות שעדי שלחה"
             subtitle="5 מקבצי שאלות"
             accentColor="makbatzim"
+            href="/makbatzim"
             onClick={() => router.push('/makbatzim')}
           />
           <Card
@@ -111,6 +119,7 @@ export default function Menu() {
             title='סימולציה דפ״ר'
             subtitle="40 שאלות"
             accentColor="makbatzim"
+            href="/makbatzim/dapar-simulation"
             onClick={() => router.push('/makbatzim/dapar-simulation')}
           />
         </CardGrid>

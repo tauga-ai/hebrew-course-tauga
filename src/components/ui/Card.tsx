@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+'use client'
+
+import { useEffect, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 
 /**
  * One entry per practice-module accent already registered in globals.css's
@@ -29,6 +32,14 @@ interface CardProps {
   trailing?: ReactNode
   onClick?: () => void
   disabled?: boolean
+  /**
+   * Pass this whenever `onClick` navigates to a fixed route, so it can be
+   * prefetched on mount — Card renders a `<button>`, not a `next/link` `<a>`,
+   * so it gets none of Link's automatic in-viewport prefetching, which is
+   * why clicking a card can otherwise visibly stall on a cold client cache.
+   * Omit it for onClick handlers that don't navigate (e.g. in-page state).
+   */
+  href?: string
 }
 
 /**
@@ -39,8 +50,14 @@ interface CardProps {
  * filling the whole card, so nothing in a grid of these ever looks like it
  * belongs to a different design language.
  */
-export function Card({ icon, title, subtitle, accentColor, trailing, onClick, disabled }: CardProps) {
+export function Card({ icon, title, subtitle, accentColor, trailing, onClick, disabled, href }: CardProps) {
+  const router = useRouter()
   const accent = ACCENT_STYLES[accentColor]
+
+  useEffect(() => {
+    if (href) router.prefetch(href)
+  }, [href, router])
+
   return (
     <button
       type="button"

@@ -39,6 +39,7 @@ export default function MakbatzimSetsPage() {
             title={s.labelHe}
             subtitle={`${s.count} שאלות`}
             accentColor="makbatzim"
+            href={`/makbatzim/${s.key}`}
             onClick={() => router.push(`/makbatzim/${s.key}`)}
             trailing={<span className="text-fg/40 text-xl">←</span>}
           />

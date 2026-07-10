@@ -48,6 +48,7 @@ export default function SentenceLanding() {
             title={`סט ${set.id}`}
             subtitle="10 תרגילים"
             accentColor="sentence"
+            href={`/sentence/${set.id}`}
             onClick={() => router.push(`/sentence/${set.id}`)}
             trailing={
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[set.difficulty]}`}>

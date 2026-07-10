@@ -69,6 +69,7 @@ export default function TzavRishonTopicsPage() {
             title={isAr ? t.labelAr : t.labelHe}
             subtitle={isAr ? `${t.count} سؤال` : `${t.count} שאלות`}
             accentColor="tzav-rishon"
+            href={`/tzav-rishon/${t.key}`}
             onClick={() => router.push(`/tzav-rishon/${t.key}`)}
             trailing={<span className="text-accent-tzav-rishon-fg text-xl">←</span>}
           />

@@ -80,6 +80,7 @@ export default function ReadingSetsPage() {
               subtitle={`${set.topic}, רמה ${set.difficulty_level}`}
               accentColor="reading"
               disabled={done}
+              href={`/practice/${set.id}`}
               onClick={() => router.push(`/practice/${set.id}`)}
               trailing={
                 done ? (
