@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
+import { broadcastClassroomActivity } from '@/lib/realtime-broadcast'
 
 export async function POST(req: NextRequest) {
   const session = await getStudentFromSession()
@@ -92,6 +93,19 @@ export async function POST(req: NextRequest) {
   )
 
   if (ansError) return NextResponse.json({ error: ansError.message }, { status: 500 })
+
+  const { data: set } = await db.from('practice_sets').select('set_number').eq('id', practice_set_id).maybeSingle()
+  broadcastClassroomActivity({
+    studentId: session.student.id,
+    studentName: session.student.full_name,
+    classId: session.student.class_id,
+    lessonGroup: session.student.lesson_group,
+    feature: 'reading-sets',
+    label: set ? `סט ${set.set_number}` : 'סטי הבנת הנקרא',
+    status: 'completed',
+    detail: `${Math.round(score)}% (${correct}/${total})`,
+    at: Date.now(),
+  })
 
   return NextResponse.json({
     score_percentage: score,
