@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getQuestionById, gradeAnswer } from '@/lib/makbatzim'
+import { getQuestionById, gradeAnswer, getSetMeta } from '@/lib/makbatzim'
 import { getStudentFromSession } from '@/lib/auth'
+import { broadcastClassroomActivity } from '@/lib/realtime-broadcast'
 
 export async function POST(req: NextRequest) {
   const session = await getStudentFromSession()
@@ -43,6 +44,19 @@ export async function POST(req: NextRequest) {
   )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const setMeta = getSetMeta(set_id)
+  broadcastClassroomActivity({
+    studentId: session.student.id,
+    studentName: session.student.full_name,
+    classId: session.student.class_id,
+    lessonGroup: session.student.lesson_group,
+    feature: set_id === 'dapar-simulation' ? 'dapar-simulation' : 'makbatzim',
+    label: setMeta?.labelHe ?? set_id,
+    status: 'in_progress',
+    detail: `שאלה ${question_id}: ${is_correct ? 'נכון' : 'טעות'}`,
+    at: Date.now(),
+  })
 
   return NextResponse.json({
     is_correct,
