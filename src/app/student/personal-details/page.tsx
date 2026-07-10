@@ -28,11 +28,10 @@ export default function PersonalDetailsPage() {
     let cancelled = false
 
     async function loadStats() {
-      const [practiceSetsRes, submissionsRes, daparRes, psychoRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
+      const [practiceSetsRes, submissionsRes, daparRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
         fetch('/api/practice-sets').then(r => r.json()).catch(() => null),
         fetch(`/api/student/${session!.id}/submissions`).then(r => r.json()).catch(() => null),
         fetch('/api/dapar/my-submission').then(r => r.json()).catch(() => null),
-        fetch('/api/psychotechnic/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/sentence/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/interview/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/simulation/my-stats').then(r => r.json()).catch(() => null),
@@ -58,11 +57,6 @@ export default function PersonalDetailsPage() {
           key: 'dapar',
           label: 'דפ"ר',
           value: daparGrade ? `הוגש · ${Math.round(daparGrade.pct)}%` : 'עדיין לא הוגש',
-        },
-        {
-          key: 'psychotechnic',
-          label: 'פסיכוטכני',
-          value: `${psychoRes?.attempted_sets ?? 0}/${psychoRes?.total_sets ?? 0} מקבצים${psychoRes?.avg_pct != null ? ` · ממוצע ${Math.round(psychoRes.avg_pct)}%` : ''}`,
         },
         {
           key: 'sentence',
