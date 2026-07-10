@@ -20,7 +20,7 @@ const CLASSROOM_ITEMS: NavItem[] = [
   { href: '/makbatzim/dapar-simulation', icon: '🧮', label: 'סימולציה דפ"ר' },
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
   { href: '/reading-sets', icon: '📖', label: 'תרגול הבנת הנקרא', alsoActiveUnder: ['/practice'] },
-  { href: '/makbatzim', icon: '🧮', label: 'שאלות שעדי שלחה', excludeUnder: ['/makbatzim/dapar-simulation'] },
+  { href: '/makbatzim', icon: '🧮', label: 'מקבצים פסיכוטכני', excludeUnder: ['/makbatzim/dapar-simulation'] },
 ]
 
 const HOME_ITEMS: NavItem[] = [

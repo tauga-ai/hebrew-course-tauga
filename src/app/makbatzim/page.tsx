@@ -29,7 +29,7 @@ export default function MakbatzimSetsPage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-md mx-auto w-full">
-      <PageHeader backHref="/menu" title="שאלות שעדי שלחה" />
+      <PageHeader backHref="/menu" title="מקבצים פסיכוטכני" />
 
       <CardGrid>
         {sets.map(s => (

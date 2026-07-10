@@ -68,7 +68,7 @@ export default function Menu() {
     },
     {
       icon: '🧮',
-      title: 'שאלות שעדי שלחה',
+      title: 'מקבצים פסיכוטכני',
       subtitle: '5 מקבצי שאלות',
       accentColor: 'makbatzim',
       href: '/makbatzim',

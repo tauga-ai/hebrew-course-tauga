@@ -5,7 +5,7 @@ import { FeatureReport } from '@/components/teacher/FeatureReport'
 export default function MakbatzimTeacherPage() {
   return (
     <FeatureReport
-      title="דוח שאלות שעדי שלחה"
+      title="דוח מקבצים פסיכוטכני"
       titleColorClass="text-primary-700 dark:text-primary-400"
       reportEndpoint="/api/teacher/makbatzim"
       entitiesEndpoint="/api/makbatzim/sets"
