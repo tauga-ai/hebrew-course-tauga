@@ -37,12 +37,13 @@ export type TeacherSessionResult =
 
 /**
  * Resolves the authenticated teacher from the Supabase session.
- * Authorization is derived from owning a row in `class_teachers` — not a
- * client-supplied `?email=` query param, and not a separate hardcoded
- * allowlist duplicated from the client. A class can have several teachers,
- * but each teacher belongs to exactly one class. Super admins (`admins`
- * table) also pass, with `isAdmin: true` — they can view every class via a
- * selector; see getClassAndStudents() in teacher-data.ts.
+ * Authorization is derived from owning at least one row in `class_teachers`
+ * — not a client-supplied `?email=` query param, and not a separate
+ * hardcoded allowlist duplicated from the client. A teacher can now own
+ * more than one class (see resolveClassAndGroup() in teacher-data.ts), so
+ * this only checks existence — never `.single()`/`.maybeSingle()`, which
+ * would throw on 2+ matching rows. Super admins (`admins` table) also pass,
+ * with `isAdmin: true` — they can view every class via a selector.
  */
 export async function requireTeacher(): Promise<TeacherSessionResult> {
   const supabase = await createClient()
@@ -50,13 +51,12 @@ export async function requireTeacher(): Promise<TeacherSessionResult> {
   if (!user?.email) return { status: 'unauthenticated' }
 
   const db = createServiceClient()
-  const { data: row } = await db
+  const { data: rows } = await db
     .from('class_teachers')
     .select('teacher_email')
     .eq('teacher_email', user.email)
-    .maybeSingle()
 
-  if (row) return { status: 'ok', email: user.email, isAdmin: false }
+  if (rows && rows.length > 0) return { status: 'ok', email: user.email, isAdmin: false }
 
   const { data: admin } = await db
     .from('admins')
