@@ -17,7 +17,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/simulation', icon: '🏆', label: 'סימולציה עברית' },
   { href: '/interview', icon: '🗣️', label: 'ראיון אישי' },
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
-  { href: '/psychotechnic', icon: '🧠', label: 'פסיכוטכני' },
   { href: '/tzav-rishon', icon: '🎯', label: 'דפ"ר לצו ראשון' },
   { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא', alsoActiveUnder: ['/practice'] },
   { href: '/ai-practice/reading', icon: '🤖', label: 'הבנת הנקרא (AI)' },

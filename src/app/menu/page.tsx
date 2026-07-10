@@ -79,13 +79,6 @@ export default function Menu() {
             onClick={() => router.push('/sentence')}
           />
           <Card
-            icon="🧠"
-            title="פסיכוטכני: הזנת תשובות"
-            subtitle="10 מקבצים, בדיקה מיידית, ציון ותיקון"
-            accentColor="psychotechnic"
-            onClick={() => router.push('/psychotechnic')}
-          />
-          <Card
             icon="🎯"
             title='דפ"ר לצו ראשון'
             subtitle="300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות"
