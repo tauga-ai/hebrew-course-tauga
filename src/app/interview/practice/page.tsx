@@ -27,9 +27,37 @@ export default function PracticePage() {
     if (window.speechSynthesis) window.speechSynthesis.getVoices()
   }, [])
 
+  // Restore previously saved answers once the student session is ready.
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+    fetch('/api/interview/practice-answers')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data?.answers) return
+        setAnswers(prev => ({ ...data.answers, ...prev }))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [session])
+
+  // Not scored, just autosaved — persisted the moment the student leaves a
+  // question (nav buttons or the dot strip), not on every keystroke.
+  function saveAnswer(questionId: number, text: string | undefined) {
+    if (!text) return
+    fetch('/api/interview/practice-answers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: questionId, answer_text: text }),
+    }).catch(() => {})
+  }
+
   function go(dir: number) {
     stopSpeaking()
     stopListening()
+    saveAnswer(q.id, answers[q.id])
     setIdx(i => Math.max(0, Math.min(total - 1, i + dir)))
   }
 
@@ -103,7 +131,7 @@ export default function PracticePage() {
           {ALL_PRACTICE_QUESTIONS.map((qq, i) => (
             <button
               key={qq.id}
-              onClick={() => { stopSpeaking(); setIdx(i) }}
+              onClick={() => { stopSpeaking(); saveAnswer(q.id, answers[q.id]); setIdx(i) }}
               className={`w-2 h-2 rounded-full transition ${
                 i === idx ? 'bg-primary-600 scale-125' : answers[qq.id] ? 'bg-primary-300' : 'bg-gray-200 dark:bg-white/10'
               }`}
@@ -123,7 +151,7 @@ export default function PracticePage() {
       {answered === total && (
         <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-xl p-4 text-center">
           <p className="text-green-700 dark:text-green-400 font-semibold">כל הכבוד! ענית על כל {total} השאלות 🎉</p>
-          <button onClick={() => router.push('/interview')} className="mt-2 text-sm text-green-600 dark:text-green-400 underline">
+          <button onClick={() => { saveAnswer(q.id, answers[q.id]); router.push('/interview') }} className="mt-2 text-sm text-green-600 dark:text-green-400 underline">
             חזור לתפריט
           </button>
         </div>
