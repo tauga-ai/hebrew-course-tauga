@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
+import { broadcastClassroomActivity } from '@/lib/realtime-broadcast'
 
 export async function POST() {
   const session = await getStudentFromSession()
@@ -20,6 +21,17 @@ export async function POST() {
   if (error || !simSession) {
     return NextResponse.json({ error: error?.message || 'שגיאה' }, { status: 500 })
   }
+
+  broadcastClassroomActivity({
+    studentId: session.student.id,
+    studentName: session.student.full_name,
+    classId: session.student.class_id,
+    lessonGroup: session.student.lesson_group,
+    feature: 'simulation',
+    label: 'סימולציה עברית',
+    status: 'started',
+    at: Date.now(),
+  })
 
   // Load all questions + exercises
   const [qRes, exRes] = await Promise.all([
