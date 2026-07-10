@@ -102,9 +102,16 @@ export default function Menu() {
           <Card
             icon="🧮"
             title="שאלות שעדי שלחה"
-            subtitle="6 מקבצי שאלות"
+            subtitle="5 מקבצי שאלות"
             accentColor="makbatzim"
             onClick={() => router.push('/makbatzim')}
+          />
+          <Card
+            icon="🧮"
+            title='סימולציה דפ״ר'
+            subtitle="40 שאלות"
+            accentColor="makbatzim"
+            onClick={() => router.push('/makbatzim/dapar-simulation')}
           />
         </CardGrid>
       </div>

@@ -62,7 +62,7 @@ export default function MakbatzimPracticePage() {
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
-        backHref="/makbatzim"
+        backHref={setId === 'dapar-simulation' ? '/menu' : '/makbatzim'}
         title={setMeta.labelHe}
         right={<LtrIsolate>{`${answeredCount}/${total}`}</LtrIsolate>}
       />

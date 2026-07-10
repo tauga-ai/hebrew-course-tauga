@@ -19,7 +19,9 @@ export default function MakbatzimSetsPage() {
   const router = useRouter()
   const { session, loading: sessionLoading } = useStudentSession()
   const { data } = useResource<{ sets: SetMeta[] }>(session ? '/api/makbatzim/sets' : null, { fallback: { sets: [] } })
-  const sets = data?.sets ?? null
+  // 'dapar-simulation' moved to its own top-level card in the lobby — still a
+  // real set (grading/questions API unaffected), just no longer listed here.
+  const sets = data ? data.sets.filter(s => s.key !== 'dapar-simulation') : null
 
   if (sessionLoading || sets === null) return <LoadingSpinner />
 
