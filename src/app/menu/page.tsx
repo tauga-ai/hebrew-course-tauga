@@ -78,7 +78,7 @@ export default function Menu() {
   const homeCards: MenuCard[] = [
     {
       icon: '🎯',
-      title: 'דפ"ר לצו ראשון',
+      title: 'תרגול עצמי כמותי - עברית וערבית',
       subtitle: '300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות',
       accentColor: 'tzav-rishon',
       href: '/tzav-rishon',

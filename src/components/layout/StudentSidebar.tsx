@@ -24,7 +24,7 @@ const CLASSROOM_ITEMS: NavItem[] = [
 ]
 
 const HOME_ITEMS: NavItem[] = [
-  { href: '/tzav-rishon', icon: '🎯', label: 'דפ"ר לצו ראשון' },
+  { href: '/tzav-rishon', icon: '🎯', label: 'תרגול עצמי כמותי - עברית וערבית' },
   { href: '/interview', icon: '🗣️', label: 'ראיון אישי' },
   { href: '/ai-practice/reading', icon: '🤖', label: 'הבנת הנקרא (AI)' },
   { href: '/ai-practice/sentence', icon: '🤖', label: 'בניית משפט (AI)' },

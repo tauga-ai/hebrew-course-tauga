@@ -5,7 +5,7 @@ import { FeatureReport } from '@/components/teacher/FeatureReport'
 export default function TzavRishonTeacherPage() {
   return (
     <FeatureReport
-      title='דוח דפ״ר לצו ראשון'
+      title='דוח תרגול עצמי כמותי - עברית וערבית'
       titleColorClass="text-accent-tzav-rishon-fg"
       reportEndpoint="/api/teacher/tzav-rishon"
       entitiesEndpoint="/api/tzav-rishon/topics"

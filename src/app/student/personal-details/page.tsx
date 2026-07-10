@@ -68,7 +68,7 @@ export default function PersonalDetailsPage() {
         },
         {
           key: 'tzav-rishon',
-          label: 'דפ״ר לצו ראשון',
+          label: 'תרגול עצמי כמותי - עברית וערבית',
           // total comes from the API dynamically (sum across all 4 topics), unlike
           // the two lines above that read a client-side constant's .length — this
           // one has no equivalent constant to import, so it's computed server-side.

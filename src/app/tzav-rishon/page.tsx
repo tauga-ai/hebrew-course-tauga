@@ -34,7 +34,7 @@ export default function TzavRishonTopicsPage() {
       <div lang={isAr ? 'ar' : 'he'} className="flex-1 p-4 max-w-md mx-auto w-full">
       <PageHeader
         backHref="/menu"
-        title={isAr ? 'دفار للاستدعاء الأول' : 'דפ״ר לצו ראשון'}
+        title="תרגול עצמי כמותי - עברית וערבית"
         titleColorClass="text-accent-tzav-rishon-fg"
       />
 
