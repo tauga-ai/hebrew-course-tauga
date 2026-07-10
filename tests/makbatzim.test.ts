@@ -7,6 +7,8 @@ import set2Data from '../src/data/makbatzim/set-2/data.json'
 import set3Data from '../src/data/makbatzim/set-3/data.json'
 import set4Data from '../src/data/makbatzim/set-4/data.json'
 import set1TzuraniData from '../src/data/makbatzim/set-1-tzurani/data.json'
+import set1AnalogiesData from '../src/data/makbatzim/set-1-analogies/data.json'
+import set1InstructionsData from '../src/data/makbatzim/set-1-instructions/data.json'
 import daparSimulationData from '../src/data/makbatzim/dapar-simulation/data.json'
 
 // Imported directly from the raw JSON (not via src/lib/makbatzim.ts or
@@ -19,6 +21,8 @@ const SETS: Record<string, MakbatzimQuestion[]> = {
   'set-3': set3Data as MakbatzimQuestion[],
   'set-4': set4Data as MakbatzimQuestion[],
   'set-1-tzurani': set1TzuraniData as MakbatzimQuestion[],
+  'set-1-analogies': set1AnalogiesData as MakbatzimQuestion[],
+  'set-1-instructions': set1InstructionsData as MakbatzimQuestion[],
   'dapar-simulation': daparSimulationData as MakbatzimQuestion[],
 }
 
@@ -28,6 +32,8 @@ const EXPECTED_COUNT: Record<string, number> = {
   'set-3': 10,
   'set-4': 10,
   'set-1-tzurani': 9,
+  'set-1-analogies': 9,
+  'set-1-instructions': 10,
   'dapar-simulation': 40,
 }
 
@@ -37,7 +43,11 @@ const EXPECTED_IMAGE_COUNT: Record<string, number> = {
   'set-3': 0,
   'set-4': 0,
   'set-1-tzurani': 9,
-  'dapar-simulation': 13,
+  'set-1-analogies': 0,
+  'set-1-instructions': 0,
+  // Updated 2026-07-10 alongside the refreshed 40-question source workbook
+  // (was 13 with the previous question set).
+  'dapar-simulation': 12,
 }
 
 test('gradeAnswer: correct selection is graded correct', () => {

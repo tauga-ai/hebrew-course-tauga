@@ -5,6 +5,8 @@ import set2Data from './set-2/data.json'
 import set3Data from './set-3/data.json'
 import set4Data from './set-4/data.json'
 import set1TzuraniData from './set-1-tzurani/data.json'
+import set1AnalogiesData from './set-1-analogies/data.json'
+import set1InstructionsData from './set-1-instructions/data.json'
 import daparSimulationData from './dapar-simulation/data.json'
 
 const DATA: Record<SetKey, MakbatzimQuestion[]> = {
@@ -13,6 +15,8 @@ const DATA: Record<SetKey, MakbatzimQuestion[]> = {
   'set-3': set3Data as MakbatzimQuestion[],
   'set-4': set4Data as MakbatzimQuestion[],
   'set-1-tzurani': set1TzuraniData as MakbatzimQuestion[],
+  'set-1-analogies': set1AnalogiesData as MakbatzimQuestion[],
+  'set-1-instructions': set1InstructionsData as MakbatzimQuestion[],
   'dapar-simulation': daparSimulationData as MakbatzimQuestion[],
 }
 
@@ -22,6 +26,8 @@ const LABELS: Record<SetKey, string> = {
   'set-3': 'מקבץ 3',
   'set-4': 'מקבץ 4',
   'set-1-tzurani': 'מקבץ 1 - צורני',
+  'set-1-analogies': 'מקבץ 1 - אנלוגיות מילוליות',
+  'set-1-instructions': 'מקבץ 1 - הוראות',
   'dapar-simulation': 'סימולציה דפ״ר',
 }
 
