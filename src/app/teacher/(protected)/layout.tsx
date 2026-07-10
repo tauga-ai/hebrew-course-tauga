@@ -28,10 +28,12 @@ function getCookie(name: string): string | null {
 }
 
 /**
- * Admin-only class selector — absent for every regular teacher (the API
- * call fails/returns isAdmin:false for them, so this renders nothing extra).
- * Switching class sets the `active_class_id` cookie that getClassAndStudents()
- * reads server-side, then reloads so every page re-fetches under it.
+ * Class selector — renders for admins (who can view every class) and for
+ * any regular teacher who owns more than one class (e.g. teaching both
+ * Arabic and Russian); absent otherwise, since /api/teacher/classes only
+ * ever returns more than one class in those two cases. Switching class
+ * sets the `active_class_id` cookie that getClassAndStudents() reads
+ * server-side, then reloads so every page re-fetches under it.
  */
 function ClassSelector() {
   const [classes, setClasses] = useState<TeacherClassOption[]>([])
@@ -42,7 +44,7 @@ function ClassSelector() {
     fetch('/api/teacher/classes')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
-        if (cancelled || !data?.isAdmin || !Array.isArray(data.classes)) return
+        if (cancelled || !Array.isArray(data?.classes)) return
         setClasses(data.classes)
         setActiveId(getCookie('active_class_id') || String(data.classes[0]?.id || ''))
       })
