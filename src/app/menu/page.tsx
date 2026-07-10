@@ -51,13 +51,6 @@ export default function Menu() {
 
         <CardGrid>
           <Card
-            icon="📝"
-            title='סימולציית דפ"ר'
-            subtitle="הזנת תשובות לשאלות 1-50"
-            accentColor="dapar"
-            onClick={() => router.push('/dapar')}
-          />
-          <Card
             icon="🏆"
             title="סימולציה עברית"
             subtitle="חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון"

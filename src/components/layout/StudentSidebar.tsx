@@ -13,7 +13,6 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dapar', icon: '📝', label: 'סימולציית דפ"ר' },
   { href: '/simulation', icon: '🏆', label: 'סימולציה עברית' },
   { href: '/interview', icon: '🗣️', label: 'ראיון אישי' },
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
