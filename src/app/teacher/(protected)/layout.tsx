@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 const NAV_ITEMS: { href: string; label: string; classes: string }[] = [
   { href: '/teacher/dashboard', label: 'לוח בקרה', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20' },
+  { href: '/teacher/monitor', label: '🔴 ניטור בזמן אמת', classes: 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20' },
   { href: '/teacher/students', label: 'הבנת הנקרא', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20' },
   { href: '/teacher/activity', label: 'משפטים + ראיון', classes: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20' },
   { href: '/teacher/simulation-report', label: '🏆 סימולציה', classes: 'bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/20' },

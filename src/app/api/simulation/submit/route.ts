@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
+import { broadcastClassroomActivity, type ClassroomActivityEvent } from '@/lib/realtime-broadcast'
 
 type ReadingAnswer = { question_id: number; selected_answer: number }
 type SentenceResult = { ex_order: number; sentence: string; score: number; feedback: string; improved_sentence: string }
@@ -83,10 +84,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
+  const activityBase: Omit<ClassroomActivityEvent, 'label' | 'status' | 'detail'> = {
+    studentId: session.student.id,
+    studentName: session.student.full_name,
+    classId: session.student.class_id,
+    lessonGroup: session.student.lesson_group,
+    feature: 'simulation',
+    at: Date.now(),
+  }
+
   try {
     if (type === 'reading_a' || type === 'reading_b') {
       const part = type === 'reading_a' ? 1 : 2
       const result = await submitReading(db, session_id, part, body.answers)
+      broadcastClassroomActivity({
+        ...activityBase,
+        label: part === 1 ? 'סימולציה עברית: חלק א׳' : 'סימולציה עברית: חלק ב׳',
+        status: 'in_progress',
+        detail: `${result.correct}/${result.total} נכונות`,
+      })
       return NextResponse.json(result)
     }
     if (type === 'sentences') {
@@ -94,10 +110,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
       }
       await submitSentences(db, session_id, body.results)
+      const avg = body.results.reduce((s: number, r: SentenceResult) => s + r.score, 0) / body.results.length
+      broadcastClassroomActivity({
+        ...activityBase,
+        label: 'סימולציה עברית: חלק ג׳ (משפטים)',
+        status: 'in_progress',
+        detail: `ממוצע ${avg.toFixed(1)}/10`,
+      })
       return NextResponse.json({ ok: true })
     }
     if (type === 'interview') {
       await submitInterview(db, session_id, body.score, body.level, body.summary || '')
+      broadcastClassroomActivity({
+        ...activityBase,
+        label: 'סימולציה עברית: חלק ד׳ (ראיון) — הושלמה',
+        status: 'completed',
+        detail: `ציון ${body.score}, רמה ${body.level}`,
+      })
       return NextResponse.json({ ok: true })
     }
     return NextResponse.json({ error: 'סוג לא ידוע' }, { status: 400 })
