@@ -26,6 +26,14 @@ export interface UseQuizEngineConfig {
   submitBodyExtra: Record<string, unknown>
   /** Shown when a submit fails without a server-provided message. */
   submitErrorMessage: string
+  /**
+   * Exam-style mode: answers are still recorded immediately (unchanged),
+   * but the caller should withhold correctness from the UI — via the
+   * returned `revealed` flag — until every question in the set has been
+   * answered, at which point everything unlocks together. Omit (or leave
+   * false) for the normal self-practice behavior of immediate feedback.
+   */
+  deferFeedback?: boolean
 }
 
 /**
@@ -40,7 +48,7 @@ export interface UseQuizEngineConfig {
 export function useQuizEngine<Q extends { id: number }, M extends { key: string }, E>(
   config: UseQuizEngineConfig
 ) {
-  const { entityId, session, questionsUrl, progressUrl, entityMetaUrl, entityMetaKey, submitUrl, submitBodyExtra, submitErrorMessage } = config
+  const { entityId, session, questionsUrl, progressUrl, entityMetaUrl, entityMetaKey, submitUrl, submitBodyExtra, submitErrorMessage, deferFeedback } = config
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [seededForEntity, setSeededForEntity] = useState<string | null>(null)
@@ -96,6 +104,9 @@ export function useQuizEngine<Q extends { id: number }, M extends { key: string 
   const resultsByQuestion = Object.fromEntries(
     Object.entries(progress).map(([qid, p]) => [qid, p.is_correct])
   )
+  // Exam mode: nothing unlocks until the whole set is answered, then
+  // everything reveals together — never gated per-question.
+  const revealed = !deferFeedback || (total > 0 && answeredCount === total)
 
   async function selectOption(optionNum: number) {
     if (submitting || !current) return
@@ -142,7 +153,7 @@ export function useQuizEngine<Q extends { id: number }, M extends { key: string 
   return {
     loading, loadError, questions, entityMeta,
     currentIndex, current, progress, answered,
-    total, answeredCount, resultsByQuestion,
+    total, answeredCount, resultsByQuestion, revealed,
     submitting, error, selectOption,
     goPrev, goNext, jumpTo, retryLoad,
   }

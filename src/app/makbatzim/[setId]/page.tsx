@@ -39,6 +39,7 @@ export default function MakbatzimPracticePage() {
     submitUrl: '/api/makbatzim/submit',
     submitBodyExtra: { set_id: setId },
     submitErrorMessage: 'שגיאה בשליחה',
+    deferFeedback: setId === 'dapar-simulation',
   })
 
   if (engine.loadError && engine.questions === null) {
@@ -55,7 +56,7 @@ export default function MakbatzimPracticePage() {
 
   if (sessionLoading || engine.loading || !engine.current || !engine.entityMeta) return <LoadingSpinner />
 
-  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, entityMeta: setMeta } = engine
+  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, revealed, entityMeta: setMeta } = engine
 
   return (
     <div className="min-h-screen md:flex">
@@ -93,10 +94,15 @@ export default function MakbatzimPracticePage() {
           const isSelected = answered?.selected_option === optionNum
           const isTheCorrectOne = answered && answered.correct_option === optionNum
           let stateClass = 'bg-surface border-card-border hover:border-accent-makbatzim text-fg'
-          if (answered) {
+          if (answered && revealed) {
             if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
             else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
             else stateClass = 'bg-surface border-card-border text-fg/60'
+          } else if (answered && isSelected) {
+            // Exam mode, not yet revealed — acknowledge the selection without
+            // showing whether it's right, same neutral treatment as the
+            // non-revealing reading phase in the main Hebrew simulation.
+            stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
           }
           return (
             <button
@@ -116,7 +122,7 @@ export default function MakbatzimPracticePage() {
 
       {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{error}</p>}
 
-      {answered && (
+      {answered && revealed && (
         <div className={`rounded-2xl p-4 mb-4 border ${answered.is_correct ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'}`}>
           <div className={`font-bold mb-2 ${answered.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
             {answered.is_correct ? 'תשובה נכונה!' : 'תשובה לא נכונה'}
@@ -146,7 +152,12 @@ export default function MakbatzimPracticePage() {
         </button>
       </div>
 
-      <QuestionMap count={total} currentIndex={currentIndex} results={resultsByQuestion} onJump={engine.jumpTo} />
+      <QuestionMap
+        count={total}
+        currentIndex={currentIndex}
+        results={revealed ? resultsByQuestion : Object.fromEntries(Object.keys(resultsByQuestion).map(qid => [qid, 'answered' as const]))}
+        onJump={engine.jumpTo}
+      />
       </div>
     </div>
   )
