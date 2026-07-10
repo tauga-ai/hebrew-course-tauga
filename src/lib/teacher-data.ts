@@ -10,12 +10,15 @@ export interface TeacherClass {
 export interface ClassStudent {
   id: string
   full_name: string
+  lesson_group: number | null
 }
 
 export interface ClassAndStudents {
   cls: TeacherClass
   students: ClassStudent[]
   studentIds: string[]
+  /** The resolved lesson_group scope for the requesting teacher (null = whole class). */
+  lessonGroup: number | null
 }
 
 interface OwnedClass {
@@ -84,12 +87,12 @@ export async function getClassAndStudents(db: Db, email: string): Promise<ClassA
   const { data: cls } = await db.from('classes').select('id, name, join_code').eq('id', resolved.classId).single()
   if (!cls) return null
 
-  let query = db.from('students').select('id, full_name').eq('class_id', cls.id).order('full_name')
+  let query = db.from('students').select('id, full_name, lesson_group').eq('class_id', cls.id).order('full_name')
   if (resolved.lessonGroup !== null) query = query.eq('lesson_group', resolved.lessonGroup)
   const { data: students } = await query
 
   const rows = students || []
-  return { cls, students: rows, studentIds: rows.map(s => s.id) }
+  return { cls, students: rows, studentIds: rows.map(s => s.id), lessonGroup: resolved.lessonGroup }
 }
 
 /** Every class an admin can pick from, or every class a regular teacher owns. */
