@@ -45,28 +45,47 @@ export function LiveMonitorBoard({ classId, lessonGroup, roster, initialSnapshot
   const [connection, setConnection] = useState<ConnectionState>('connecting')
 
   useEffect(() => {
+    let cancelled = false
+
+    function mergeEvent(event: ClassroomActivityEvent) {
+      setActivity(prev => {
+        const existing = prev[event.studentId]
+        if (existing && existing.at >= event.at) return prev
+        return { ...prev, [event.studentId]: event }
+      })
+    }
+
+    // Broadcasts missed while disconnected are never replayed to a
+    // reconnecting client, so every (re)subscribe re-fetches a fresh
+    // snapshot and merges it in — a no-op if nothing was actually missed,
+    // since mergeEvent only ever keeps the more recent of the two per student.
+    function catchUp() {
+      fetch('/api/teacher/monitor/snapshot')
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (cancelled || !data?.snapshot) return
+          Object.values(data.snapshot as Record<string, ClassroomActivityEvent>).forEach(mergeEvent)
+        })
+        .catch(() => {})
+    }
+
     const supabase = createClient()
     const topic = lessonGroup !== null ? `class:${classId}:group:${lessonGroup}` : `class:${classId}:all`
     const channel = supabase.channel(topic, { config: { private: true } })
 
     channel
-      .on('broadcast', { event: 'activity' }, ({ payload }) => {
-        const event = payload as ClassroomActivityEvent
-        setActivity(prev => {
-          const existing = prev[event.studentId]
-          if (existing && existing.at >= event.at) return prev
-          return { ...prev, [event.studentId]: event }
-        })
-      })
+      .on('broadcast', { event: 'activity' }, ({ payload }) => mergeEvent(payload as ClassroomActivityEvent))
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') setConnection('connected')
-        // RT9 hooks a catch-up snapshot fetch onto this same transition —
-        // broadcasts missed while disconnected are never replayed to a
-        // reconnecting client.
-        else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') setConnection('disconnected')
+        if (status === 'SUBSCRIBED') {
+          setConnection('connected')
+          catchUp()
+        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setConnection('disconnected')
+        }
       })
 
     return () => {
+      cancelled = true
       supabase.removeChannel(channel)
     }
   }, [classId, lessonGroup])
