@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getQuestionById, gradeAnswer, getSetMeta } from '@/lib/makbatzim'
+import { getQuestionById, gradeAnswer, getSetMeta, isSetComplete } from '@/lib/makbatzim'
 import { getStudentFromSession } from '@/lib/auth'
 import { broadcastClassroomActivity } from '@/lib/realtime-broadcast'
 
@@ -57,6 +57,16 @@ export async function POST(req: NextRequest) {
     detail: `שאלה ${question_id}: ${is_correct ? 'נכון' : 'טעות'}`,
     at: Date.now(),
   })
+
+  // Exam mode: dapar-simulation never tells the client whether an answer
+  // was right, nor what the correct one is, until the whole 40-question set
+  // has been answered (checked AFTER this upsert, so answering the last
+  // question reveals immediately) — a real server-side boundary, not just
+  // a UI choice, since a student could otherwise read the correct answer
+  // straight off the Network tab regardless of what the page renders.
+  if (set_id === 'dapar-simulation' && !(await isSetComplete(db, session.student.id, set_id))) {
+    return NextResponse.json({ recorded: true })
+  }
 
   return NextResponse.json({
     is_correct,
