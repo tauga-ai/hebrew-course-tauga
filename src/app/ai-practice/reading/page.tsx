@@ -65,6 +65,13 @@ export default function AIReadingPage() {
     const isCorrect = selected === question.correct_index
     setStats(s => ({ correct: s.correct + (isCorrect ? 1 : 0), total: s.total + 1 }))
     setPhase('result')
+    if (level !== null) {
+      fetch('/api/ai-practice/reading/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level, is_correct: isCorrect }),
+      }).catch(() => {})
+    }
   }
 
   const isCorrect = selected !== null && question !== null && selected === question.correct_index

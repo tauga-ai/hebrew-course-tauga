@@ -82,6 +82,13 @@ export default function AISentencePage() {
       setFeedback(data.feedback)
       setScores(s => [...s, data.feedback.score])
       setPhase('result')
+      if (level !== null) {
+        fetch('/api/ai-practice/sentence/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level, score: data.feedback.score }),
+        }).catch(() => {})
+      }
     } catch {
       alert('שגיאה בבדיקת המשפט. נסה שוב.')
       setPhase('input')
