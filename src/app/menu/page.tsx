@@ -59,7 +59,7 @@ export default function Menu() {
           />
           <Card
             icon="🏆"
-            title="סימולציה אמיתית"
+            title="סימולציה עברית"
             subtitle="חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון"
             accentColor="simulation"
             onClick={() => router.push('/simulation')}

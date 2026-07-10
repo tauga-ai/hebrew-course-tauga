@@ -435,7 +435,7 @@ export default function SimulationPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">🏆</div>
-        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">סימולציה אמיתית</h1>
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">סימולציה עברית</h1>
         <p className="text-fg/60 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
         <p className="text-fg/70 mb-6 text-sm leading-relaxed">
           סימולציה מקיפה בת 4 חלקים המדמה תנאי בחינה אמיתיים.
