@@ -61,7 +61,7 @@ export default function Menu() {
     },
     {
       icon: '📖',
-      title: 'סטי הבנת הנקרא',
+      title: 'תרגול הבנת הנקרא',
       subtitle: `${completedCount}/${sets.length} סטים הושלמו`,
       accentColor: 'reading',
       href: '/reading-sets',

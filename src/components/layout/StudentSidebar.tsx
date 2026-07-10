@@ -19,7 +19,7 @@ const CLASSROOM_ITEMS: NavItem[] = [
   { href: '/simulation', icon: '🏆', label: 'סימולציה עברית' },
   { href: '/makbatzim/dapar-simulation', icon: '🧮', label: 'סימולציה דפ"ר' },
   { href: '/sentence', icon: '✍️', label: 'בניית משפטים' },
-  { href: '/reading-sets', icon: '📖', label: 'סטי הבנת הנקרא', alsoActiveUnder: ['/practice'] },
+  { href: '/reading-sets', icon: '📖', label: 'תרגול הבנת הנקרא', alsoActiveUnder: ['/practice'] },
   { href: '/makbatzim', icon: '🧮', label: 'שאלות שעדי שלחה', excludeUnder: ['/makbatzim/dapar-simulation'] },
 ]
 

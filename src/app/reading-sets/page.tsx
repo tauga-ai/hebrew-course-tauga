@@ -40,7 +40,7 @@ export default function ReadingSetsPage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-      <PageHeader backHref="/menu" title="סטי הבנת הנקרא" right={session?.full_name} />
+      <PageHeader backHref="/menu" title="תרגול הבנת הנקרא" right={session?.full_name} />
 
       {availableDifficulties.length > 1 && (
         <div className="flex flex-wrap gap-2 mb-5">
