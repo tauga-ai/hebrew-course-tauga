@@ -1,6 +1,5 @@
 /**
- * Generic localStorage draft persistence, generalized from the ad-hoc
- * dapar_answers_* pattern in dapar/page.tsx. Fails silently (storage may be
+ * Generic localStorage draft persistence. Fails silently (storage may be
  * full, disabled, or unavailable during SSR) — draft saving is a UX nicety,
  * never a hard requirement.
  */

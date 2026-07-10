@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
-import { gradeDaparAnswers } from '@/lib/dapar'
 import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { PracticeSet, Submission } from '@/lib/types'
 
@@ -28,10 +27,9 @@ export default function PersonalDetailsPage() {
     let cancelled = false
 
     async function loadStats() {
-      const [practiceSetsRes, submissionsRes, daparRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
+      const [practiceSetsRes, submissionsRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
         fetch('/api/practice-sets').then(r => r.json()).catch(() => null),
         fetch(`/api/student/${session!.id}/submissions`).then(r => r.json()).catch(() => null),
-        fetch('/api/dapar/my-submission').then(r => r.json()).catch(() => null),
         fetch('/api/sentence/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/interview/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/simulation/my-stats').then(r => r.json()).catch(() => null),
@@ -45,18 +43,11 @@ export default function PersonalDetailsPage() {
         ? submissions.reduce((s, sub) => s + sub.score_percentage, 0) / submissions.length
         : null
 
-      const daparGrade = daparRes?.submission?.answers ? gradeDaparAnswers(daparRes.submission.answers) : null
-
       const lines: StatLine[] = [
         {
           key: 'reading',
           label: 'הבנת הנקרא',
           value: `${submissions.length}/${totalSets.length} סטים${avgReading !== null ? ` · ממוצע ${Math.round(avgReading)}%` : ''}`,
-        },
-        {
-          key: 'dapar',
-          label: 'דפ"ר',
-          value: daparGrade ? `הוגש · ${Math.round(daparGrade.pct)}%` : 'עדיין לא הוגש',
         },
         {
           key: 'sentence',

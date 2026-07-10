@@ -8,7 +8,6 @@ import type { ReactNode } from 'react'
  * detected at build time.
  */
 const ACCENT_STYLES = {
-  dapar: { badge: 'bg-accent-dapar/10 text-accent-dapar', hoverBorder: 'hover:border-accent-dapar' },
   simulation: { badge: 'bg-accent-simulation/10 text-accent-simulation', hoverBorder: 'hover:border-accent-simulation' },
   interview: { badge: 'bg-accent-interview/10 text-accent-interview', hoverBorder: 'hover:border-accent-interview' },
   sentence: { badge: 'bg-accent-sentence/10 text-accent-sentence', hoverBorder: 'hover:border-accent-sentence' },

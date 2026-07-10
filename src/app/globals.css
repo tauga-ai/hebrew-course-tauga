@@ -48,7 +48,6 @@
   --color-danger-700: #b91c1c;
 
   /* One accent per practice module, matching each module's existing color identity. */
-  --color-accent-dapar: #334155;
   --color-accent-simulation: #2563eb;
   --color-accent-interview: #2563eb;
   --color-accent-sentence: #9333ea;
