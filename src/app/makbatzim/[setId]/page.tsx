@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useQuizEngine } from '@/lib/hooks/use-quiz-engine'
@@ -28,6 +29,7 @@ export default function MakbatzimPracticePage() {
   const params = useParams()
   const setId = String(params.setId)
   const { session, loading: sessionLoading } = useStudentSession()
+  const [brokenImageId, setBrokenImageId] = useState<number | null>(null)
 
   const engine = useQuizEngine<QuestionOut, SetMeta, Segment[]>({
     entityId: setId,
@@ -80,8 +82,22 @@ export default function MakbatzimPracticePage() {
           שאלה <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
         </div>
         {current.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- source image dimensions are unknown and hosting is cross-project (see plan); a plain <img> avoids committing to next/image config prematurely.
-          <img src={current.imageUrl} alt="" className="w-full rounded-xl mb-4 border border-card-border" />
+          brokenImageId === current.id ? (
+            <div className="w-full rounded-xl mb-4 border border-card-border bg-black/5 dark:bg-white/5 p-6 text-center text-sm text-fg/40">
+              🖼️ התמונה לא נטענה
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- source image dimensions are unknown and hosting is cross-project (see plan); a plain <img> avoids committing to next/image config prematurely.
+            <img
+              src={current.imageUrl}
+              alt=""
+              className="w-full rounded-xl mb-4 border border-card-border"
+              onError={() => {
+                console.error(`Failed to load makbatzim question image: ${current.imageUrl}`)
+                setBrokenImageId(current.id)
+              }}
+            />
+          )
         )}
         <p className="text-fg leading-relaxed text-base">
           <Segments segments={current.question} />

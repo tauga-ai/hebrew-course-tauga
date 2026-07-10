@@ -25,6 +25,28 @@ test('enrichProgress: empty rows produce an empty array', () => {
   assert.deepEqual(enrichProgress([], lookup), [])
 })
 
+test('enrichProgress: reveal defaults to true — every existing caller (tzav-rishon, regular makbatzim sets) keeps its exact prior behavior unchanged', () => {
+  const result = enrichProgress([{ question_id: 1, selected_option: 2, is_correct: true }], lookup)
+  assert.equal(result[0].correct_option, 2)
+  assert.deepEqual(result[0].explanation, ['why 2'])
+})
+
+test('enrichProgress: reveal=false withholds is_correct/correct_option/explanation entirely — the exact guarantee dapar-simulation relies on before the set is complete', () => {
+  const result = enrichProgress([{ question_id: 1, selected_option: 2, is_correct: true }], lookup, false)
+  assert.equal(result[0].is_correct, null)
+  assert.equal(result[0].correct_option, null)
+  assert.equal(result[0].explanation, null)
+  // selected_option (what the student themselves picked) is fine to keep —
+  // only the identity of the CORRECT answer is the secret.
+  assert.equal(result[0].selected_option, 2)
+})
+
+test('enrichProgress: reveal=true (post-completion) returns full data even for a set previously withheld', () => {
+  const result = enrichProgress([{ question_id: 1, selected_option: 1, is_correct: false }], lookup, true)
+  assert.equal(result[0].correct_option, 2)
+  assert.deepEqual(result[0].explanation, ['why 2'])
+})
+
 test('computeStats: null avg_pct when nothing attempted', () => {
   const stats = computeStats([], 10)
   assert.equal(stats.attempted, 0)

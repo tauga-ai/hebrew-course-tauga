@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
-import { getQuestionById } from '@/lib/makbatzim'
+import { getQuestionById, isSetComplete } from '@/lib/makbatzim'
 import { enrichProgress } from '@/lib/quiz-progress'
 
 /**
@@ -31,7 +31,11 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const progress = enrichProgress(data || [], id => getQuestionById(setId, id))
+  // dapar-simulation withholds correctness for previously-answered
+  // questions too, not just the live submit response — otherwise resuming
+  // or navigating back mid-set would leak it via this route instead.
+  const reveal = setId !== 'dapar-simulation' || (await isSetComplete(db, session.student.id, setId))
+  const progress = enrichProgress(data || [], id => getQuestionById(setId, id), reveal)
 
   return NextResponse.json({ progress })
 }

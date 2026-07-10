@@ -38,7 +38,13 @@ const SHEET_TO_SET: Record<string, string> = {
   'מקבץ 3': 'set-3',
   'מקבץ 4': 'set-4',
   'מקבץ 1- צורני': 'set-1-tzurani',
-  'סימולציה דפר': 'dapar-simulation',
+  'מקבץ 1- אנלוגיות מילוליות': 'set-1-analogies',
+  'מקבץ 1- הוראות': 'set-1-instructions',
+  // Renamed from 'סימולציה דפר' in the source workbook once the sheet was
+  // refreshed with 40 updated questions — the old key is gone, not kept
+  // alongside, so a stale/mismatched source file surfaces as a clear
+  // "Sheet not found" anomaly instead of silently mapping the wrong sheet.
+  'סימולציה דפר- מעודכן': 'dapar-simulation',
 }
 
 // Real, confirmed row counts per sheet in the source workbook — used by the
@@ -49,6 +55,8 @@ const EXPECTED_COUNT: Record<string, number> = {
   'set-3': 10,
   'set-4': 10,
   'set-1-tzurani': 9,
+  'set-1-analogies': 9,
+  'set-1-instructions': 10,
   'dapar-simulation': 40,
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useResource } from './use-resource'
 
 export interface QuizProgressEntry<E> {
@@ -108,6 +108,30 @@ export function useQuizEngine<Q extends { id: number }, M extends { key: string 
   // everything reveals together — never gated per-question.
   const revealed = !deferFeedback || (total > 0 && answeredCount === total)
 
+  // In exam mode, every answer's optimistic entry was recorded with the
+  // correctness fields withheld by the server (see selectOption below) —
+  // once the set completes, re-fetch progress once to backfill the real
+  // is_correct/correct_option/explanation for every question, not just the
+  // last one answered. Re-fires per entity only (progressUrl embeds it).
+  useEffect(() => {
+    if (!deferFeedback || !revealed) return
+    let cancelled = false
+    fetch(progressUrl)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled || !data?.progress) return
+        setOptimisticProgress(prev => {
+          const merged = { ...prev }
+          for (const p of data.progress as QuizProgressEntry<E>[]) merged[p.question_id] = p
+          return merged
+        })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [deferFeedback, revealed, progressUrl])
+
   async function selectOption(optionNum: number) {
     if (submitting || !current) return
     setSubmitting(true)
@@ -125,9 +149,13 @@ export function useQuizEngine<Q extends { id: number }, M extends { key: string 
         [current.id]: {
           question_id: current.id,
           selected_option: optionNum,
-          is_correct: data.is_correct,
-          correct_option: data.correct_option,
-          explanation: data.explanation,
+          // In exam mode, before the set is complete, the server withholds
+          // all three of these — these placeholders are never rendered
+          // (revealed is false) and get overwritten by the backfill effect
+          // above once the set completes.
+          is_correct: data.is_correct ?? false,
+          correct_option: data.correct_option ?? null,
+          explanation: data.explanation ?? null,
         },
       }))
     } catch (err: unknown) {
