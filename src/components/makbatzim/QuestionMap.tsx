@@ -18,14 +18,18 @@ export function QuestionMap({ count, currentIndex, results, onJump }: QuestionMa
           result === true
             ? 'bg-green-500 text-white'
             : result === false
-              ? 'bg-red-500 text-white'
+              // underline is a non-color cue distinguishing "incorrect" from
+              // "correct" for colorblind users, who can't rely on red vs. green.
+              ? 'bg-red-500 text-white underline decoration-2 underline-offset-2'
               : result === 'answered'
                 ? 'bg-accent-makbatzim text-white'
                 : 'bg-black/5 dark:bg-white/10 text-fg/70 hover:bg-black/10 dark:hover:bg-white/15'
+        const stateLabel = result === true ? ', נענתה נכון' : result === false ? ', נענתה שגוי' : result === 'answered' ? ', נענתה' : ''
         return (
           <button
             key={questionId}
             onClick={() => onJump(i)}
+            aria-label={`שאלה ${questionId}${stateLabel}`}
             className={`aspect-square rounded text-xs font-medium transition ${stateClass} ${
               i === currentIndex ? 'ring-2 ring-offset-1 ring-accent-makbatzim' : ''
             }`}

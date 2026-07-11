@@ -85,7 +85,7 @@ export default function TeacherDashboard() {
                   </div>
                   <div className="text-sm text-fg/70">
                     ממוצע:{' '}
-                    <span className={`font-bold ${scoreColor(s.avg_score, { thresholds: { good: 70, ok: 70 }, emptyClass: 'text-fg/40' })}`}>
+                    <span className={`font-bold ${scoreColor(s.avg_score, { emptyClass: 'text-fg/40' })}`}>
                       {s.avg_score === null ? '—' : `${Math.round(s.avg_score)}%`}
                     </span>
                   </div>
@@ -96,7 +96,7 @@ export default function TeacherDashboard() {
             {s.avg_score !== null && (
               <div className="mt-3 w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
                 <div
-                  className={`h-1.5 rounded-full ${scoreColor(s.avg_score, { thresholds: { good: 70, ok: 70 }, palette: { good: 'bg-green-500', ok: 'bg-red-400', bad: 'bg-red-400' } })}`}
+                  className={`h-1.5 rounded-full ${scoreColor(s.avg_score, { palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })}`}
                   style={{ width: `${s.avg_score}%` }}
                 />
               </div>

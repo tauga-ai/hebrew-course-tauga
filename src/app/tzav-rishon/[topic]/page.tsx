@@ -133,7 +133,13 @@ export default function TzavRishonPracticePage() {
               <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/10">
                 {optionNum}
               </span>
-              <span><Segments segments={opt[language]} /></span>
+              <span className="flex-1"><Segments segments={opt[language]} /></span>
+              {answered && isTheCorrectOne && (
+                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{isAr ? ' إجابة صحيحة' : ' תשובה נכונה'}</span></span>
+              )}
+              {answered && isSelected && !isTheCorrectOne && (
+                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{isAr ? ' اخترت هذه الإجابة، خاطئة' : ' בחרת בתשובה זו, שגויה'}</span></span>
+              )}
             </button>
           )
         })}

@@ -1,3 +1,8 @@
+-- Part 2 of 3 in the RLS lockdown chain (after
+-- migration_enable_rls_all_tables.sql, before
+-- migration_rls_drop_remaining_anon_policies.sql — that file plugs 11 more
+-- tables this one didn't cover).
+--
 -- Root cause found: 5 tables had a pre-existing fully-permissive policy
 -- (roles={anon}, cmd=ALL, qual=true) granting the anon key unconditional
 -- read/write/delete access, unrelated to migration_enable_rls_all_tables.sql

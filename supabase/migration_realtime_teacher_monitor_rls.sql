@@ -1,3 +1,9 @@
+-- SUPERSEDED by migration_fix_realtime_monitor_group_scope.sql — that file
+-- drops and recreates the same policy with a bug fix (a group-scoped
+-- teacher could bypass their own scoping via the :all channel). Keep this
+-- file for history, but run that one instead — running only this one leaves
+-- the scoping bug in place.
+--
 -- Real-time teacher monitoring ("תרגול בכיתה" live dashboard) — Broadcast
 -- Authorization policy. This is the ONLY RLS this feature touches: every
 -- application table (students, makbatzim_results, etc.) keeps RLS disabled

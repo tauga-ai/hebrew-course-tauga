@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
+import { scoreColor } from '@/lib/score-color'
 
 export default function ReadingSetsPage() {
   const router = useRouter()
@@ -85,8 +86,8 @@ export default function ReadingSetsPage() {
               trailing={
                 done ? (
                   <span className="flex flex-col items-end">
-                    <span className="text-success-600 font-bold text-sm">{Math.round(sub.score_percentage)}%</span>
-                    <span className="text-xs text-success-600/70">הושלם</span>
+                    <span className={`font-bold text-sm ${scoreColor(sub.score_percentage)}`}>{Math.round(sub.score_percentage)}%</span>
+                    <span className="text-xs text-fg/40">הושלם</span>
                   </span>
                 ) : (
                   <span className="text-primary-500 text-sm">←</span>

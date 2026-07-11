@@ -1,3 +1,9 @@
+-- Part 1 of 3 in the RLS lockdown chain — run this, then
+-- migration_rls_diagnose_and_force.sql, then
+-- migration_rls_drop_remaining_anon_policies.sql. Each later file plugs a
+-- gap the previous one missed (leftover fully-permissive anon_all_* policies
+-- on some tables); running only this one leaves 16 tables still fully open.
+--
 -- CRITICAL security fix: every app table currently has RLS fully
 -- disabled, which means the public anon key (embedded in the client
 -- bundle, not a secret) can read/write/delete every row via Supabase's

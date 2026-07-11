@@ -1,3 +1,6 @@
+-- Part 3 of 3 in the RLS lockdown chain, after
+-- migration_enable_rls_all_tables.sql and migration_rls_diagnose_and_force.sql.
+--
 -- Second (larger) batch of leftover fully-permissive anon policies, found
 -- via a complete pg_policies sweep after the first 5-table fix — the
 -- earlier row-count-based verification (curl with anon key, check if rows

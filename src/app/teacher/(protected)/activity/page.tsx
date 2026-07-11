@@ -38,9 +38,7 @@ export default function ActivityPage() {
 
   if (loading) return <LoadingSpinner />
 
-  // Thresholds (7/5) and empty-value fallback (text-fg/40, vs. the app's
-  // usual text-fg/30) are pre-existing divergences from other pages —
-  // preserved verbatim here, not silently normalized.
+  // Scores here are on a 0-10 scale; 7/5 is the 0-10 equivalent of the app-wide 70/50 thresholds.
   const activityScoreColor = (s: number | null) => scoreColor(s, { thresholds: { good: 7, ok: 5 }, emptyClass: 'text-fg/40' })
 
   return (
@@ -56,7 +54,7 @@ export default function ActivityPage() {
             <div className="text-xs text-fg/60">ניסיונות</div>
           </div>
           <div>
-            <div className={`text-2xl font-bold ${activityScoreColor(interviewStats?.avg_score ?? null)}`}>
+            <div className={`text-2xl font-bold ${activityScoreColor(interviewStats?.avg_score != null ? interviewStats.avg_score / 10 : null)}`}>
               {interviewStats?.avg_score != null ? `${Math.round(interviewStats.avg_score)}/100` : '—'}
             </div>
             <div className="text-xs text-fg/60">ממוצע</div>

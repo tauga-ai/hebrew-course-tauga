@@ -121,7 +121,7 @@ export default function SimulatePage() {
 
   // ── RESULTS ────────────────────────────────────────────────────────────────
   if (phase === 'results' && feedback) {
-    const THRESHOLDS = { good: 80, ok: 60 }
+    const THRESHOLDS = { good: 70, ok: 50 }
     const scoreColor = sharedScoreColor(feedback.score, { thresholds: THRESHOLDS })
     const scoreBg = sharedScoreColor(feedback.score, {
       thresholds: THRESHOLDS,

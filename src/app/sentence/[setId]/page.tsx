@@ -102,7 +102,8 @@ export default function SentenceSetPage() {
     }
   }
 
-  const THRESHOLDS = { good: 8, ok: 6 }
+  // Scores here are on a 0-10 scale; 7/5 is the 0-10 equivalent of the app-wide 70/50 thresholds.
+  const THRESHOLDS = { good: 7, ok: 5 }
   const scoreTextColor = (s: number) => scoreColor(s, { thresholds: THRESHOLDS })
   const scoreBg = (s: number) => scoreColor(s, {
     thresholds: THRESHOLDS,

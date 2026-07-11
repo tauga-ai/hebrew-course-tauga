@@ -103,7 +103,8 @@ export default function AISentencePage() {
     } finally { setTtsLoading(false) }
   }
 
-  const THRESHOLDS = { good: 8, ok: 6 }
+  // Scores here are on a 0-10 scale; 7/5 is the 0-10 equivalent of the app-wide 70/50 thresholds.
+  const THRESHOLDS = { good: 7, ok: 5 }
   const scoreColor = (s: number) => sharedScoreColor(s, { thresholds: THRESHOLDS })
   const scoreBg = (s: number) => sharedScoreColor(s, {
     thresholds: THRESHOLDS,

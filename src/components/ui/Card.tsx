@@ -14,7 +14,6 @@ const ACCENT_STYLES = {
   simulation: { badge: 'bg-accent-simulation/10 text-accent-simulation', hoverBorder: 'hover:border-accent-simulation' },
   interview: { badge: 'bg-accent-interview/10 text-accent-interview', hoverBorder: 'hover:border-accent-interview' },
   sentence: { badge: 'bg-accent-sentence/10 text-accent-sentence', hoverBorder: 'hover:border-accent-sentence' },
-  psychotechnic: { badge: 'bg-accent-psychotechnic/10 text-accent-psychotechnic', hoverBorder: 'hover:border-accent-psychotechnic' },
   'ai-reading': { badge: 'bg-accent-ai-reading/10 text-accent-ai-reading', hoverBorder: 'hover:border-accent-ai-reading' },
   'ai-sentence': { badge: 'bg-accent-ai-sentence/10 text-accent-ai-sentence', hoverBorder: 'hover:border-accent-ai-sentence' },
   'tzav-rishon': { badge: 'bg-accent-tzav-rishon/10 text-accent-tzav-rishon-fg', hoverBorder: 'hover:border-accent-tzav-rishon' },

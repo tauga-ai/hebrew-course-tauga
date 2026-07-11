@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getStudentFromSession } from '@/lib/auth'
+import { checkAiRateLimit } from '@/lib/ai-rate-limit'
 
 export interface SentenceFeedback {
   used_all_starred: boolean
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
   const session = await getStudentFromSession()
   if (session.status !== 'ok') {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  if (!(await checkAiRateLimit(session.student.id, 'sentence/feedback')).ok) {
+    return NextResponse.json({ error: 'יותר מדי בקשות, נסה שוב בעוד כמה דקות' }, { status: 429 })
   }
 
   let sentence: string, starred_words: string[], all_words: string[]

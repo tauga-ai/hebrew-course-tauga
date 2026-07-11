@@ -30,6 +30,8 @@ const HOME_ITEMS: NavItem[] = [
   { href: '/ai-practice/sentence', icon: '🤖', label: 'בניית משפט (AI)' },
 ]
 
+const PROGRESS_ITEM: NavItem = { href: '/student/personal-details', icon: '📊', label: 'ההתקדמות שלי' }
+
 function isActive(item: NavItem, pathname: string): boolean {
   const matches = pathname === item.href
     || pathname.startsWith(`${item.href}/`)
@@ -90,6 +92,18 @@ export function StudentSidebar() {
             <span>{item.label}</span>
           </Link>
         ))}
+        <span className="hidden md:block md:border-t md:border-card-border md:mt-2 md:pt-2" />
+        <Link
+          href={PROGRESS_ITEM.href}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
+            isActive(PROGRESS_ITEM, pathname)
+              ? 'bg-highlight/10 text-highlight'
+              : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
+          }`}
+        >
+          <span>{PROGRESS_ITEM.icon}</span>
+          <span>{PROGRESS_ITEM.label}</span>
+        </Link>
       </nav>
     </aside>
   )

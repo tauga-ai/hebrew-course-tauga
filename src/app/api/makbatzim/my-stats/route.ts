@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
-import { getTotalQuestionCount } from '@/lib/makbatzim'
+import { SETS } from '@/lib/makbatzim'
 import { computeStats } from '@/lib/quiz-progress'
 
-/** The authenticated student's own "שאלות שעדי שלחה" performance summary, across all 6 sets. */
+const DAPAR_SET_ID = 'dapar-simulation'
+
+/**
+ * The authenticated student's own "מקבצים פסיכוטכני" performance summary.
+ * dapar-simulation is reported as its own line (`dapar`), separate from the
+ * regular sets (`regular`) — it's a single 40-question exam with
+ * deferred/end-of-set feedback, not an incremental practice set, so folding
+ * it into the same total would misrepresent both numbers.
+ */
 export async function GET() {
   const session = await getStudentFromSession()
   if (session.status !== 'ok') {
@@ -14,8 +22,15 @@ export async function GET() {
   const db = createServiceClient()
   const { data } = await db
     .from('makbatzim_results')
-    .select('is_correct')
+    .select('set_id, is_correct')
     .eq('student_id', session.student.id)
 
-  return NextResponse.json(computeStats(data || [], getTotalQuestionCount()))
+  const rows = data || []
+  const daparTotal = SETS.find(s => s.key === DAPAR_SET_ID)?.count ?? 0
+  const regularTotal = SETS.filter(s => s.key !== DAPAR_SET_ID).reduce((sum, s) => sum + s.count, 0)
+
+  return NextResponse.json({
+    regular: computeStats(rows.filter(r => r.set_id !== DAPAR_SET_ID), regularTotal),
+    dapar: computeStats(rows.filter(r => r.set_id === DAPAR_SET_ID), daparTotal),
+  })
 }

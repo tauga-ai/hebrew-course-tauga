@@ -31,6 +31,31 @@ export default function MakbatzimPracticePage() {
   const { session, loading: sessionLoading } = useStudentSession()
   const [brokenImageId, setBrokenImageId] = useState<number | null>(null)
 
+  // Summary/retry are local, entity-scoped UI state — reset whenever the
+  // student navigates to a different set. Retry answers are graded against
+  // the already-revealed correct_option sitting in engine progress; they are
+  // never sent to the submit endpoint, so a retry attempt never overwrites
+  // the historical result of the student's first attempt.
+  const [viewMode, setViewMode] = useState<'quiz' | 'summary' | 'retry'>('quiz')
+  const [summaryShownForEntity, setSummaryShownForEntity] = useState<string | null>(null)
+  const [retryQueue, setRetryQueue] = useState<QuestionOut[]>([])
+  const [retryIndex, setRetryIndex] = useState(0)
+  const [retryAnswer, setRetryAnswer] = useState<number | null>(null)
+  const [resetForEntity, setResetForEntity] = useState<string | null>(null)
+
+  // Render-time reset (React's recommended pattern, mirroring
+  // use-quiz-engine's own entity-change handling) rather than an effect —
+  // these are local view states, not data to synchronize with an external
+  // system, so there's nothing to "effect" here.
+  if (resetForEntity !== setId) {
+    setViewMode('quiz')
+    setSummaryShownForEntity(null)
+    setRetryQueue([])
+    setRetryIndex(0)
+    setRetryAnswer(null)
+    setResetForEntity(setId)
+  }
+
   const engine = useQuizEngine<QuestionOut, SetMeta, Segment[]>({
     entityId: setId,
     session,
@@ -58,7 +83,175 @@ export default function MakbatzimPracticePage() {
 
   if (sessionLoading || engine.loading || !engine.current || !engine.entityMeta) return <LoadingSpinner />
 
-  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, revealed, entityMeta: setMeta } = engine
+  const { current, answered, total, currentIndex, answeredCount, submitting, error, resultsByQuestion, revealed, questions, progress, entityMeta: setMeta } = engine
+
+  const isComplete = total > 0 && answeredCount === total && revealed
+  const correctCount = questions?.filter(q => progress[q.id]?.is_correct).length ?? 0
+  const missedQuestions = isComplete && questions ? questions.filter(q => progress[q.id] && !progress[q.id].is_correct) : []
+
+  // Auto-surface the summary exactly once per entity, right as the set
+  // completes — this is also the moment dapar-simulation's deferred
+  // feedback reveals, replacing what used to be a silent in-place reveal
+  // with an actual "you're done" screen.
+  if (isComplete && summaryShownForEntity !== setId && viewMode === 'quiz') {
+    setViewMode('summary')
+    setSummaryShownForEntity(setId)
+  }
+
+  function startRetry() {
+    setRetryQueue(missedQuestions)
+    setRetryIndex(0)
+    setRetryAnswer(null)
+    setViewMode('retry')
+  }
+
+  if (viewMode === 'summary') {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
+          <PageHeader
+            backHref={setId === 'dapar-simulation' ? '/menu' : '/makbatzim'}
+            title={setMeta.labelHe}
+          />
+          <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
+            <div className="text-4xl mb-2">{missedQuestions.length === 0 ? '🎉' : '✅'}</div>
+            <h2 className="text-lg font-bold text-fg mb-1">סיימת את הסט!</h2>
+            <p className="text-fg/70 mb-4">
+              <LtrIsolate>{`${correctCount}/${total}`}</LtrIsolate> תשובות נכונות
+            </p>
+            {missedQuestions.length === 0 ? (
+              <p className="text-green-600 dark:text-green-400 font-semibold mb-4">כל הכבוד, ענית נכון על כל השאלות!</p>
+            ) : (
+              <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 mb-4 text-right">
+                <p className="text-sm text-fg/60 mb-2">שאלות שטעית בהן:</p>
+                <div className="flex flex-wrap gap-2">
+                  {missedQuestions.map(q => (
+                    <span key={q.id} className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center">
+                      {q.id}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              {missedQuestions.length > 0 && (
+                <button
+                  onClick={startRetry}
+                  className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition"
+                >
+                  תרגל שוב את הטעויות ({missedQuestions.length})
+                </button>
+              )}
+              <button
+                onClick={() => setViewMode('quiz')}
+                className="w-full py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                סקור את כל השאלות
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (viewMode === 'retry') {
+    const retryDone = retryIndex >= retryQueue.length
+    const retryQ = !retryDone ? retryQueue[retryIndex] : null
+    const originalProgress = retryQ ? progress[retryQ.id] : null
+
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
+          <PageHeader
+            backHref={setId === 'dapar-simulation' ? '/menu' : '/makbatzim'}
+            title="תרגול טעויות"
+            right={!retryDone ? <LtrIsolate>{`${retryIndex + 1}/${retryQueue.length}`}</LtrIsolate> : undefined}
+          />
+
+          {retryDone ? (
+            <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
+              <div className="text-4xl mb-2">💪</div>
+              <h2 className="text-lg font-bold text-fg mb-4">סיימת לתרגל את הטעויות!</h2>
+              <button
+                onClick={() => setViewMode('summary')}
+                className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition"
+              >
+                חזרה לסיכום
+              </button>
+            </div>
+          ) : retryQ && originalProgress ? (
+            <>
+              <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
+                {retryQ.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- same rationale as the quiz view above.
+                  <img
+                    src={retryQ.imageUrl}
+                    alt="תמונה מצורפת לשאלה"
+                    className="w-full rounded-xl mb-4 border border-card-border"
+                  />
+                )}
+                <p className="text-fg leading-relaxed text-base">
+                  <Segments segments={retryQ.question} />
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                {retryQ.options.map((opt, i) => {
+                  const optionNum = i + 1
+                  const isSelected = retryAnswer === optionNum
+                  const isTheCorrectOne = originalProgress.correct_option === optionNum
+                  let stateClass = 'bg-surface border-card-border hover:border-accent-makbatzim text-fg'
+                  if (retryAnswer !== null) {
+                    if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+                    else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+                    else stateClass = 'bg-surface border-card-border text-fg/60'
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => retryAnswer === null && setRetryAnswer(optionNum)}
+                      disabled={retryAnswer !== null}
+                      className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
+                    >
+                      <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/10">
+                        {optionNum}
+                      </span>
+                      <span className="flex-1"><Segments segments={opt} /></span>
+                      {retryAnswer !== null && isTheCorrectOne && (
+                        <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only"> תשובה נכונה</span></span>
+                      )}
+                      {retryAnswer !== null && isSelected && !isTheCorrectOne && (
+                        <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only"> בחרת בתשובה זו, שגויה</span></span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {retryAnswer !== null && originalProgress.explanation && (
+                <div className="rounded-2xl p-4 mb-4 border bg-black/5 dark:bg-white/5">
+                  <div className="text-sm text-fg/80 leading-relaxed">
+                    <Segments segments={originalProgress.explanation} />
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => { setRetryIndex(i => i + 1); setRetryAnswer(null) }}
+                disabled={retryAnswer === null}
+                className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition disabled:opacity-40"
+              >
+                {retryIndex === retryQueue.length - 1 ? 'סיום' : 'הבאה →'}
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen md:flex">
@@ -90,7 +283,7 @@ export default function MakbatzimPracticePage() {
             // eslint-disable-next-line @next/next/no-img-element -- source image dimensions are unknown and hosting is cross-project (see plan); a plain <img> avoids committing to next/image config prematurely.
             <img
               src={current.imageUrl}
-              alt=""
+              alt="תמונה מצורפת לשאלה"
               className="w-full rounded-xl mb-4 border border-card-border"
               onError={() => {
                 console.error(`Failed to load makbatzim question image: ${current.imageUrl}`)
@@ -130,7 +323,13 @@ export default function MakbatzimPracticePage() {
               <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/10">
                 {optionNum}
               </span>
-              <span><Segments segments={opt} /></span>
+              <span className="flex-1"><Segments segments={opt} /></span>
+              {answered && revealed && isTheCorrectOne && (
+                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only"> תשובה נכונה</span></span>
+              )}
+              {answered && revealed && isSelected && !isTheCorrectOne && (
+                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only"> בחרת בתשובה זו, שגויה</span></span>
+              )}
             </button>
           )
         })}
@@ -174,6 +373,15 @@ export default function MakbatzimPracticePage() {
         results={revealed ? resultsByQuestion : Object.fromEntries(Object.keys(resultsByQuestion).map(qid => [qid, 'answered' as const]))}
         onJump={engine.jumpTo}
       />
+
+      {isComplete && (
+        <button
+          onClick={() => setViewMode('summary')}
+          className="w-full mt-4 py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+        >
+          חזרה לסיכום
+        </button>
+      )}
       </div>
     </div>
   )

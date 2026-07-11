@@ -50,7 +50,3 @@ export function getQuestionById(setId: string, questionId: number): MakbatzimQue
   const questions = getSetQuestions(setId)
   return questions?.find(q => q.id === questionId) ?? null
 }
-
-export function getTotalQuestionCount(): number {
-  return SETS.reduce((sum, s) => sum + s.count, 0)
-}

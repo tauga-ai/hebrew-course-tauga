@@ -51,12 +51,10 @@ export default function SimulationReportPage() {
     ? Math.round(completed.filter(s => s.part_b_pct !== null).reduce((acc, s) => acc + (s.part_b_pct || 0), 0) / completed.filter(s => s.part_b_pct !== null).length)
     : null
 
+  // part_c_avg is on a 0-10 scale; 7/5 is the 0-10 equivalent of the app-wide 70/50 thresholds.
   const partCColor = (v: string | null) => scoreColor(v ? parseFloat(v) : null, { thresholds: { good: 7, ok: 5 } })
-  // success_pct uses 70/40 thresholds, while every other 0-100 score on this
-  // page (and the rest of the app) uses 70/50 — a pre-existing divergence,
-  // preserved verbatim rather than silently normalized.
-  const questionSuccessColor = (v: number | null) => scoreColor(v, { thresholds: { good: 70, ok: 40 } })
-  const questionBarColor = (v: number | null) => scoreColor(v, { thresholds: { good: 70, ok: 40 }, palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
+  const questionSuccessColor = (v: number | null) => scoreColor(v)
+  const questionBarColor = (v: number | null) => scoreColor(v, { palette: { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' } })
 
   return (
     <>

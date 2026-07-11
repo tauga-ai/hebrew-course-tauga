@@ -57,7 +57,7 @@ export default function SetAnalyticsPage() {
           </div>
           <div>
             <span className="text-fg/60">ממוצע: </span>
-            <span className={`font-bold ${scoreColor(data.avg_score, { thresholds: { good: 70, ok: 70 }, emptyClass: 'text-fg/40' })}`}>
+            <span className={`font-bold ${scoreColor(data.avg_score, { emptyClass: 'text-fg/40' })}`}>
               {data.avg_score === null ? '—' : `${Math.round(data.avg_score)}%`}
             </span>
           </div>
@@ -79,10 +79,9 @@ export default function SetAnalyticsPage() {
                 </span>
                 {total > 0 && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreColor(correctPct, {
-                    thresholds: { good: 70, ok: 70 },
                     palette: {
                       good: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400',
-                      ok: 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400',
+                      ok: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400',
                       bad: 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400',
                     },
                   })}`}>

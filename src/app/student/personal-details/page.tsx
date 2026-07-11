@@ -27,13 +27,15 @@ export default function PersonalDetailsPage() {
     let cancelled = false
 
     async function loadStats() {
-      const [practiceSetsRes, submissionsRes, sentenceRes, interviewRes, simRes, tzavRishonRes] = await Promise.all([
+      const [practiceSetsRes, submissionsRes, sentenceRes, interviewRes, simRes, tzavRishonRes, makbatzimRes, aiPracticeRes] = await Promise.all([
         fetch('/api/practice-sets').then(r => r.json()).catch(() => null),
         fetch(`/api/student/${session!.id}/submissions`).then(r => r.json()).catch(() => null),
         fetch('/api/sentence/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/interview/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/simulation/my-stats').then(r => r.json()).catch(() => null),
         fetch('/api/tzav-rishon/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/makbatzim/my-stats').then(r => r.json()).catch(() => null),
+        fetch('/api/ai-practice/my-stats').then(r => r.json()).catch(() => null),
       ])
       if (cancelled) return
 
@@ -73,6 +75,30 @@ export default function PersonalDetailsPage() {
           // the two lines above that read a client-side constant's .length — this
           // one has no equivalent constant to import, so it's computed server-side.
           value: `${tzavRishonRes?.attempted ?? 0}/${tzavRishonRes?.total ?? 0} שאלות${tzavRishonRes?.avg_pct != null ? ` · ממוצע ${Math.round(tzavRishonRes.avg_pct)}%` : ''}`,
+        },
+        {
+          key: 'makbatzim',
+          label: 'מקבצים פסיכוטכני',
+          value: `${makbatzimRes?.regular?.attempted ?? 0}/${makbatzimRes?.regular?.total ?? 0} שאלות${makbatzimRes?.regular?.avg_pct != null ? ` · ממוצע ${Math.round(makbatzimRes.regular.avg_pct)}%` : ''}`,
+        },
+        {
+          key: 'dapar-simulation',
+          label: 'סימולציה דפ"ר',
+          value: `${makbatzimRes?.dapar?.attempted ?? 0}/${makbatzimRes?.dapar?.total ?? 0} שאלות${makbatzimRes?.dapar?.avg_pct != null ? ` · ממוצע ${Math.round(makbatzimRes.dapar.avg_pct)}%` : ''}`,
+        },
+        {
+          key: 'ai-reading',
+          label: 'הבנת הנקרא (AI)',
+          value: aiPracticeRes?.reading?.attempted
+            ? `${aiPracticeRes.reading.attempted} שאלות · ממוצע ${Math.round(aiPracticeRes.reading.avg_pct)}%`
+            : 'עדיין לא בוצע',
+        },
+        {
+          key: 'ai-sentence',
+          label: 'בניית משפט (AI)',
+          value: aiPracticeRes?.sentence?.attempted
+            ? `${aiPracticeRes.sentence.attempted} תרגילים · ממוצע ${Math.round(aiPracticeRes.sentence.avg_score * 10) / 10}`
+            : 'עדיין לא בוצע',
         },
       ]
       setStats(lines)

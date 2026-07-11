@@ -29,9 +29,13 @@ export function broadcastClassroomActivity(event: ClassroomActivityEvent): void 
   const db = createServiceClient()
   const payload = { studentId: event.studentId, studentName: event.studentName, feature: event.feature, label: event.label, status: event.status, detail: event.detail, at: event.at }
 
-  db.channel(`class:${event.classId}:all`).httpSend('activity', payload).catch(() => {})
+  db.channel(`class:${event.classId}:all`).httpSend('activity', payload).catch(err => {
+    console.error('broadcastClassroomActivity failed (class channel):', err)
+  })
 
   if (event.lessonGroup !== null) {
-    db.channel(`class:${event.classId}:group:${event.lessonGroup}`).httpSend('activity', payload).catch(() => {})
+    db.channel(`class:${event.classId}:group:${event.lessonGroup}`).httpSend('activity', payload).catch(err => {
+      console.error('broadcastClassroomActivity failed (group channel):', err)
+    })
   }
 }

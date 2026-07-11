@@ -12,7 +12,6 @@ const NAV_ITEMS: { href: string; label: string; classes: string }[] = [
   { href: '/teacher/students', label: 'הבנת הנקרא', classes: 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20' },
   { href: '/teacher/activity', label: 'משפטים + ראיון', classes: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20' },
   { href: '/teacher/simulation-report', label: '🏆 סימולציה', classes: 'bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/20' },
-  { href: '/teacher/psychotechnic', label: '🧠 פסיכוטכני', classes: 'bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-400 dark:hover:bg-teal-500/20' },
   { href: '/teacher/tzav-rishon', label: 'צו ראשון פסיכוטכני בערבית', classes: 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20' },
   { href: '/teacher/makbatzim', label: 'מקבצים פסיכוטכני', classes: 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:text-cyan-400 dark:hover:bg-cyan-500/20' },
 ]

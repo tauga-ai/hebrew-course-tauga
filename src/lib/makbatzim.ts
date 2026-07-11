@@ -4,14 +4,13 @@ import {
   getSetMeta,
   getSetQuestions,
   getQuestionById,
-  getTotalQuestionCount,
 } from '@/data/makbatzim'
 import type { Segment, SetKey, SetMeta, MakbatzimQuestion } from '@/data/makbatzim/types'
 import { gradeAnswer } from './makbatzim-grading'
 import { createServiceClient } from './supabase/service'
 
 export type { Segment, SetKey, SetMeta, MakbatzimQuestion }
-export { SETS, getSetMeta, getSetQuestions, getQuestionById, getTotalQuestionCount, gradeAnswer }
+export { SETS, getSetMeta, getSetQuestions, getQuestionById, gradeAnswer }
 
 /**
  * Whether `studentId` has answered every question in `setId` — used to gate

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStudentFromSession } from '@/lib/auth'
+import { checkAiRateLimit } from '@/lib/ai-rate-limit'
 
 // Google Cloud Text-to-Speech — proper Hebrew support via he-IL voices
 export async function POST(req: NextRequest) {
   const session = await getStudentFromSession()
   if (session.status !== 'ok') {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+  if (!(await checkAiRateLimit(session.student.id, 'tts')).ok) {
+    return NextResponse.json({ error: 'יותר מדי בקשות, נסה שוב בעוד כמה דקות' }, { status: 429 })
   }
 
   let text, voice
