@@ -316,8 +316,15 @@ export default function MakbatzimPracticePage() {
           return (
             <button
               key={i}
-              onClick={() => !answered && engine.selectOption(optionNum)}
-              disabled={!!answered || submitting}
+              // Exam mode (dapar-simulation, deferFeedback): the answer isn't
+              // locked until the whole set is revealed, so a student can
+              // change their mind — including navigating back to an earlier
+              // question via QuestionMap — right up until question 40 is
+              // answered. Every other set has revealed === true from the
+              // start, so this is unchanged there: locked the instant it's
+              // answered, same as before.
+              onClick={() => (!answered || !revealed) && engine.selectOption(optionNum)}
+              disabled={(!!answered && revealed) || submitting}
               className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
             >
               <span className="text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-black/5 dark:bg-white/10">
