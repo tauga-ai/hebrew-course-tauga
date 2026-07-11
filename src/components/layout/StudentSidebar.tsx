@@ -67,7 +67,7 @@ export function StudentSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap md:whitespace-normal transition ${
               isActive(item, pathname)
                 ? 'bg-highlight/10 text-highlight'
                 : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
@@ -82,7 +82,7 @@ export function StudentSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap md:whitespace-normal transition ${
               isActive(item, pathname)
                 ? 'bg-highlight/10 text-highlight'
                 : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
