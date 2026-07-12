@@ -87,7 +87,7 @@ export default function ReadingSetsPage() {
                 done ? (
                   <span className="flex flex-col items-end">
                     <span className={`font-bold text-sm ${scoreColor(sub.score_percentage)}`}>{Math.round(sub.score_percentage)}%</span>
-                    <span className="text-xs text-fg/40">הושלם</span>
+                    <span className="text-xs text-fg/40">ציון</span>
                   </span>
                 ) : (
                   <span className="text-primary-500 text-sm">←</span>

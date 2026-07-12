@@ -9,6 +9,13 @@ import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { scoreColor } from '@/lib/score-color'
+
+interface SubmitResult {
+  score_percentage: number
+  correct_count: number
+  total_questions: number
+}
 
 export default function PracticePage() {
   const router = useRouter()
@@ -20,6 +27,7 @@ export default function PracticePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [currentIdx, setCurrentIdx] = useState(0)
+  const [result, setResult] = useState<SubmitResult | null>(null)
 
   const { data, loading, error: loadError } = useResource<{ set: PracticeSet; questions: Question[] }>(
     session ? `/api/practice-sets/${setId}` : null
@@ -74,7 +82,7 @@ export default function PracticePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
-      router.push(`/menu?completed=${setId}&score=${Math.round(data.score_percentage)}`)
+      setResult(data)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'שגיאה בשליחה')
       setSubmitting(false)
@@ -82,6 +90,37 @@ export default function PracticePage() {
   }
 
   if (loading) return <LoadingSpinner />
+
+  if (result) {
+    return (
+      <div className="min-h-screen md:flex">
+        <StudentSidebar />
+        <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
+          <PageHeader backHref="/reading-sets" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} />
+          <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
+            <div className="text-4xl mb-2">{result.score_percentage === 100 ? '🎉' : '✅'}</div>
+            <h2 className="text-lg font-bold text-fg mb-1">סיימת את הסט!</h2>
+            <p className="text-fg/70 mb-2">{`${result.correct_count}/${result.total_questions}`} תשובות נכונות</p>
+            <p className={`text-3xl font-bold mb-4 ${scoreColor(result.score_percentage)}`}>{Math.round(result.score_percentage)}%</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push('/reading-sets')}
+                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+              >
+                לרשימת הסטים
+              </button>
+              <button
+                onClick={() => router.push('/menu')}
+                className="w-full py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                לתפריט הראשי
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen md:flex">
