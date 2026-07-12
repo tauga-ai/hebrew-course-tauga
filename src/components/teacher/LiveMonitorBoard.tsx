@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { ClassroomActivityEvent } from '@/lib/realtime-broadcast'
+import { classroomMonitorTopic, subscribeToClassroomMonitor, type MonitorConnectionState } from '@/lib/realtime-monitor-client'
 
 export interface MonitorRosterStudent {
   id: string
@@ -16,8 +17,6 @@ export interface LiveMonitorBoardProps {
   roster: MonitorRosterStudent[]
   initialSnapshot: Record<string, ClassroomActivityEvent>
 }
-
-type ConnectionState = 'connecting' | 'connected' | 'disconnected'
 
 function timeAgo(at: number): string {
   const seconds = Math.max(0, Math.floor((Date.now() - at) / 1000))
@@ -34,7 +33,9 @@ function timeAgo(at: number): string {
  * scope — class:{classId}:group:{lessonGroup} for a group-scoped teacher,
  * or class:{classId}:all for a whole-class teacher/admin (lessonGroup is
  * always null on that path). `private: true` is what makes the
- * Broadcast Authorization RLS policy on realtime.messages actually apply.
+ * Broadcast Authorization RLS policy on realtime.messages actually apply —
+ * subscribeToClassroomMonitor() attaches the JWT via realtime.setAuth()
+ * before subscribing, which that policy requires to authorize the channel.
  *
  * No client-side aggregation ever happens here — every incoming broadcast
  * is a fully-computed ClassroomActivityEvent, merged into state keyed by
@@ -42,10 +43,11 @@ function timeAgo(at: number): string {
  */
 export function LiveMonitorBoard({ classId, lessonGroup, roster, initialSnapshot }: LiveMonitorBoardProps) {
   const [activity, setActivity] = useState(initialSnapshot)
-  const [connection, setConnection] = useState<ConnectionState>('connecting')
+  const [connection, setConnection] = useState<MonitorConnectionState>('connecting')
 
   useEffect(() => {
     let cancelled = false
+    let cleanup: (() => void) | null = null
 
     function mergeEvent(event: ClassroomActivityEvent) {
       setActivity(prev => {
@@ -70,23 +72,26 @@ export function LiveMonitorBoard({ classId, lessonGroup, roster, initialSnapshot
     }
 
     const supabase = createClient()
-    const topic = lessonGroup !== null ? `class:${classId}:group:${lessonGroup}` : `class:${classId}:all`
-    const channel = supabase.channel(topic, { config: { private: true } })
+    const topic = classroomMonitorTopic(classId, lessonGroup)
 
-    channel
-      .on('broadcast', { event: 'activity' }, ({ payload }) => mergeEvent(payload as ClassroomActivityEvent))
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          setConnection('connected')
-          catchUp()
-        } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          setConnection('disconnected')
-        }
-      })
+    subscribeToClassroomMonitor(supabase, topic, {
+      onBroadcast: payload => mergeEvent(payload as ClassroomActivityEvent),
+      onStatusChange: state => {
+        if (cancelled) return
+        setConnection(state)
+        if (state === 'connected') catchUp()
+      },
+    }).then(stop => {
+      if (cancelled) {
+        stop()
+        return
+      }
+      cleanup = stop
+    })
 
     return () => {
       cancelled = true
-      supabase.removeChannel(channel)
+      cleanup?.()
     }
   }, [classId, lessonGroup])
 
