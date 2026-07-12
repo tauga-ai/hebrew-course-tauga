@@ -59,7 +59,7 @@ export default function SimulationReportPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="font-bold text-primary-700 dark:text-primary-400">דוח סימולציה</h1>
+        <h1 className="font-bold text-primary-700 dark:text-primary-400">דוח סימולציה עברית</h1>
         <p className="text-xs text-fg/60">{className}</p>
       </div>
 

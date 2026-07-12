@@ -28,15 +28,19 @@ export interface FeatureReportProps {
   title: string
   titleColorClass: string
   reportEndpoint: string
-  entitiesEndpoint: string
+  entitiesEndpoint?: string
   /** Key the entities-list response nests its array under (e.g. 'topics' | 'sets'). */
-  entitiesResponseKey: string
+  entitiesResponseKey?: string
   filterParamName: string
   filterLabel: string
-  allOptionLabel: string
+  allOptionLabel?: string
   selectedLabelColorClass: string
-  summaryTabLabel: string
+  summaryTabLabel?: string
   accent: { activeTab: string; hoverBorder: string; ring: string }
+  /** Entity keys to hide from the filter dropdown (e.g. דפ"ר, which has its own dedicated report page). */
+  excludeEntityKeys?: string[]
+  /** Locks the report to a single entity and hides the picker entirely — used for single-set dedicated report pages (e.g. דפ"ר) instead of the multi-entity dropdown. */
+  fixedEntity?: { key: string; labelHe: string }
 }
 
 /**
@@ -50,16 +54,19 @@ export interface FeatureReportProps {
 export function FeatureReport({
   title, titleColorClass, reportEndpoint, entitiesEndpoint, entitiesResponseKey,
   filterParamName, filterLabel, allOptionLabel, selectedLabelColorClass, summaryTabLabel, accent,
+  excludeEntityKeys, fixedEntity,
 }: FeatureReportProps) {
   const { email } = useTeacherAuth()
-  const [selectedEntity, setSelectedEntity] = useState('')
-  const [tab, setTab] = useState<'summary' | 'students' | 'questions'>('summary')
+  const [selectedEntity, setSelectedEntity] = useState(fixedEntity?.key ?? '')
+  const [tab, setTab] = useState<'summary' | 'students' | 'questions'>(fixedEntity ? 'students' : 'summary')
   const [retryToken, setRetryToken] = useState(0)
 
   const { data: entitiesData, loading: entitiesLoading, error: entitiesError } = useResource<Record<string, EntityMeta[]>>(
-    email ? `${entitiesEndpoint}?_r=${retryToken}` : null
+    !fixedEntity && email && entitiesEndpoint ? `${entitiesEndpoint}?_r=${retryToken}` : null
   )
-  const allEntities = entitiesData?.[entitiesResponseKey] ?? []
+  const allEntities = fixedEntity
+    ? []
+    : (entitiesData?.[entitiesResponseKey ?? ''] ?? []).filter(e => !excludeEntityKeys?.includes(e.key))
 
   const reportParams = new URLSearchParams()
   if (selectedEntity) reportParams.set(filterParamName, selectedEntity)
@@ -86,13 +93,14 @@ export function FeatureReport({
   if (loading || !report) return <LoadingSpinner />
 
   const filteredStudents = selectedEntity ? report.students.filter(s => s.entity_id === selectedEntity) : report.students
-  const selectedLabel = selectedEntity ? allEntities.find(e => e.key === selectedEntity)?.labelHe : null
+  const selectedLabel = fixedEntity ? fixedEntity.labelHe : (selectedEntity ? allEntities.find(e => e.key === selectedEntity)?.labelHe : null)
 
   return (
     <>
       <h1 className={`font-bold mb-1 ${titleColorClass}`}>{title}</h1>
       <p className="text-xs text-fg/60 mb-5">{report.class_name}</p>
 
+      {!fixedEntity && (
       <div className="bg-surface rounded-xl border border-card-border p-4 mb-4">
         <label htmlFor="entityFilter" className="text-sm font-medium text-fg/80 block mb-2">סנן לפי {filterLabel}:</label>
         <select
@@ -110,12 +118,15 @@ export function FeatureReport({
           <p className={`text-xs mt-1 ${selectedLabelColorClass}`}>{filteredStudents.length} תלמידים ענו ב{selectedLabel}</p>
         )}
       </div>
+      )}
 
       <div className="flex gap-2 mb-4">
+        {!fixedEntity && (
         <button onClick={() => setTab('summary')}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'summary' ? `${accent.activeTab} text-white` : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
           {summaryTabLabel}
         </button>
+        )}
         <button onClick={() => setTab('students')}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'students' ? `${accent.activeTab} text-white` : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
           לפי תלמיד ({filteredStudents.length})

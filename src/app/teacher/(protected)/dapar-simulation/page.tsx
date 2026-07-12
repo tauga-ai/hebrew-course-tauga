@@ -2,20 +2,16 @@
 
 import { FeatureReport } from '@/components/teacher/FeatureReport'
 
-export default function MakbatzimTeacherPage() {
+export default function DaparSimulationTeacherPage() {
   return (
     <FeatureReport
-      title="דוח מקבצים פסיכוטכני"
+      title="דוח סימולציית דפ״ר"
       titleColorClass="text-primary-700 dark:text-primary-400"
       reportEndpoint="/api/teacher/makbatzim"
-      entitiesEndpoint="/api/makbatzim/sets"
-      entitiesResponseKey="sets"
-      excludeEntityKeys={['dapar-simulation']}
       filterParamName="set_id"
       filterLabel="מקבץ"
-      allOptionLabel="כל המקבצים"
       selectedLabelColorClass="text-primary-600 dark:text-primary-400"
-      summaryTabLabel="סיכום מקבצים"
+      fixedEntity={{ key: 'dapar-simulation', labelHe: 'סימולציה דפ״ר' }}
       accent={{
         activeTab: 'bg-accent-makbatzim',
         hoverBorder: 'hover:border-accent-makbatzim',
