@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { AIWordList } from '@/app/api/ai-practice/sentence-words/route'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import { speakHebrew } from '@/lib/tts-client'
@@ -86,7 +87,13 @@ export default function AISentencePage() {
         fetch('/api/ai-practice/sentence/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ level, score: data.feedback.score }),
+          body: JSON.stringify({
+            level,
+            score: data.feedback.score,
+            sentence: sentence.trim(),
+            feedback: data.feedback,
+            wordList,
+          }),
         }).catch(() => {})
       }
     } catch {
@@ -131,7 +138,12 @@ export default function AISentencePage() {
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
         <>
-          <p className="text-center text-fg/60 text-sm mb-6">בחר רמה וה-AI יצור לך תרגיל בניית משפט</p>
+          <p className="text-center text-fg/60 text-sm mb-2">בחר רמה וה-AI יצור לך תרגיל בניית משפט</p>
+          <div className="text-center mb-6">
+            <Link href="/sentence/history" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
+              📜 ההיסטוריה שלי
+            </Link>
+          </div>
           <div className="grid gap-3">
             {[1, 2, 3, 4, 5].map(lvl => (
               <button key={lvl} onClick={() => generateExercise(lvl)}

@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { level, score } = await req.json()
+  const { level, score, sentence, feedback, wordList } = await req.json()
   if (level === undefined || score === undefined) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     class_id: session.student.class_id,
     level,
     score,
+    sentence_text: sentence ?? null,
+    feedback: feedback ?? null,
+    word_list: wordList ?? null,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

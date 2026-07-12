@@ -68,7 +68,13 @@ export default function SentenceSetPage() {
         fetch('/api/sentence/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ set_id: setId, exercise_idx: exerciseIdx, score: data.feedback.score }),
+          body: JSON.stringify({
+            set_id: setId,
+            exercise_idx: exerciseIdx,
+            score: data.feedback.score,
+            sentence: sentence.trim(),
+            feedback: data.feedback,
+          }),
         }).catch(() => {})
       }
     } catch {

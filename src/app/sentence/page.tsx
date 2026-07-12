@@ -25,6 +25,12 @@ export default function SentenceLanding() {
       <div className="text-center mb-5">
         <div className="text-5xl mb-3">✍️</div>
         <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">בניית משפטים</h1>
+        <button
+          onClick={() => router.push('/sentence/history')}
+          className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          📜 ההיסטוריה שלי
+        </button>
       </div>
 
       {/* How it works — at top */}

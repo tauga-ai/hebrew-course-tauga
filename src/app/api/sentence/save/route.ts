@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  const { set_id, exercise_idx, score } = await req.json()
+  const { set_id, exercise_idx, score, sentence, feedback } = await req.json()
   if (set_id === undefined || score === undefined) {
     return NextResponse.json({ error: 'שדות חסרים' }, { status: 400 })
   }
@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
     set_id,
     exercise_idx,
     score,
+    sentence_text: sentence ?? null,
+    feedback: feedback ?? null,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
