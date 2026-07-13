@@ -11,6 +11,18 @@ export interface SentenceFeedback {
   feedback: string
   improved_sentence: string
   improvement_note: string
+  /** Whether improved_sentence is a genuinely better, judge-verified rewrite — false means the student's own sentence was already fine and improved_sentence was reset to match it. */
+  improved_sentence_changed: boolean
+}
+
+interface JudgeVerdict {
+  verdict: 'improved_is_better' | 'original_is_fine' | 'tie'
+  reason: string
+}
+
+/** Loose equality for "is this actually a different sentence" — ignores whitespace/punctuation-only diffs. */
+function normalizeSentence(s: string): string {
+  return s.trim().replace(/[.,!?;:״"'׳]/g, '').replace(/\s+/g, ' ')
 }
 
 export async function POST(req: NextRequest) {
@@ -85,18 +97,63 @@ export async function POST(req: NextRequest) {
   "improvement_note": "הסבר קצר במה שיניתי ולמה"
 }`
 
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  let feedback: SentenceFeedback
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json' },
     })
     const text = result.response.text().trim()
-    const feedback: SentenceFeedback = JSON.parse(text)
-    return NextResponse.json({ feedback })
+    feedback = JSON.parse(text)
   } catch (err) {
     console.error('Gemini sentence error:', err)
     return NextResponse.json({ error: 'שגיאה בעיבוד' }, { status: 500 })
   }
+
+  // The model that just wrote improved_sentence is biased toward defending its
+  // own rewrite, so a second, independent call judges original vs. improved
+  // rather than trusting the first call's self-assessment — this is what
+  // catches cases where the "correction" was actually a downgrade.
+  let improvedSentenceChanged = !(normalizeSentence(feedback.improved_sentence) === normalizeSentence(sentence))
+  if (improvedSentenceChanged) {
+    const judgePrompt = `אתה בוחן עברית מקצועי ומחמיר. קיבלת משפט שכתב תלמיד דרוזי שלומד עברית כשפה שנייה, וגרסה מתוקנת שהוצעה לו על ידי כלי אחר.
+
+משפט מקורי של התלמיד: "${sentence}"
+גרסה מתוקנת שהוצעה: "${feedback.improved_sentence}"
+מילים שהיה חובה להשתמש בהן: ${starredList}
+
+המשימה שלך: להכריע בכנות איזה מהמשפטים טוב יותר בפועל — אל תניח שהגרסה ה"מתוקנת" עדיפה רק כי היא סומנה כתיקון. שקול:
+- האם המשפט המקורי כבר תקין דקדוקית וטבעי כפי שהוא?
+- האם הגרסה המתוקנת מתקנת שגיאה אמיתית, או שהיא רק משנה ניסוח בלי סיבה טובה (מאריכה, מוסיפה מילים גבוהות/לא נחוצות, או נשמעת פחות טבעית)?
+- האם הגרסה המתוקנת עדיין משתמשת בדיוק באותן מילות החובה?
+
+אם אינך בטוח שהגרסה המתוקנת עדיפה משמעותית — העדף את המשפט המקורי.
+
+החזר JSON בלבד:
+{ "verdict": "improved_is_better", "reason": "הסבר קצר בעברית" }
+כאשר verdict הוא אחד מ: "improved_is_better", "original_is_fine", "tie"`
+
+    try {
+      const judgeResult = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: judgePrompt }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      })
+      const judgeVerdict: JudgeVerdict = JSON.parse(judgeResult.response.text().trim())
+      improvedSentenceChanged = judgeVerdict.verdict === 'improved_is_better'
+    } catch (err) {
+      console.error('Gemini sentence judge error:', err)
+      // Fail safe toward the student's own sentence, same as an unsure judge verdict.
+      improvedSentenceChanged = false
+    }
+  }
+
+  feedback.improved_sentence_changed = improvedSentenceChanged
+  if (!improvedSentenceChanged) {
+    feedback.improved_sentence = sentence
+  }
+
+  return NextResponse.json({ feedback })
 }

@@ -73,10 +73,16 @@ function HistoryCard({ title, createdAt, score, sentenceText, feedback, words }:
                 <p className="text-xs text-fg/40 mb-0.5">משוב</p>
                 <p className="text-fg/80 text-sm leading-relaxed">{feedback.feedback}</p>
               </div>
-              <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl p-3">
-                <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">גרסה מושלמת</p>
-                <p className="text-green-900 dark:text-green-300 text-sm leading-relaxed">{feedback.improved_sentence}</p>
-              </div>
+              {feedback.improved_sentence_changed === false ? (
+                <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl p-3 text-center">
+                  <p className="text-green-800 dark:text-green-300 text-sm font-semibold">✅ המשפט כבר היה תקין ומנוסח היטב</p>
+                </div>
+              ) : (
+                <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                  <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">גרסה מושלמת</p>
+                  <p className="text-green-900 dark:text-green-300 text-sm leading-relaxed">{feedback.improved_sentence}</p>
+                </div>
+              )}
             </>
           )}
         </>

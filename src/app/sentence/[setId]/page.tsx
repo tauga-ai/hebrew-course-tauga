@@ -272,26 +272,32 @@ export default function SentenceSetPage() {
           </div>
 
           {/* Improved sentence */}
-          <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-green-800 dark:text-green-300">✨ גרסה מושלמת</h3>
-              <button
-                onClick={playImproved}
-                disabled={improvedAudioLoading}
-                className="flex items-center gap-1 text-xs bg-surface border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-2.5 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-50 font-medium"
-              >
-                <span>{improvedAudioLoading ? '⏳' : '🔊'}</span>
-                <span>{improvedAudioLoading ? 'טוען...' : 'האזן לגרסה המושלמת'}</span>
-              </button>
+          {feedback.improved_sentence_changed === false ? (
+            <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4 text-center">
+              <p className="text-green-800 dark:text-green-300 font-semibold">✅ המשפט שלך כבר תקין ומנוסח היטב!</p>
             </div>
-            <p className="text-green-900 dark:text-green-300 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
-            {feedback.improvement_note && (
-              <p className="text-green-700 dark:text-green-400 text-xs border-t border-green-200 dark:border-green-800 pt-2 mt-2">{feedback.improvement_note}</p>
-            )}
-            {ttsError && (
-              <p className="text-red-500 dark:text-red-400 text-xs mt-2">{ttsError}</p>
-            )}
-          </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold text-green-800 dark:text-green-300">✨ גרסה מושלמת</h3>
+                <button
+                  onClick={playImproved}
+                  disabled={improvedAudioLoading}
+                  className="flex items-center gap-1 text-xs bg-surface border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-2.5 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-50 font-medium"
+                >
+                  <span>{improvedAudioLoading ? '⏳' : '🔊'}</span>
+                  <span>{improvedAudioLoading ? 'טוען...' : 'האזן לגרסה המושלמת'}</span>
+                </button>
+              </div>
+              <p className="text-green-900 dark:text-green-300 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
+              {feedback.improvement_note && (
+                <p className="text-green-700 dark:text-green-400 text-xs border-t border-green-200 dark:border-green-800 pt-2 mt-2">{feedback.improvement_note}</p>
+              )}
+              {ttsError && (
+                <p className="text-red-500 dark:text-red-400 text-xs mt-2">{ttsError}</p>
+              )}
+            </div>
+          )}
 
           <button
             onClick={nextExercise}
