@@ -6,6 +6,7 @@ import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 interface StudentRow {
   student_id: string
@@ -57,11 +58,11 @@ export default function StudentsPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">הבנת הנקרא</h1>
+        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">{t('הבנת הנקרא')}</h1>
         <p className="text-sm text-fg/60">{className}</p>
       </div>
 
-      <h2 className="text-lg font-semibold text-fg mb-4">סיכום סטים</h2>
+      <h2 className="text-lg font-semibold text-fg mb-4">{t('סיכום סטים')}</h2>
       <div className="grid gap-3 mb-8">
         {sets.map(s => (
           <button
@@ -71,17 +72,17 @@ export default function StudentsPage() {
           >
             <div className="flex justify-between items-center">
               <div>
-                <div className="font-semibold text-fg">סט {s.set_number}</div>
+                <div className="font-semibold text-fg">{t('סט')} {s.set_number}</div>
                 <div className="text-sm text-fg/60 mt-0.5">{s.topic}</div>
-                <div className="text-xs text-fg/40 mt-0.5">רמה {s.difficulty_level}</div>
+                <div className="text-xs text-fg/40 mt-0.5">{t('רמה')} {s.difficulty_level}</div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-left space-y-1">
                   <div className="text-sm text-fg/70">
-                    <span className="font-bold text-fg">{s.student_count}</span> תלמידים השלימו
+                    <span className="font-bold text-fg">{s.student_count}</span> {t('תלמידים השלימו')}
                   </div>
                   <div className="text-sm text-fg/70">
-                    ממוצע:{' '}
+                    {t('ממוצע')}:{' '}
                     <span className={`font-bold ${scoreColor(s.avg_score, { emptyClass: 'text-fg/40' })}`}>
                       {s.avg_score === null ? '—' : `${Math.round(s.avg_score)}%`}
                     </span>
@@ -102,22 +103,22 @@ export default function StudentsPage() {
         ))}
       </div>
 
-      <h2 className="text-lg font-semibold text-fg mb-4">ניתוח תלמידים</h2>
+      <h2 className="text-lg font-semibold text-fg mb-4">{t('ניתוח תלמידים')}</h2>
 
       {students.length === 0 ? (
-        <p className="text-center text-fg/40 mt-16">אין תלמידים עדיין</p>
+        <p className="text-center text-fg/40 mt-16">{t('אין תלמידים עדיין')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
             <thead>
               <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
-                <th className="text-right p-3 font-semibold text-fg/80">תלמיד</th>
+                <th className="text-right p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
                 {setHeaders.map(h => (
                   <th key={h.set_number} className="p-3 font-semibold text-fg/80 text-center whitespace-nowrap">
-                    סט {h.set_number}
+                    {t('סט')} {h.set_number}
                   </th>
                 ))}
-                <th className="p-3 font-semibold text-fg/80 text-center">ממוצע</th>
+                <th className="p-3 font-semibold text-fg/80 text-center">{t('ממוצע')}</th>
               </tr>
             </thead>
             <tbody>

@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { PracticeSet, Submission } from '@/lib/types'
+import { t } from '@/lib/dev-i18n'
 
 const GROUPS = [1, 2, 3] as const
 
@@ -48,57 +49,57 @@ export default function PersonalDetailsPage() {
       const lines: StatLine[] = [
         {
           key: 'reading',
-          label: 'הבנת הנקרא',
-          value: `${submissions.length}/${totalSets.length} סטים${avgReading !== null ? ` · ממוצע ${Math.round(avgReading)}%` : ''}`,
+          label: t('הבנת הנקרא'),
+          value: `${submissions.length}/${totalSets.length} ${t('סטים')}${avgReading !== null ? ` · ${t('ממוצע')} ${Math.round(avgReading)}%` : ''}`,
         },
         {
           key: 'sentence',
-          label: 'בניית משפטים',
-          value: `${sentenceRes?.attempted ?? 0}/${SENTENCE_SETS.length} סטים${sentenceRes?.avg_score != null ? ` · ממוצע ${Math.round(sentenceRes.avg_score)}` : ''}`,
+          label: t('בניית משפטים'),
+          value: `${sentenceRes?.attempted ?? 0}/${SENTENCE_SETS.length} ${t('סטים')}${sentenceRes?.avg_score != null ? ` · ${t('ממוצע')} ${Math.round(sentenceRes.avg_score)}` : ''}`,
         },
         {
           key: 'interview',
-          label: 'ראיון אישי',
+          label: t('ראיון אישי'),
           value: interviewRes?.count
-            ? `${interviewRes.count} ראיונות · ממוצע ${Math.round(interviewRes.avg_score)}${interviewRes.latest_level ? ` · רמה אחרונה ${interviewRes.latest_level}` : ''}`
-            : 'עדיין לא בוצע',
+            ? `${interviewRes.count} ${t('ראיונות')} · ${t('ממוצע')} ${Math.round(interviewRes.avg_score)}${interviewRes.latest_level ? ` · ${t('רמה אחרונה')} ${interviewRes.latest_level}` : ''}`
+            : t('עדיין לא בוצע'),
         },
         {
           key: 'simulation',
-          label: 'סימולציה',
-          value: simRes?.completed_count ? `${simRes.completed_count} סימולציות הושלמו` : 'עדיין לא בוצעה',
+          label: t('סימולציה'),
+          value: simRes?.completed_count ? `${simRes.completed_count} ${t('סימולציות הושלמו')}` : t('עדיין לא בוצעה'),
         },
         {
           key: 'tzav-rishon',
-          label: 'תרגול עצמי כמותי - עברית וערבית',
+          label: t('תרגול עצמי כמותי - עברית וערבית'),
           // total comes from the API dynamically (sum across all 4 topics), unlike
           // the two lines above that read a client-side constant's .length — this
           // one has no equivalent constant to import, so it's computed server-side.
-          value: `${tzavRishonRes?.attempted ?? 0}/${tzavRishonRes?.total ?? 0} שאלות${tzavRishonRes?.avg_pct != null ? ` · ממוצע ${Math.round(tzavRishonRes.avg_pct)}%` : ''}`,
+          value: `${tzavRishonRes?.attempted ?? 0}/${tzavRishonRes?.total ?? 0} ${t('שאלות')}${tzavRishonRes?.avg_pct != null ? ` · ${t('ממוצע')} ${Math.round(tzavRishonRes.avg_pct)}%` : ''}`,
         },
         {
           key: 'makbatzim',
-          label: 'מקבצים פסיכוטכני',
-          value: `${makbatzimRes?.regular?.attempted ?? 0}/${makbatzimRes?.regular?.total ?? 0} שאלות${makbatzimRes?.regular?.avg_pct != null ? ` · ממוצע ${Math.round(makbatzimRes.regular.avg_pct)}%` : ''}`,
+          label: t('מקבצים פסיכוטכני'),
+          value: `${makbatzimRes?.regular?.attempted ?? 0}/${makbatzimRes?.regular?.total ?? 0} ${t('שאלות')}${makbatzimRes?.regular?.avg_pct != null ? ` · ${t('ממוצע')} ${Math.round(makbatzimRes.regular.avg_pct)}%` : ''}`,
         },
         {
           key: 'dapar-simulation',
-          label: 'סימולציה דפ"ר',
-          value: `${makbatzimRes?.dapar?.attempted ?? 0}/${makbatzimRes?.dapar?.total ?? 0} שאלות${makbatzimRes?.dapar?.avg_pct != null ? ` · ממוצע ${Math.round(makbatzimRes.dapar.avg_pct)}%` : ''}`,
+          label: t('סימולציה דפ"ר'),
+          value: `${makbatzimRes?.dapar?.attempted ?? 0}/${makbatzimRes?.dapar?.total ?? 0} ${t('שאלות')}${makbatzimRes?.dapar?.avg_pct != null ? ` · ${t('ממוצע')} ${Math.round(makbatzimRes.dapar.avg_pct)}%` : ''}`,
         },
         {
           key: 'ai-reading',
-          label: 'הבנת הנקרא (AI)',
+          label: t('הבנת הנקרא (AI)'),
           value: aiPracticeRes?.reading?.attempted
-            ? `${aiPracticeRes.reading.attempted} שאלות · ממוצע ${Math.round(aiPracticeRes.reading.avg_pct)}%`
-            : 'עדיין לא בוצע',
+            ? `${aiPracticeRes.reading.attempted} ${t('שאלות')} · ${t('ממוצע')} ${Math.round(aiPracticeRes.reading.avg_pct)}%`
+            : t('עדיין לא בוצע'),
         },
         {
           key: 'ai-sentence',
-          label: 'בניית משפט (AI)',
+          label: t('בניית משפט (AI)'),
           value: aiPracticeRes?.sentence?.attempted
-            ? `${aiPracticeRes.sentence.attempted} תרגילים · ממוצע ${Math.round(aiPracticeRes.sentence.avg_score * 10) / 10}`
-            : 'עדיין לא בוצע',
+            ? `${aiPracticeRes.sentence.attempted} ${t('תרגילים')} · ${t('ממוצע')} ${Math.round(aiPracticeRes.sentence.avg_score * 10) / 10}`
+            : t('עדיין לא בוצע'),
         },
       ]
       setStats(lines)
@@ -119,11 +120,11 @@ export default function PersonalDetailsPage() {
         body: JSON.stringify({ lesson_group: group }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       setSavedGroup(group)
       retry()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'שגיאה בשמירת הכיתה')
+      setError(err instanceof Error ? err.message : t('שגיאה בשמירת הכיתה'))
     } finally {
       setSaving(null)
     }
@@ -135,22 +136,22 @@ export default function PersonalDetailsPage() {
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
-      <PageHeader backHref="/menu" title="פרטים אישיים" />
+      <PageHeader backHref="/menu" title={t('פרטים אישיים')} />
 
       <div className="bg-surface rounded-2xl shadow-md p-6 space-y-4">
         <div>
-          <div className="text-xs text-fg/40 mb-0.5">שם מלא</div>
+          <div className="text-xs text-fg/40 mb-0.5">{t('שם מלא')}</div>
           <div className="font-semibold text-fg">{session?.full_name}</div>
         </div>
         <div>
-          <div className="text-xs text-fg/40 mb-0.5">כיתה</div>
+          <div className="text-xs text-fg/40 mb-0.5">{t('כיתה')}</div>
           <div className="font-semibold text-fg">{session?.class_name}</div>
         </div>
 
         {session?.has_lesson_groups && (
           <div>
             <div className="text-xs text-fg/40 mb-2">
-              כיתה נוכחית בשיעור {currentGroup && `: כיתה ${currentGroup}`}
+              {t('כיתה נוכחית בשיעור')} {currentGroup && `: ${t('כיתה')} ${currentGroup}`}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {GROUPS.map(group => (
@@ -164,7 +165,7 @@ export default function PersonalDetailsPage() {
                       : 'bg-black/5 dark:bg-white/5 text-fg/80 hover:bg-black/10 dark:hover:bg-white/10'
                   }`}
                 >
-                  {saving === group ? '...' : `כיתה ${group}`}
+                  {saving === group ? '...' : `${t('כיתה')} ${group}`}
                 </button>
               ))}
             </div>
@@ -174,9 +175,9 @@ export default function PersonalDetailsPage() {
       </div>
 
       <div className="bg-surface rounded-2xl shadow-md p-6 mt-4">
-        <h2 className="text-sm font-semibold text-fg/60 mb-3">הביצועים שלי</h2>
+        <h2 className="text-sm font-semibold text-fg/60 mb-3">{t('הביצועים שלי')}</h2>
         {stats === null ? (
-          <p className="text-sm text-fg/40">טוען...</p>
+          <p className="text-sm text-fg/40">{t('טוען...')}</p>
         ) : (
           <div className="space-y-3">
             {stats.map(stat => (

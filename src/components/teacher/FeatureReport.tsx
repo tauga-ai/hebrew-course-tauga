@@ -5,6 +5,7 @@ import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 interface EntitySummary { entity_id: string; label_he: string; attempted_count: number; avg_pct: number | null }
 interface StudentSummary {
@@ -86,7 +87,7 @@ export function FeatureReport({
   if (error) return (
     <div className="flex flex-col items-center justify-center gap-4 text-center mt-12">
       <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
-      <button onClick={() => setRetryToken(t => t + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+      <button onClick={() => setRetryToken(n => n + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">{t('נסה שוב')}</button>
     </div>
   )
 
@@ -102,7 +103,7 @@ export function FeatureReport({
 
       {!fixedEntity && (
       <div className="bg-surface rounded-xl border border-card-border p-4 mb-4">
-        <label htmlFor="entityFilter" className="text-sm font-medium text-fg/80 block mb-2">סנן לפי {filterLabel}:</label>
+        <label htmlFor="entityFilter" className="text-sm font-medium text-fg/80 block mb-2">{t('סנן לפי')} {filterLabel}:</label>
         <select
           id="entityFilter"
           value={selectedEntity}
@@ -115,7 +116,7 @@ export function FeatureReport({
           ))}
         </select>
         {selectedLabel && (
-          <p className={`text-xs mt-1 ${selectedLabelColorClass}`}>{filteredStudents.length} תלמידים ענו ב{selectedLabel}</p>
+          <p className={`text-xs mt-1 ${selectedLabelColorClass}`}>{filteredStudents.length} {t('תלמידים ענו ב')}{selectedLabel}</p>
         )}
       </div>
       )}
@@ -129,19 +130,19 @@ export function FeatureReport({
         )}
         <button onClick={() => setTab('students')}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'students' ? `${accent.activeTab} text-white` : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-          לפי תלמיד ({filteredStudents.length})
+          {t('לפי תלמיד')} ({filteredStudents.length})
         </button>
         {selectedEntity && (
           <button onClick={() => setTab('questions')}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'questions' ? `${accent.activeTab} text-white` : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-            ניתוח שאלות
+            {t('ניתוח שאלות')}
           </button>
         )}
       </div>
 
       {tab === 'summary' && (
         report.entities_summary.length === 0 ? (
-          <p className="text-center text-fg/40 mt-12">אין נתונים עדיין</p>
+          <p className="text-center text-fg/40 mt-12">{t('אין נתונים עדיין')}</p>
         ) : (
           <div className="grid gap-3">
             {report.entities_summary.map(e => (
@@ -150,13 +151,13 @@ export function FeatureReport({
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-semibold text-fg">{e.label_he}</div>
-                    <div className="text-xs text-fg/60 mt-0.5">{e.attempted_count} תשובות</div>
+                    <div className="text-xs text-fg/60 mt-0.5">{e.attempted_count} {t('תשובות')}</div>
                   </div>
                   <div className="text-left">
                     <div className={`text-2xl font-bold ${scoreColor(e.avg_pct)}`}>
                       {e.avg_pct !== null ? `${e.avg_pct}%` : '—'}
                     </div>
-                    <div className="text-xs text-fg/40">ממוצע</div>
+                    <div className="text-xs text-fg/40">{t('ממוצע')}</div>
                   </div>
                 </div>
                 {e.avg_pct !== null && (
@@ -173,15 +174,15 @@ export function FeatureReport({
 
       {tab === 'students' && (
         filteredStudents.length === 0 ? (
-          <p className="text-center text-fg/40 mt-12">אין נתונים</p>
+          <p className="text-center text-fg/40 mt-12">{t('אין נתונים')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
               <thead>
                 <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
-                  <th className="text-right p-3 font-semibold text-fg/80">תלמיד</th>
+                  <th className="text-right p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
                   <th className="p-3 text-right font-semibold text-fg/80">{filterLabel}</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">ציון</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('ציון')}</th>
                   <th className="p-3 text-center font-semibold text-fg/80">%</th>
                 </tr>
               </thead>
@@ -202,15 +203,15 @@ export function FeatureReport({
 
       {tab === 'questions' && selectedEntity && (
         report.question_stats.length === 0 ? (
-          <p className="text-center text-fg/40 mt-12">אין נתוני שאלות עדיין</p>
+          <p className="text-center text-fg/40 mt-12">{t('אין נתוני שאלות עדיין')}</p>
         ) : (
           <div className="space-y-3">
             {report.question_stats.map(q => (
               <div key={q.question_id} className="bg-surface rounded-xl border border-card-border p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <span className="font-semibold text-fg">שאלה {q.question_id}</span>
-                    <span className="text-xs text-green-700 bg-green-100 dark:bg-green-500/10 dark:text-green-400 px-2 py-0.5 rounded-full mr-2">תשובה נכונה: {q.correct_answer}</span>
+                    <span className="font-semibold text-fg">{t('שאלה')} {q.question_id}</span>
+                    <span className="text-xs text-green-700 bg-green-100 dark:bg-green-500/10 dark:text-green-400 px-2 py-0.5 rounded-full mr-2">{t('תשובה נכונה')}: {q.correct_answer}</span>
                   </div>
                   <div className={`text-2xl font-bold ${scoreColor(q.success_pct)}`}>
                     {q.success_pct !== null ? `${q.success_pct}%` : '—'}

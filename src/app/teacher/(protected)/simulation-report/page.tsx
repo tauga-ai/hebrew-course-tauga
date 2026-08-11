@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 interface SessionRow {
   session_id: string; student_name: string; status: string
@@ -59,7 +60,7 @@ export default function SimulationReportPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="font-bold text-primary-700 dark:text-primary-400">דוח סימולציה עברית</h1>
+        <h1 className="font-bold text-primary-700 dark:text-primary-400">{t('דוח סימולציה עברית')}</h1>
         <p className="text-xs text-fg/60">{className}</p>
       </div>
 
@@ -67,19 +68,19 @@ export default function SimulationReportPage() {
       <div className="grid grid-cols-4 gap-3 mb-6">
         <div className="bg-surface rounded-xl border border-card-border p-3 text-center">
           <div className="text-2xl font-bold text-fg">{sessions.length}</div>
-          <div className="text-xs text-fg/60">ניסיונות</div>
+          <div className="text-xs text-fg/60">{t('ניסיונות')}</div>
         </div>
         <div className="bg-surface rounded-xl border border-card-border p-3 text-center">
           <div className="text-2xl font-bold text-fg">{completed.length}</div>
-          <div className="text-xs text-fg/60">הושלמו</div>
+          <div className="text-xs text-fg/60">{t('הושלמו')}</div>
         </div>
         <div className={`bg-surface rounded-xl border border-card-border p-3 text-center`}>
           <div className={`text-2xl font-bold ${scoreColor(classAvgA)}`}>{classAvgA !== null ? `${classAvgA}%` : '—'}</div>
-          <div className="text-xs text-fg/60">ממוצע חלק א</div>
+          <div className="text-xs text-fg/60">{t('ממוצע חלק א')}</div>
         </div>
         <div className={`bg-surface rounded-xl border border-card-border p-3 text-center`}>
           <div className={`text-2xl font-bold ${scoreColor(classAvgB)}`}>{classAvgB !== null ? `${classAvgB}%` : '—'}</div>
-          <div className="text-xs text-fg/60">ממוצע חלק ב</div>
+          <div className="text-xs text-fg/60">{t('ממוצע חלק ב')}</div>
         </div>
       </div>
 
@@ -87,29 +88,29 @@ export default function SimulationReportPage() {
       <div className="flex gap-2 mb-4">
         <button onClick={() => setActiveTab('students')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'students' ? 'bg-primary-600 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-          תלמידים ({sessions.length})
+          {t('תלמידים')} ({sessions.length})
         </button>
         <button onClick={() => setActiveTab('questions')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'questions' ? 'bg-primary-600 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-          ניתוח שאלות ({questionStats.length})
+          {t('ניתוח שאלות')} ({questionStats.length})
         </button>
       </div>
 
       {/* Students tab */}
       {activeTab === 'students' && (
         sessions.length === 0 ? (
-          <p className="text-center text-fg/40 mt-12">אין נתוני סימולציה עדיין</p>
+          <p className="text-center text-fg/40 mt-12">{t('אין נתוני סימולציה עדיין')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
               <thead>
                 <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
-                  <th className="text-right p-3 font-semibold text-fg/80">תלמיד</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">סטטוס</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">חלק א (16)</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">חלק ב (24)</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">משפטים</th>
-                  <th className="p-3 text-center font-semibold text-fg/80">ראיון</th>
+                  <th className="text-right p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('סטטוס')}</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('חלק א (16)')}</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('חלק ב (24)')}</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('משפטים')}</th>
+                  <th className="p-3 text-center font-semibold text-fg/80">{t('ראיון')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,7 +119,7 @@ export default function SimulationReportPage() {
                     <td className="p-3 font-medium text-fg">{s.student_name}</td>
                     <td className="p-3 text-center">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'}`}>
-                        {s.status === 'completed' ? 'הושלם' : 'בתהליך'}
+                        {s.status === 'completed' ? t('הושלם') : t('בתהליך')}
                       </span>
                     </td>
                     <td className={`p-3 text-center font-semibold ${scoreColor(s.part_a_pct)}`}>
@@ -147,19 +148,19 @@ export default function SimulationReportPage() {
       {/* Questions tab */}
       {activeTab === 'questions' && (
         questionStats.length === 0 ? (
-          <p className="text-center text-fg/40 mt-12">אין נתוני שאלות עדיין</p>
+          <p className="text-center text-fg/40 mt-12">{t('אין נתוני שאלות עדיין')}</p>
         ) : (
           <div className="space-y-2">
             {['1', '2'].map(part => (
               <div key={part}>
                 <h3 className="font-semibold text-fg/80 mb-2 mt-4">
-                  {part === '1' ? '📖 חלק א: 16 שאלות קשות' : '📚 חלק ב: 24 שאלות קשות מאוד'}
+                  {part === '1' ? t('📖 חלק א: 16 שאלות קשות') : t('📚 חלק ב: 24 שאלות קשות מאוד')}
                 </h3>
                 {questionStats.filter(q => String(q.part) === part).map(q => (
                   <div key={q.question_id} className="bg-surface rounded-xl border border-card-border p-4 mb-2">
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1">
-                        <p className="text-xs text-fg/40 mb-1">שאלה {q.q_order}</p>
+                        <p className="text-xs text-fg/40 mb-1">{t('שאלה')} {q.q_order}</p>
                         <p className="text-sm text-fg/80 leading-relaxed line-clamp-2">{q.question_text}</p>
                       </div>
                       <div className="text-left flex-shrink-0">

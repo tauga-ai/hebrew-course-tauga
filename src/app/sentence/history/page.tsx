@@ -11,6 +11,7 @@ import { SENTENCE_SETS } from '@/lib/sentence-exercises'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import type { SentenceHistoryEntry } from '@/app/api/sentence/history/route'
 import type { AISentenceHistoryEntry } from '@/app/api/ai-practice/sentence/history/route'
+import { t } from '@/lib/dev-i18n'
 
 type Tab = 'regular' | 'ai'
 
@@ -60,26 +61,26 @@ function HistoryCard({ title, createdAt, score, sentenceText, feedback, words }:
       )}
 
       {sentenceText === null ? (
-        <p className="text-sm text-fg/40 italic">פרטי הניסיון הזה לא נשמרו</p>
+        <p className="text-sm text-fg/40 italic">{t('פרטי הניסיון הזה לא נשמרו')}</p>
       ) : (
         <>
           <div className="mb-2">
-            <p className="text-xs text-fg/40 mb-0.5">המשפט שכתבת</p>
+            <p className="text-xs text-fg/40 mb-0.5">{t('המשפט שכתבת')}</p>
             <p className="text-fg leading-relaxed text-sm">{sentenceText}</p>
           </div>
           {feedback && (
             <>
               <div className="mb-2">
-                <p className="text-xs text-fg/40 mb-0.5">משוב</p>
+                <p className="text-xs text-fg/40 mb-0.5">{t('משוב')}</p>
                 <p className="text-fg/80 text-sm leading-relaxed">{feedback.feedback}</p>
               </div>
               {feedback.improved_sentence_changed === false ? (
                 <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl p-3 text-center">
-                  <p className="text-green-800 dark:text-green-300 text-sm font-semibold">✅ המשפט כבר היה תקין ומנוסח היטב</p>
+                  <p className="text-green-800 dark:text-green-300 text-sm font-semibold">{t('✅ המשפט כבר היה תקין ומנוסח היטב')}</p>
                 </div>
               ) : (
                 <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl p-3">
-                  <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">גרסה מושלמת</p>
+                  <p className="text-xs text-green-700 dark:text-green-400 mb-0.5">{t('גרסה מושלמת')}</p>
                   <p className="text-green-900 dark:text-green-300 text-sm leading-relaxed">{feedback.improved_sentence}</p>
                 </div>
               )}
@@ -113,7 +114,7 @@ export default function SentenceHistoryPage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-        <PageHeader backHref="/sentence" title="ההיסטוריה שלי" subtitle="בניית משפטים" />
+        <PageHeader backHref="/sentence" title={t('ההיסטוריה שלי')} subtitle={t('בניית משפטים')} />
 
         <div className="flex gap-2 mb-4">
           <button
@@ -122,7 +123,7 @@ export default function SentenceHistoryPage() {
               tab === 'regular' ? 'bg-primary-600 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'
             }`}
           >
-            בניית משפט ({regularEntries.length})
+            {t('בניית משפט')} ({regularEntries.length})
           </button>
           <button
             onClick={() => setTab('ai')}
@@ -130,12 +131,12 @@ export default function SentenceHistoryPage() {
               tab === 'ai' ? 'bg-purple-600 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70 hover:bg-black/10 dark:hover:bg-white/10'
             }`}
           >
-            בניית משפט עם AI ({aiEntries.length})
+            {t('בניית משפט עם AI')} ({aiEntries.length})
           </button>
         </div>
 
         {activeEntries.length === 0 ? (
-          <p className="text-center text-fg/40 mt-16">עדיין אין ניסיונות שמורים כאן</p>
+          <p className="text-center text-fg/40 mt-16">{t('עדיין אין ניסיונות שמורים כאן')}</p>
         ) : (
           <div className="space-y-3">
             {tab === 'regular'
@@ -145,7 +146,7 @@ export default function SentenceHistoryPage() {
                   return (
                     <HistoryCard
                       key={entry.id}
-                      title={`סט ${entry.set_id}${exercise ? `, תרגיל ${entry.exercise_idx + 1}` : ''}`}
+                      title={`${t('סט')} ${entry.set_id}${exercise ? `, ${t('תרגיל')} ${entry.exercise_idx + 1}` : ''}`}
                       createdAt={entry.created_at}
                       score={entry.score}
                       sentenceText={entry.sentence_text}
@@ -157,7 +158,7 @@ export default function SentenceHistoryPage() {
               : aiEntries.map(entry => (
                   <HistoryCard
                     key={entry.id}
-                    title={`רמה ${entry.level}${entry.word_list?.theme ? ` · ${entry.word_list.theme}` : ''}`}
+                    title={`${t('רמה')} ${entry.level}${entry.word_list?.theme ? ` · ${entry.word_list.theme}` : ''}`}
                     createdAt={entry.created_at}
                     score={entry.score}
                     sentenceText={entry.sentence_text}

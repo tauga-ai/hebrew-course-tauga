@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { t } from '@/lib/dev-i18n'
 
 interface PageHeaderProps {
   /** Static destination — rendered as a Link. Ignored if onBack is given. */
@@ -19,11 +20,11 @@ export function PageHeader({ backHref, onBack, backLabel = '← חזרה', title
     <div className="flex justify-between items-center mt-4 mb-6">
       {onBack ? (
         <button onClick={onBack} className="text-sm text-fg/40 hover:text-fg/70">
-          {backLabel}
+          {t(backLabel)}
         </button>
       ) : (
         <Link href={backHref!} className="text-sm text-fg/40 hover:text-fg/70">
-          {backLabel}
+          {t(backLabel)}
         </Link>
       )}
       <div className="text-center">

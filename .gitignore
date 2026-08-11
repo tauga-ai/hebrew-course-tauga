@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase CLI local state (regenerates per-machine, not shared)
+/supabase/.temp/
+
 # claude code local artifacts
 .claude/
 
@@ -44,3 +47,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+/aidocs
+CLAUDE.local.md

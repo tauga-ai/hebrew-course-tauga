@@ -10,6 +10,7 @@ import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 type Phase = 'input' | 'loading' | 'result'
 
@@ -35,7 +36,7 @@ export default function SentenceSetPage() {
 
   if (!set) return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-fg/40">סט לא נמצא</p>
+      <p className="text-fg/40">{t('סט לא נמצא')}</p>
     </div>
   )
 
@@ -78,7 +79,7 @@ export default function SentenceSetPage() {
         }).catch(() => {})
       }
     } catch {
-      alert('שגיאה בקבלת המשוב. נסה שוב.')
+      alert(t('שגיאה בקבלת המשוב. נסה שוב.'))
       setPhase('input')
     }
   }
@@ -90,7 +91,7 @@ export default function SentenceSetPage() {
     try {
       await speakHebrew(feedback.improved_sentence)
     } catch {
-      setTtsError('לא ניתן להשמיע כעת.')
+      setTtsError(t('לא ניתן להשמיע כעת.'))
     } finally {
       setImprovedAudioLoading(false)
     }
@@ -119,7 +120,7 @@ export default function SentenceSetPage() {
       bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
     },
   })
-  const scoreLabel = (s: number) => s >= 9 ? 'מצוין!' : s >= 7 ? 'טוב מאוד' : s >= 5 ? 'סביר' : 'צריך שיפור'
+  const scoreLabel = (s: number) => s >= 9 ? t('מצוין!') : s >= 7 ? t('טוב מאוד') : s >= 5 ? t('סביר') : t('צריך שיפור')
 
   return (
     <div className="min-h-screen md:flex">
@@ -139,7 +140,7 @@ export default function SentenceSetPage() {
       {phase === 'loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-bounce">🤔</div>
-          <p className="text-fg/60">בודק את המשפט שלך...</p>
+          <p className="text-fg/60">{t('בודק את המשפט שלך...')}</p>
           <div className="flex gap-2">
             {[0,1,2].map(i => (
               <div key={i} className="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
@@ -154,17 +155,16 @@ export default function SentenceSetPage() {
           {/* Rules reminder */}
           <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-4 text-sm text-primary-800 dark:text-primary-300">
             <p>
-              השתמש בכל המילים <strong>המסומנות בכוכב ★</strong> (חובה)
-              ובלפחות <strong>6 מילים</strong> מהרשימה הכללית.
+              {t('השתמש בכל המילים')} <strong>{t('המסומנות בכוכב ★')}</strong> {t('(חובה) ובלפחות')} <strong>{t('6 מילים')}</strong> {t('מהרשימה הכללית.')}
             </p>
             <p className="text-primary-600 dark:text-primary-400 text-xs mt-1">
-              💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״
+              {t('💡 צורות שונות של מילה נספרות, למשל ״חברים״ וגם ״חבריי״')}
             </p>
           </div>
 
           {/* Word chips */}
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
-            <p className="text-xs font-semibold text-fg/40 uppercase mb-3">המילים שלך</p>
+            <p className="text-xs font-semibold text-fg/40 uppercase mb-3">{t('המילים שלך')}</p>
             <div className="flex flex-wrap gap-2">
               {exercise.words.map((w, i) => (
                 <span
@@ -184,14 +184,14 @@ export default function SentenceSetPage() {
           {/* Input area */}
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium text-fg/80">המשפט שלך</span>
+              <span className="text-sm font-medium text-fg/80">{t('המשפט שלך')}</span>
               <div className="flex gap-2">
                 {sentence && (
                   <button
                     onClick={() => { stopListening(); setSentence('') }}
                     className="text-xs text-fg/40 hover:text-red-500 px-2 py-1 rounded"
                   >
-                    נקה
+                    {t('נקה')}
                   </button>
                 )}
                 {speechSupported && (
@@ -203,7 +203,7 @@ export default function SentenceSetPage() {
                         : 'bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-500/20'
                     }`}
                   >
-                    {isListening ? '⏹ עצור' : '🎤 הקלט'}
+                    {isListening ? t('⏹ עצור') : t('🎤 הקלט')}
                   </button>
                 )}
               </div>
@@ -211,18 +211,18 @@ export default function SentenceSetPage() {
             <textarea
               value={sentence}
               onChange={e => setSentence(e.target.value)}
-              placeholder="כתוב כאן את המשפט שלך בעברית, או לחץ על 🎤..."
+              placeholder={t('כתוב כאן את המשפט שלך בעברית, או לחץ על 🎤...')}
               rows={4}
               className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg text-base"
             />
             {isListening && (
               <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 animate-pulse">
-                🎤 מקליט... דבר בעברית. לחץ ״עצור״ כשתסיים.
+                {t('🎤 מקליט... דבר בעברית. לחץ ״עצור״ כשתסיים.')}
               </p>
             )}
             {speechSupported && !isListening && sentence && (
               <p className="text-xs text-fg/40 mt-1.5">
-                💡 לחץ שוב על 🎤 כדי להוסיף עוד דיבור לטקסט
+                {t('💡 לחץ שוב על 🎤 כדי להוסיף עוד דיבור לטקסט')}
               </p>
             )}
           </div>
@@ -232,7 +232,7 @@ export default function SentenceSetPage() {
             disabled={!sentence.trim()}
             className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg"
           >
-            שלח לבדיקה
+            {t('שלח לבדיקה')}
           </button>
         </>
       )}
@@ -243,50 +243,50 @@ export default function SentenceSetPage() {
           {/* Score card */}
           <div className={`rounded-2xl border p-5 text-center mb-4 ${scoreBg(feedback.score)}`}>
             <div className={`text-6xl font-bold ${scoreTextColor(feedback.score)}`}>{feedback.score}</div>
-            <div className="text-fg/60 text-sm">מתוך 10</div>
+            <div className="text-fg/60 text-sm">{t('מתוך 10')}</div>
             <div className={`text-lg font-semibold mt-1 ${scoreTextColor(feedback.score)}`}>
               {scoreLabel(feedback.score)}
             </div>
             <div className="mt-2 text-xs text-fg/60 space-y-0.5">
               {feedback.used_all_starred
-                ? <p className="text-green-600 dark:text-green-400">✓ כל מילות החובה שומשו</p>
-                : <p className="text-red-500 dark:text-red-400">✗ חסרו מילות חובה: <strong>{feedback.missing_starred.join(', ')}</strong></p>
+                ? <p className="text-green-600 dark:text-green-400">{t('✓ כל מילות החובה שומשו')}</p>
+                : <p className="text-red-500 dark:text-red-400">{t('✗ חסרו מילות חובה')}: <strong>{feedback.missing_starred.join(', ')}</strong></p>
               }
-              <p>{feedback.words_used_count} מילים מהרשימה שומשו</p>
+              <p>{feedback.words_used_count} {t('מילים מהרשימה שומשו')}</p>
               {feedback.score <= 8 && feedback.score >= 7 && feedback.used_all_starred && (
-                <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">(-{10 - feedback.score} על דקדוק/ניסוח)</p>
+                <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">(-{10 - feedback.score} {t('על דקדוק/ניסוח')})</p>
               )}
             </div>
           </div>
 
           {/* Your sentence */}
           <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
-            <p className="text-xs text-fg/40 mb-1">המשפט שכתבת</p>
+            <p className="text-xs text-fg/40 mb-1">{t('המשפט שכתבת')}</p>
             <p className="text-fg leading-relaxed">{sentence}</p>
           </div>
 
           {/* Feedback */}
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-3">
-            <h3 className="font-semibold text-fg mb-2">💬 משוב</h3>
+            <h3 className="font-semibold text-fg mb-2">{t('💬 משוב')}</h3>
             <p className="text-fg/80 text-sm leading-relaxed">{feedback.feedback}</p>
           </div>
 
           {/* Improved sentence */}
           {feedback.improved_sentence_changed === false ? (
             <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4 text-center">
-              <p className="text-green-800 dark:text-green-300 font-semibold">✅ המשפט שלך כבר תקין ומנוסח היטב!</p>
+              <p className="text-green-800 dark:text-green-300 font-semibold">{t('✅ המשפט שלך כבר תקין ומנוסח היטב!')}</p>
             </div>
           ) : (
             <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-5 mb-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold text-green-800 dark:text-green-300">✨ גרסה מושלמת</h3>
+                <h3 className="font-semibold text-green-800 dark:text-green-300">{t('✨ גרסה מושלמת')}</h3>
                 <button
                   onClick={playImproved}
                   disabled={improvedAudioLoading}
                   className="flex items-center gap-1 text-xs bg-surface border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-2.5 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-500/10 disabled:opacity-50 font-medium"
                 >
                   <span>{improvedAudioLoading ? '⏳' : '🔊'}</span>
-                  <span>{improvedAudioLoading ? 'טוען...' : 'האזן לגרסה המושלמת'}</span>
+                  <span>{improvedAudioLoading ? t('טוען...') : t('האזן לגרסה המושלמת')}</span>
                 </button>
               </div>
               <p className="text-green-900 dark:text-green-300 font-medium leading-relaxed mb-2">{feedback.improved_sentence}</p>
@@ -303,12 +303,12 @@ export default function SentenceSetPage() {
             onClick={nextExercise}
             className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition text-lg"
           >
-            {isLast ? 'סיים סט' : `תרגיל הבא (${exerciseIdx + 2}/${set.exercises.length})`}
+            {isLast ? t('סיים סט') : `${t('תרגיל הבא')} (${exerciseIdx + 2}/${set.exercises.length})`}
           </button>
 
           {scores.length > 0 && (
             <p className="text-center mt-3 text-sm text-fg/40">
-              ממוצע עד כה: {(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10
+              {t('ממוצע עד כה')}: {(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)}/10
             </p>
           )}
         </>

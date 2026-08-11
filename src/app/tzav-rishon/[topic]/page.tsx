@@ -10,6 +10,7 @@ import { QuestionMap } from '@/components/tzav-rishon/QuestionMap'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { t } from '@/lib/dev-i18n'
 import type { Segment } from '@/data/tzav-rishon/types'
 
 interface Bilingual { he: Segment[]; ar: Segment[] }
@@ -43,7 +44,7 @@ export default function TzavRishonPracticePage() {
     entityMetaKey: 'topics',
     submitUrl: '/api/tzav-rishon/submit',
     submitBodyExtra: { topic },
-    submitErrorMessage: isAr ? 'خطأ في الإرسال' : 'שגיאה בשליחה',
+    submitErrorMessage: isAr ? 'خطأ في الإرسال' : t('שגיאה בשליחה'),
   })
 
   if (engine.loadError && engine.questions === null) {
@@ -52,7 +53,7 @@ export default function TzavRishonPracticePage() {
         <StudentSidebar />
         <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
           <p className="text-red-500 dark:text-red-400 text-sm">{engine.loadError}</p>
-          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">{t('נסה שוב')}</button>
         </div>
       </div>
     )
@@ -82,7 +83,7 @@ export default function TzavRishonPracticePage() {
               : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
-          עברית
+          {t('עברית')}
         </button>
         <button
           onClick={() => setLanguage('ar')}
@@ -105,7 +106,7 @@ export default function TzavRishonPracticePage() {
 
       <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
         <div className="text-xs text-fg/40 mb-3">
-          {isAr ? 'السؤال' : 'שאלה'} <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
+          {isAr ? 'السؤال' : t('שאלה')} <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
         </div>
         <p className="text-fg leading-relaxed text-base">
           <Segments segments={current.question[language]} />
@@ -135,10 +136,10 @@ export default function TzavRishonPracticePage() {
               </span>
               <span className="flex-1"><Segments segments={opt[language]} /></span>
               {answered && isTheCorrectOne && (
-                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{isAr ? ' إجابة صحيحة' : ' תשובה נכונה'}</span></span>
+                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{isAr ? ' إجابة صحيحة' : t(' תשובה נכונה')}</span></span>
               )}
               {answered && isSelected && !isTheCorrectOne && (
-                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{isAr ? ' اخترت هذه الإجابة، خاطئة' : ' בחרת בתשובה זו, שגויה'}</span></span>
+                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{isAr ? ' اخترت هذه الإجابة، خاطئة' : t(' בחרת בתשובה זו, שגויה')}</span></span>
               )}
             </button>
           )
@@ -151,8 +152,8 @@ export default function TzavRishonPracticePage() {
         <div className={`rounded-2xl p-4 mb-4 border ${answered.is_correct ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'}`}>
           <div className={`font-bold mb-2 ${answered.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
             {answered.is_correct
-              ? (isAr ? 'إجابة صحيحة!' : 'תשובה נכונה!')
-              : (isAr ? 'إجابة غير صحيحة' : 'תשובה לא נכונה')}
+              ? (isAr ? 'إجابة صحيحة!' : t('תשובה נכונה!'))
+              : (isAr ? 'إجابة غير صحيحة' : t('תשובה לא נכונה'))}
           </div>
           {answered.explanation && (
             <div className="text-sm text-fg/80 leading-relaxed">
@@ -168,14 +169,14 @@ export default function TzavRishonPracticePage() {
           disabled={currentIndex === 0}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          {isAr ? '← السابق' : '← הקודמת'}
+          {isAr ? '← السابق' : t('← הקודמת')}
         </button>
         <button
           onClick={engine.goNext}
           disabled={currentIndex === total - 1}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          {isAr ? 'التالي →' : 'הבאה →'}
+          {isAr ? 'التالي →' : t('הבאה →')}
         </button>
       </div>
 

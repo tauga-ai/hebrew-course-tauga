@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 interface SubmitResult {
   score_percentage: number
@@ -42,7 +43,7 @@ export default function PracticePage() {
   const q = questions[currentIdx]
   const total = questions.length
   const answered = Object.keys(answers).length
-  const hebrewLabels = ['א', 'ב', 'ג', 'ד']
+  const hebrewLabels = [t('א'), t('ב'), t('ג'), t('ד')]
 
   // Compute shuffled display order per question (deterministic by question id)
   const shuffledOrder = useMemo(() => {
@@ -63,7 +64,7 @@ export default function PracticePage() {
     if (!session) return
     const unanswered = questions.filter(q => !answers[q.id])
     if (unanswered.length > 0) {
-      setError(`יש לענות על כל השאלות. נותרו ${unanswered.length} שאלות ללא מענה.`)
+      setError(`${t('יש לענות על כל השאלות. נותרו')} ${unanswered.length} ${t('שאלות ללא מענה.')}`)
       return
     }
     setSubmitting(true)
@@ -81,10 +82,10 @@ export default function PracticePage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       setResult(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'שגיאה בשליחה')
+      setError(err instanceof Error ? err.message : t('שגיאה בשליחה'))
       setSubmitting(false)
     }
   }
@@ -96,24 +97,24 @@ export default function PracticePage() {
       <div className="min-h-screen md:flex">
         <StudentSidebar />
         <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-          <PageHeader backHref="/reading-sets" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} />
+          <PageHeader backHref="/reading-sets" title={`${t('סט')} ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} />
           <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
             <div className="text-4xl mb-2">{result.score_percentage === 100 ? '🎉' : '✅'}</div>
-            <h2 className="text-lg font-bold text-fg mb-1">סיימת את הסט!</h2>
-            <p className="text-fg/70 mb-2">{`${result.correct_count}/${result.total_questions}`} תשובות נכונות</p>
+            <h2 className="text-lg font-bold text-fg mb-1">{t('סיימת את הסט!')}</h2>
+            <p className="text-fg/70 mb-2">{`${result.correct_count}/${result.total_questions}`} {t('תשובות נכונות')}</p>
             <p className={`text-3xl font-bold mb-4 ${scoreColor(result.score_percentage)}`}>{Math.round(result.score_percentage)}%</p>
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => router.push('/reading-sets')}
                 className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
               >
-                לרשימת הסטים
+                {t('לרשימת הסטים')}
               </button>
               <button
                 onClick={() => router.push('/menu')}
                 className="w-full py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
               >
-                לתפריט הראשי
+                {t('לתפריט הראשי')}
               </button>
             </div>
           </div>
@@ -126,14 +127,14 @@ export default function PracticePage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-      <PageHeader backHref="/menu" title={`סט ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} right={`${answered}/${total}`} />
+      <PageHeader backHref="/menu" title={`${t('סט')} ${practiceSet?.set_number}`} subtitle={practiceSet?.topic} right={`${answered}/${total}`} />
 
       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-6">
         <div className="bg-primary-500 h-2 rounded-full transition-all" style={{ width: `${(answered / total) * 100}%` }} />
       </div>
 
       <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
-        <div className="text-xs text-fg/40 mb-3">שאלה {currentIdx + 1} מתוך {total}</div>
+        <div className="text-xs text-fg/40 mb-3">{t('שאלה')} {currentIdx + 1} {t('מתוך')} {total}</div>
         <p className="text-fg leading-relaxed text-base whitespace-pre-line">{q?.question_text}</p>
       </div>
 
@@ -162,7 +163,7 @@ export default function PracticePage() {
       <div className="flex justify-between items-center mb-4">
         <button onClick={() => setCurrentIdx(i => Math.max(0, i - 1))} disabled={currentIdx === 0}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">
-          ← הקודמת
+          {t('← הקודמת')}
         </button>
         <div className="flex gap-1.5">
           {questions.map((qx, i) => (
@@ -173,7 +174,7 @@ export default function PracticePage() {
         </div>
         <button onClick={() => setCurrentIdx(i => Math.min(total - 1, i + 1))} disabled={currentIdx === total - 1}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">
-          הבאה →
+          {t('הבאה →')}
         </button>
       </div>
 
@@ -181,7 +182,7 @@ export default function PracticePage() {
 
       <button onClick={handleSubmit} disabled={submitting}
         className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition disabled:opacity-50">
-        {submitting ? 'שולח...' : `הגש (${answered}/${total} נענו)`}
+        {submitting ? t('שולח...') : `${t('הגש')} (${answered}/${total} ${t('נענו')})`}
       </button>
       </div>
     </div>

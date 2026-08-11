@@ -12,6 +12,7 @@ import { ResultsPhase } from './_components/ResultsPhase'
 import { SentencePhase } from './_components/SentencePhase'
 import { ReadingPhase } from './_components/ReadingPhase'
 import { InterviewIntroPhase, InterviewPhase } from './_components/InterviewPhase'
+import { t } from '@/lib/dev-i18n'
 
 // Part A/B question type from DB
 interface SimQuestion {
@@ -61,10 +62,10 @@ interface SimulationDraft {
 const draftKey = (studentId: string) => `simulation_draft_${studentId}`
 
 const STEPS = [
-  { label: 'חלק א', desc: '16 שאלות קשות', icon: '📖' },
-  { label: 'חלק ב', desc: '24 שאלות קשות מאוד', icon: '📚' },
-  { label: 'חלק ג', desc: '5 תרגילי משפט', icon: '✍️' },
-  { label: 'חלק ד', desc: 'ראיון אישי', icon: '🎤' },
+  { label: t('חלק א'), desc: t('16 שאלות קשות'), icon: '📖' },
+  { label: t('חלק ב'), desc: t('24 שאלות קשות מאוד'), icon: '📚' },
+  { label: t('חלק ג'), desc: t('5 תרגילי משפט'), icon: '✍️' },
+  { label: t('חלק ד'), desc: t('ראיון אישי'), icon: '🎤' },
 ]
 
 export default function SimulationPage() {
@@ -196,7 +197,7 @@ export default function SimulationPage() {
       setReadingAnswers({})
       setPhase('a')
     } catch {
-      setSubmitError('שגיאה בטעינת הסימולציה. בדוק חיבור לאינטרנט ונסה שוב.')
+      setSubmitError(t('שגיאה בטעינת הסימולציה. בדוק חיבור לאינטרנט ונסה שוב.'))
       setPhase('intro')
     }
   }
@@ -225,7 +226,7 @@ export default function SimulationPage() {
       setCurrentQ(0)
       setPhase('b')
     } catch {
-      setSubmitError('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.')
+      setSubmitError(t('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.'))
     } finally {
       setSubmitting(false)
     }
@@ -242,7 +243,7 @@ export default function SimulationPage() {
       setCurrentFeedback(null)
       setPhase('c')
     } catch {
-      setSubmitError('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.')
+      setSubmitError(t('שגיאה בשמירת התשובות. בדוק חיבור לאינטרנט ונסה שוב.'))
     } finally {
       setSubmitting(false)
     }
@@ -297,7 +298,7 @@ export default function SimulationPage() {
         await submitSentenceResults(newResults)
         setPhase('d_intro')
       } catch {
-        setSubmitError('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.')
+        setSubmitError(t('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.'))
       } finally {
         setSubmitting(false)
       }
@@ -313,7 +314,7 @@ export default function SimulationPage() {
       await submitSentenceResults(sentenceResults)
       setPhase('d_intro')
     } catch {
-      setSubmitError('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.')
+      setSubmitError(t('שגיאה בשמירת התוצאות. בדוק חיבור לאינטרנט ונסה שוב.'))
     } finally {
       setSubmitting(false)
     }
@@ -381,7 +382,7 @@ export default function SimulationPage() {
       if (session) clearDraft(draftKey(session.id))
       setPhase('results')
     } catch {
-      setSubmitError('שגיאה בקבלת המשוב על הראיון. בדוק חיבור לאינטרנט ונסה שוב.')
+      setSubmitError(t('שגיאה בקבלת המשוב על הראיון. בדוק חיבור לאינטרנט ונסה שוב.'))
     } finally {
       setInterviewProcessing(false)
     }
@@ -406,7 +407,7 @@ export default function SimulationPage() {
   const errorBanner = (onRetry: () => void) => submitError && (
     <div className="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-800 rounded-xl p-3 mb-4 text-sm text-red-700 dark:text-red-400 flex items-center justify-between gap-3">
       <span>{submitError}</span>
-      <button onClick={onRetry} disabled={submitting} className="text-red-700 dark:text-red-400 font-semibold underline flex-shrink-0 disabled:opacity-40">נסה שוב</button>
+      <button onClick={onRetry} disabled={submitting} className="text-red-700 dark:text-red-400 font-semibold underline flex-shrink-0 disabled:opacity-40">{t('נסה שוב')}</button>
     </div>
   )
 
@@ -415,17 +416,17 @@ export default function SimulationPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">⏸️</div>
-        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">נמצאה סימולציה פעילה</h1>
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">{t('נמצאה סימולציה פעילה')}</h1>
         <p className="text-fg/70 mb-6 text-sm leading-relaxed">
-          נראה שהתחלת סימולציה ולא סיימת אותה. אפשר להמשיך מאיפה שעצרת, או להתחיל מחדש.
+          {t('נראה שהתחלת סימולציה ולא סיימת אותה. אפשר להמשיך מאיפה שעצרת, או להתחיל מחדש.')}
         </p>
         <button onClick={resumeDraft}
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg mb-3">
-          המשך מאיפה שעצרתי
+          {t('המשך מאיפה שעצרתי')}
         </button>
         <button onClick={discardDraftAndStartOver}
           className="w-full border border-card-border text-fg/70 font-semibold py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition">
-          התחל מחדש
+          {t('התחל מחדש')}
         </button>
       </div>
     </div>
@@ -435,10 +436,10 @@ export default function SimulationPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md max-w-md w-full p-8 text-center">
         <div className="text-5xl mb-4">🏆</div>
-        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">סימולציה עברית</h1>
-        <p className="text-fg/60 mb-1 text-sm">שלום, <strong>{session?.full_name}</strong></p>
+        <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-2">{t('סימולציה עברית')}</h1>
+        <p className="text-fg/60 mb-1 text-sm">{t('שלום')}, <strong>{session?.full_name}</strong></p>
         <p className="text-fg/70 mb-6 text-sm leading-relaxed">
-          סימולציה מקיפה בת 4 חלקים המדמה תנאי בחינה אמיתיים.
+          {t('סימולציה מקיפה בת 4 חלקים המדמה תנאי בחינה אמיתיים.')}
         </p>
         <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 mb-6 text-right space-y-2">
           {STEPS.map((s, i) => (
@@ -449,14 +450,14 @@ export default function SimulationPage() {
           ))}
         </div>
         <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800 rounded-xl p-3 mb-6 text-xs text-yellow-800 dark:text-yellow-400 text-right">
-          ⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.
+          {t('⚠️ לאחר התחלה לא ניתן לחזור אחורה. ודא שיש לך זמן מספיק לסיים.')}
         </div>
         {errorBanner(startSimulation)}
         <button onClick={startSimulation}
           className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 transition text-lg">
-          התחל סימולציה
+          {t('התחל סימולציה')}
         </button>
-        <button onClick={() => router.push('/menu')} className="mt-3 text-sm text-fg/40 hover:text-fg/70">חזרה</button>
+        <button onClick={() => router.push('/menu')} className="mt-3 text-sm text-fg/40 hover:text-fg/70">{t('חזרה')}</button>
       </div>
     </div>
   )
@@ -465,7 +466,7 @@ export default function SimulationPage() {
   if (phase === 'starting') return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <div className="text-5xl animate-bounce">📋</div>
-      <p className="text-fg/70 font-medium">טוען את הסימולציה...</p>
+      <p className="text-fg/70 font-medium">{t('טוען את הסימולציה...')}</p>
     </div>
   )
 
@@ -484,7 +485,7 @@ export default function SimulationPage() {
         getShuffledOptions={getShuffledOptions}
         groupByPassage={false}
         showUnansweredWarning={true}
-        finishLabel="סיים חלק א →"
+        finishLabel={t('סיים חלק א →')}
         onFinish={finishPartA}
         submitting={submitting}
         errorBanner={errorBanner(finishPartA)}
@@ -507,7 +508,7 @@ export default function SimulationPage() {
         getShuffledOptions={getShuffledOptions}
         groupByPassage={true}
         showUnansweredWarning={false}
-        finishLabel="סיים חלק ב →"
+        finishLabel={t('סיים חלק ב →')}
         onFinish={finishPartB}
         submitting={submitting}
         errorBanner={errorBanner(finishPartB)}
