@@ -1,3 +1,5 @@
+import { t } from '@/lib/dev-i18n'
+
 interface QuestionMapProps {
   count: number
   currentIndex: number
@@ -25,7 +27,7 @@ export function QuestionMap({ count, currentIndex, results, onJump }: QuestionMa
           <button
             key={questionId}
             onClick={() => onJump(i)}
-            aria-label={`שאלה ${questionId}${result === true ? ', נענתה נכון' : result === false ? ', נענתה שגוי' : ''}`}
+            aria-label={`${t('שאלה')} ${questionId}${result === true ? t(', נענתה נכון') : result === false ? t(', נענתה שגוי') : ''}`}
             className={`aspect-square rounded text-xs font-medium transition ${stateClass} ${
               i === currentIndex ? 'ring-2 ring-offset-1 ring-accent-tzav-rishon' : ''
             }`}

@@ -10,6 +10,7 @@ import { Segments } from '@/components/makbatzim/Segments'
 import { QuestionMap } from '@/components/makbatzim/QuestionMap'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { t } from '@/lib/dev-i18n'
 import type { Segment } from '@/data/makbatzim/types'
 
 interface QuestionOut {
@@ -65,7 +66,7 @@ export default function MakbatzimPracticePage() {
     entityMetaKey: 'sets',
     submitUrl: '/api/makbatzim/submit',
     submitBodyExtra: { set_id: setId },
-    submitErrorMessage: 'שגיאה בשליחה',
+    submitErrorMessage: t('שגיאה בשליחה'),
     deferFeedback: setId === 'dapar-simulation',
   })
 
@@ -75,7 +76,7 @@ export default function MakbatzimPracticePage() {
         <StudentSidebar />
         <div className="flex-1 p-4 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
           <p className="text-red-500 dark:text-red-400 text-sm">{engine.loadError}</p>
-          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">נסה שוב</button>
+          <button onClick={engine.retryLoad} className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5">{t('נסה שוב')}</button>
         </div>
       </div>
     )
@@ -116,15 +117,15 @@ export default function MakbatzimPracticePage() {
           />
           <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
             <div className="text-4xl mb-2">{missedQuestions.length === 0 ? '🎉' : '✅'}</div>
-            <h2 className="text-lg font-bold text-fg mb-1">סיימת את הסט!</h2>
+            <h2 className="text-lg font-bold text-fg mb-1">{t('סיימת את הסט!')}</h2>
             <p className="text-fg/70 mb-4">
-              <LtrIsolate>{`${correctCount}/${total}`}</LtrIsolate> תשובות נכונות
+              <LtrIsolate>{`${correctCount}/${total}`}</LtrIsolate> {t('תשובות נכונות')}
             </p>
             {missedQuestions.length === 0 ? (
-              <p className="text-green-600 dark:text-green-400 font-semibold mb-4">כל הכבוד, ענית נכון על כל השאלות!</p>
+              <p className="text-green-600 dark:text-green-400 font-semibold mb-4">{t('כל הכבוד, ענית נכון על כל השאלות!')}</p>
             ) : (
               <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 mb-4 text-right">
-                <p className="text-sm text-fg/60 mb-2">שאלות שטעית בהן:</p>
+                <p className="text-sm text-fg/60 mb-2">{t('שאלות שטעית בהן:')}</p>
                 <div className="flex flex-wrap gap-2">
                   {missedQuestions.map(q => (
                     <span key={q.id} className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center">
@@ -140,14 +141,14 @@ export default function MakbatzimPracticePage() {
                   onClick={startRetry}
                   className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition"
                 >
-                  תרגל שוב את הטעויות ({missedQuestions.length})
+                  {t('תרגל שוב את הטעויות')} ({missedQuestions.length})
                 </button>
               )}
               <button
                 onClick={() => setViewMode('quiz')}
                 className="w-full py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
               >
-                סקור את כל השאלות
+                {t('סקור את כל השאלות')}
               </button>
             </div>
           </div>
@@ -167,19 +168,19 @@ export default function MakbatzimPracticePage() {
         <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
           <PageHeader
             backHref={setId === 'dapar-simulation' ? '/menu' : '/makbatzim'}
-            title="תרגול טעויות"
+            title={t('תרגול טעויות')}
             right={!retryDone ? <LtrIsolate>{`${retryIndex + 1}/${retryQueue.length}`}</LtrIsolate> : undefined}
           />
 
           {retryDone ? (
             <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
               <div className="text-4xl mb-2">💪</div>
-              <h2 className="text-lg font-bold text-fg mb-4">סיימת לתרגל את הטעויות!</h2>
+              <h2 className="text-lg font-bold text-fg mb-4">{t('סיימת לתרגל את הטעויות!')}</h2>
               <button
                 onClick={() => setViewMode('summary')}
                 className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition"
               >
-                חזרה לסיכום
+                {t('חזרה לסיכום')}
               </button>
             </div>
           ) : retryQ && originalProgress ? (
@@ -189,7 +190,7 @@ export default function MakbatzimPracticePage() {
                   // eslint-disable-next-line @next/next/no-img-element -- same rationale as the quiz view above.
                   <img
                     src={retryQ.imageUrl}
-                    alt="תמונה מצורפת לשאלה"
+                    alt={t('תמונה מצורפת לשאלה')}
                     className="w-full rounded-xl mb-4 border border-card-border"
                   />
                 )}
@@ -221,10 +222,10 @@ export default function MakbatzimPracticePage() {
                       </span>
                       <span className="flex-1"><Segments segments={opt} /></span>
                       {retryAnswer !== null && isTheCorrectOne && (
-                        <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only"> תשובה נכונה</span></span>
+                        <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
                       )}
                       {retryAnswer !== null && isSelected && !isTheCorrectOne && (
-                        <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only"> בחרת בתשובה זו, שגויה</span></span>
+                        <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
                       )}
                     </button>
                   )
@@ -244,7 +245,7 @@ export default function MakbatzimPracticePage() {
                 disabled={retryAnswer === null}
                 className="w-full py-3 rounded-xl bg-accent-makbatzim text-white font-semibold hover:opacity-90 transition disabled:opacity-40"
               >
-                {retryIndex === retryQueue.length - 1 ? 'סיום' : 'הבאה →'}
+                {retryIndex === retryQueue.length - 1 ? t('סיום') : t('הבאה →')}
               </button>
             </>
           ) : null}
@@ -272,18 +273,18 @@ export default function MakbatzimPracticePage() {
 
       <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 mb-4">
         <div className="text-xs text-fg/40 mb-3">
-          שאלה <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
+          {t('שאלה')} <LtrIsolate>{`${currentIndex + 1} / ${total}`}</LtrIsolate>
         </div>
         {current.imageUrl && (
           brokenImageId === current.id ? (
             <div className="w-full rounded-xl mb-4 border border-card-border bg-black/5 dark:bg-white/5 p-6 text-center text-sm text-fg/40">
-              🖼️ התמונה לא נטענה
+              {t('🖼️ התמונה לא נטענה')}
             </div>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- source image dimensions are unknown and hosting is cross-project (see plan); a plain <img> avoids committing to next/image config prematurely.
             <img
               src={current.imageUrl}
-              alt="תמונה מצורפת לשאלה"
+              alt={t('תמונה מצורפת לשאלה')}
               className="w-full rounded-xl mb-4 border border-card-border"
               onError={() => {
                 console.error(`Failed to load makbatzim question image: ${current.imageUrl}`)
@@ -332,10 +333,10 @@ export default function MakbatzimPracticePage() {
               </span>
               <span className="flex-1"><Segments segments={opt} /></span>
               {answered && revealed && isTheCorrectOne && (
-                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only"> תשובה נכונה</span></span>
+                <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
               )}
               {answered && revealed && isSelected && !isTheCorrectOne && (
-                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only"> בחרת בתשובה זו, שגויה</span></span>
+                <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
               )}
             </button>
           )
@@ -347,7 +348,7 @@ export default function MakbatzimPracticePage() {
       {answered && revealed && (
         <div className={`rounded-2xl p-4 mb-4 border ${answered.is_correct ? 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800' : 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800'}`}>
           <div className={`font-bold mb-2 ${answered.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-            {answered.is_correct ? 'תשובה נכונה!' : 'תשובה לא נכונה'}
+            {answered.is_correct ? t('תשובה נכונה!') : t('תשובה לא נכונה')}
           </div>
           {answered.explanation && (
             <div className="text-sm text-fg/80 leading-relaxed">
@@ -363,14 +364,14 @@ export default function MakbatzimPracticePage() {
           disabled={currentIndex === 0}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          ← הקודמת
+          {t('← הקודמת')}
         </button>
         <button
           onClick={engine.goNext}
           disabled={currentIndex === total - 1}
           className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          הבאה →
+          {t('הבאה →')}
         </button>
       </div>
 
@@ -386,7 +387,7 @@ export default function MakbatzimPracticePage() {
           onClick={() => setViewMode('summary')}
           className="w-full mt-4 py-3 rounded-xl border border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
         >
-          חזרה לסיכום
+          {t('חזרה לסיכום')}
         </button>
       )}
       </div>

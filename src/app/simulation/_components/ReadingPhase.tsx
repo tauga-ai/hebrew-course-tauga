@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { t } from '@/lib/dev-i18n'
 
 interface SimQuestion {
   id: number; part: number; q_order: number
@@ -56,12 +57,12 @@ export function ReadingPhase({
       {progressBar}
       {errorBanner}
       <div className="flex justify-between text-sm text-fg/60 mb-4">
-        <span>שאלה {currentQ + 1} / {questions.length}</span>
-        <span>{answered} נענו</span>
+        <span>{t('שאלה')} {currentQ + 1} / {questions.length}</span>
+        <span>{answered} {t('נענו')}</span>
       </div>
       <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
         {isNewPassage && <p className="text-fg/80 leading-relaxed text-sm mb-3 pb-3 border-b border-card-border whitespace-pre-line">{q?.passage_text}</p>}
-        {groupByPassage && !isNewPassage && <p className="text-xs text-fg/40 mb-2 italic">(אותו קטע)</p>}
+        {groupByPassage && !isNewPassage && <p className="text-xs text-fg/40 mb-2 italic">{t('(אותו קטע)')}</p>}
         <p className="text-fg font-semibold leading-relaxed">{q?.question_text}</p>
       </div>
       <div key={`${keyPrefix}-${q?.id}`} className="space-y-3 mb-4">
@@ -71,7 +72,7 @@ export function ReadingPhase({
             <button key={`${q?.id}-${opt.num}`}
               onClick={() => setReadingAnswers(prev => ({ ...prev, [q.id]: opt.num }))}
               className={`w-full text-right rounded-xl border p-3.5 transition flex items-center gap-3 ${sel ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400' : 'bg-surface border-card-border hover:border-primary-300'}`}>
-              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-primary-500 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'}`}>{HEBREW[i]}</span>
+              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${sel ? 'bg-primary-500 text-white' : 'bg-black/5 dark:bg-white/5 text-fg/70'}`}>{t(HEBREW[i])}</span>
               <span className="text-sm">{opt.text}</span>
             </button>
           )
@@ -79,15 +80,15 @@ export function ReadingPhase({
       </div>
       <div className="flex justify-between">
         <button onClick={() => setCurrentQ(i => Math.max(0, i - 1))} disabled={currentQ === 0}
-          className="px-4 py-2 rounded-lg border border-card-border text-sm disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">← הקודמת</button>
+          className="px-4 py-2 rounded-lg border border-card-border text-sm disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5">{t('← הקודמת')}</button>
         {currentQ < questions.length - 1
-          ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm hover:bg-black/5 dark:hover:bg-white/5">הבאה →</button>
+          ? <button onClick={() => setCurrentQ(i => i + 1)} className="px-4 py-2 rounded-lg border border-card-border text-sm hover:bg-black/5 dark:hover:bg-white/5">{t('הבאה →')}</button>
           : <button onClick={onFinish} disabled={answered < questions.length || submitting}
-              className="px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-primary-700">{submitting ? 'שולח...' : finishLabel}</button>
+              className="px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-primary-700">{submitting ? t('שולח...') : finishLabel}</button>
         }
       </div>
       {showUnansweredWarning && answered < questions.length && currentQ === questions.length - 1 && (
-        <p className="text-orange-500 text-xs text-center mt-2">עדיין חסרות {questions.length - answered} תשובות</p>
+        <p className="text-orange-500 text-xs text-center mt-2">{t('עדיין חסרות')} {questions.length - answered} {t('תשובות')}</p>
       )}
     </div>
   )

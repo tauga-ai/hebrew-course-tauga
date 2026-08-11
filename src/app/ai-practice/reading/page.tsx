@@ -5,13 +5,14 @@ import type { AIReadingQuestion } from '@/app/api/ai-practice/reading/route'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { t } from '@/lib/dev-i18n'
 
 const LEVEL_LABELS: Record<number, string> = {
-  1: 'משפטים פשוטים: מי, מה, איפה',
-  2: 'סיבות וזמנים: למה, מתי',
-  3: 'ניגודים ורעיונות: למרות ש, כי',
-  4: 'קטעים מידעיים: פסקה שלמה',
-  5: 'קטעים מתקדמים: ניתוח ומסקנות',
+  1: t('משפטים פשוטים: מי, מה, איפה'),
+  2: t('סיבות וזמנים: למה, מתי'),
+  3: t('ניגודים ורעיונות: למרות ש, כי'),
+  4: t('קטעים מידעיים: פסקה שלמה'),
+  5: t('קטעים מתקדמים: ניתוח ומסקנות'),
 }
 
 const LEVEL_COLORS: Record<number, string> = {
@@ -22,7 +23,7 @@ const LEVEL_COLORS: Record<number, string> = {
   5: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400',
 }
 
-const HEBREW = ['א', 'ב', 'ג', 'ד']
+const HEBREW = [t('א'), t('ב'), t('ג'), t('ד')]
 
 type Phase = 'pick' | 'loading' | 'question' | 'result'
 
@@ -50,12 +51,12 @@ export default function AIReadingPage() {
       if (!res.ok) throw new Error(data.error)
       const q = data.question as AIReadingQuestion
       if (!Array.isArray(q?.options) || q.options.length !== 4 || !Number.isInteger(q.correct_index) || q.correct_index < 0 || q.correct_index > 3) {
-        throw new Error('שאלה לא תקינה')
+        throw new Error(t('שאלה לא תקינה'))
       }
       setQuestion(q)
       setPhase('question')
     } catch {
-      setError('שגיאה ביצירת השאלה. נסה שוב.')
+      setError(t('שגיאה ביצירת השאלה. נסה שוב.'))
       setPhase('pick')
     }
   }
@@ -82,16 +83,16 @@ export default function AIReadingPage() {
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
       <PageHeader
         backHref="/menu"
-        backLabel="← תפריט"
-        title="הבנת הנקרא עם AI"
-        subtitle={level ? `רמה ${level}` : undefined}
+        backLabel={t('← תפריט')}
+        title={t('הבנת הנקרא עם AI')}
+        subtitle={level ? `${t('רמה')} ${level}` : undefined}
         right={stats.total > 0 ? `${stats.correct}/${stats.total} ✓` : undefined}
       />
 
       {/* ── PICK LEVEL ── */}
       {phase === 'pick' && (
         <>
-          <p className="text-center text-fg/60 text-sm mb-6">בחר רמה וה-AI יצור לך שאלה בהבנת הנקרא</p>
+          <p className="text-center text-fg/60 text-sm mb-6">{t('בחר רמה וה-AI יצור לך שאלה בהבנת הנקרא')}</p>
           <div className="grid gap-3">
             {[1, 2, 3, 4, 5].map(lvl => (
               <button
@@ -101,7 +102,7 @@ export default function AIReadingPage() {
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-bold">רמה {lvl}</div>
+                    <div className="font-bold">{t('רמה')} {lvl}</div>
                     <div className="text-xs mt-0.5 opacity-80">{LEVEL_LABELS[lvl]}</div>
                   </div>
                   <span className="text-lg">←</span>
@@ -112,7 +113,7 @@ export default function AIReadingPage() {
           {error && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-4">{error}</p>}
           {stats.total > 0 && (
             <div className="mt-6 bg-black/5 dark:bg-white/5 rounded-xl p-4 text-center text-sm text-fg/70">
-              סיכום: {stats.correct} נכון מתוך {stats.total} ({Math.round((stats.correct / stats.total) * 100)}%)
+              {t('סיכום')}: {stats.correct} {t('נכון מתוך')} {stats.total} ({Math.round((stats.correct / stats.total) * 100)}%)
             </div>
           )}
         </>
@@ -122,7 +123,7 @@ export default function AIReadingPage() {
       {phase === 'loading' && (
         <div className="flex flex-col items-center justify-center min-h-64 gap-4">
           <div className="text-4xl animate-spin">🤖</div>
-          <p className="text-fg/60">יוצר שאלה ברמה {level}...</p>
+          <p className="text-fg/60">{t('יוצר שאלה ברמה')} {level}...</p>
         </div>
       )}
 
@@ -132,9 +133,9 @@ export default function AIReadingPage() {
           <div className="bg-surface rounded-2xl border border-card-border shadow-sm p-6 mb-4">
             <div className="flex justify-between items-center mb-3">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${LEVEL_COLORS[level!]}`}>
-                רמה {level}
+                {t('רמה')} {level}
               </span>
-              <span className="text-xs text-fg/40">קרא את הטקסט וענה על השאלה</span>
+              <span className="text-xs text-fg/40">{t('קרא את הטקסט וענה על השאלה')}</span>
             </div>
             <p className="text-fg leading-relaxed text-base mb-5 whitespace-pre-line border-b border-card-border pb-4">
               {question.passage}
@@ -168,7 +169,7 @@ export default function AIReadingPage() {
             disabled={selected === null}
             className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-40 text-lg"
           >
-            בדוק תשובה
+            {t('בדוק תשובה')}
           </button>
         </>
       )}
@@ -180,20 +181,20 @@ export default function AIReadingPage() {
           <div className={`rounded-2xl border p-5 text-center mb-4 ${isCorrect ? 'bg-green-50 border-green-300 dark:bg-green-950/40 dark:border-green-700' : 'bg-red-50 border-red-300 dark:bg-red-950/40 dark:border-red-700'}`}>
             <div className="text-4xl mb-2">{isCorrect ? '✅' : '❌'}</div>
             <div className={`text-xl font-bold ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-              {isCorrect ? 'נכון!' : 'לא נכון'}
+              {isCorrect ? t('נכון!') : t('לא נכון')}
             </div>
             {!isCorrect && (
               <div className="text-sm text-red-600 dark:text-red-400 mt-1">
-                התשובה הנכונה: <strong>{HEBREW[question.correct_index]}. {question.options[question.correct_index]}</strong>
+                {t('התשובה הנכונה')}: <strong>{HEBREW[question.correct_index]}. {question.options[question.correct_index]}</strong>
               </div>
             )}
           </div>
 
           {/* Passage + highlighted answer */}
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-3">
-            <p className="text-xs text-fg/40 mb-2">הטקסט</p>
+            <p className="text-xs text-fg/40 mb-2">{t('הטקסט')}</p>
             <p className="text-fg leading-relaxed text-sm mb-3">{question.passage}</p>
-            <p className="text-xs text-fg/40 mb-1">השאלה: {question.question}</p>
+            <p className="text-xs text-fg/40 mb-1">{t('השאלה')}: {question.question}</p>
           </div>
 
           {/* Options with result */}
@@ -215,7 +216,7 @@ export default function AIReadingPage() {
                   <span className={`text-sm ${isRight ? 'text-green-800 dark:text-green-300 font-semibold' : isChosen ? 'text-red-700 dark:text-red-400' : 'text-fg/60'}`}>
                     {opt}
                   </span>
-                  {isRight && <span className="mr-auto text-green-600 dark:text-green-400 text-xs font-bold">✓ נכון</span>}
+                  {isRight && <span className="mr-auto text-green-600 dark:text-green-400 text-xs font-bold">{t('✓ נכון')}</span>}
                 </div>
               )
             })}
@@ -224,7 +225,7 @@ export default function AIReadingPage() {
           {/* Explanation */}
           {question.explanation && (
             <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-800 rounded-xl p-4 mb-4 text-sm text-primary-800 dark:text-primary-300">
-              <strong>הסבר: </strong>{question.explanation}
+              <strong>{t('הסבר')}: </strong>{question.explanation}
             </div>
           )}
 
@@ -232,13 +233,13 @@ export default function AIReadingPage() {
             onClick={() => { setPhase('pick'); setQuestion(null); setSelected(null) }}
             className="w-full bg-primary-600 text-white font-semibold py-3.5 rounded-xl hover:bg-primary-700 transition text-lg"
           >
-            צור תרגיל נוסף
+            {t('צור תרגיל נוסף')}
           </button>
           <button
             onClick={() => generateQuestion(level!)}
             className="w-full mt-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 py-2"
           >
-            תרגיל נוסף באותה רמה ({level})
+            {t('תרגיל נוסף באותה רמה')} ({level})
           </button>
         </>
       )}

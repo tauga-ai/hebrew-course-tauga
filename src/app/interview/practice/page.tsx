@@ -8,6 +8,7 @@ import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
+import { t } from '@/lib/dev-i18n'
 
 export default function PracticePage() {
   const router = useRouter()
@@ -67,7 +68,7 @@ export default function PracticePage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-      <PageHeader backHref="/interview" title="תרגול שאלות ראיון" subtitle={session?.full_name} right={`${answered}/${total} נענו`} />
+      <PageHeader backHref="/interview" title={t('תרגול שאלות ראיון')} subtitle={session?.full_name} right={`${answered}/${total} ${t('נענו')}`} />
 
       {/* Progress */}
       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 mb-6">
@@ -77,7 +78,7 @@ export default function PracticePage() {
       {/* Question card */}
       <div className="bg-surface rounded-2xl border border-card-border p-6 mb-4 shadow-sm">
         <div className="flex justify-between items-start mb-4">
-          <span className="text-xs text-fg/40">שאלה {idx + 1} מתוך {total}</span>
+          <span className="text-xs text-fg/40">{t('שאלה')} {idx + 1} {t('מתוך')} {total}</span>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[q.category]}`}>
             {q.category}
           </span>
@@ -88,7 +89,7 @@ export default function PracticePage() {
       {/* Answer area */}
       <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4 shadow-sm">
         <div className="flex justify-between items-center mb-3">
-          <label htmlFor="answer" className="text-sm font-medium text-fg/80">התשובה שלי</label>
+          <label htmlFor="answer" className="text-sm font-medium text-fg/80">{t('התשובה שלי')}</label>
           {speechSupported && (
             <button
               onClick={() => isListening ? stopListening() : startListening()}
@@ -99,7 +100,7 @@ export default function PracticePage() {
               }`}
             >
               <span>{isListening ? '⏹' : '🎤'}</span>
-              <span>{isListening ? 'עצור' : 'הקלט'}</span>
+              <span>{isListening ? t('עצור') : t('הקלט')}</span>
             </button>
           )}
         </div>
@@ -107,12 +108,12 @@ export default function PracticePage() {
           id="answer"
           value={answers[q.id] || ''}
           onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-          placeholder="כתוב את תשובתך כאן..."
+          placeholder={t('כתוב את תשובתך כאן...')}
           rows={4}
           className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg"
         />
         {isListening && (
-          <p className="text-xs text-red-500 dark:text-red-400 mt-1 animate-pulse">🎤 מקליט... דבר בעברית</p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1 animate-pulse">{t('🎤 מקליט... דבר בעברית')}</p>
         )}
       </div>
 
@@ -123,7 +124,7 @@ export default function PracticePage() {
           disabled={idx === 0}
           className="px-5 py-2.5 rounded-xl border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          ← קודמת
+          {t('← קודמת')}
         </button>
 
         {/* Dots */}
@@ -144,15 +145,15 @@ export default function PracticePage() {
           disabled={idx === total - 1}
           className="px-5 py-2.5 rounded-xl border border-card-border text-sm text-fg/70 disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/5"
         >
-          הבאה →
+          {t('הבאה →')}
         </button>
       </div>
 
       {answered === total && (
         <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-xl p-4 text-center">
-          <p className="text-green-700 dark:text-green-400 font-semibold">כל הכבוד! ענית על כל {total} השאלות 🎉</p>
+          <p className="text-green-700 dark:text-green-400 font-semibold">{t('כל הכבוד! ענית על כל')} {total} {t('השאלות 🎉')}</p>
           <button onClick={() => { saveAnswer(q.id, answers[q.id]); router.push('/interview') }} className="mt-2 text-sm text-green-600 dark:text-green-400 underline">
-            חזור לתפריט
+            {t('חזור לתפריט')}
           </button>
         </div>
       )}

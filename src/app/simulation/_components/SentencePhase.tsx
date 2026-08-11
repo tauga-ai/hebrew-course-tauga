@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import type { SentenceFeedback } from '@/app/api/sentence/feedback/route'
 import type { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 // 2-tier (good/ok only, no "bad" tier exists on this screen) — ok: -Infinity
 // makes every score below `good` fall into the ok tier instead of bad.
@@ -57,12 +58,12 @@ export function SentencePhase({
       {stepHeader}
       {progressBar}
       {errorBanner}
-      <div className="text-sm text-fg/60 mb-4">תרגיל {currentEx + 1} / {partC.length}</div>
+      <div className="text-sm text-fg/60 mb-4">{t('תרגיל')} {currentEx + 1} / {partC.length}</div>
 
       {!currentFeedback ? (
         <>
           <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-4 text-sm text-primary-800 dark:text-primary-300">
-            השתמש בכל המילים <strong>★ המסומנות בכחול</strong> ובלפחות 6 מילים מהרשימה.
+            {t('השתמש בכל המילים')} <strong>{t('★ המסומנות בכחול')}</strong> {t('ובלפחות 6 מילים מהרשימה.')}
           </div>
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
             <div className="flex flex-wrap gap-2">
@@ -75,24 +76,24 @@ export function SentencePhase({
           </div>
           <div className="bg-surface rounded-2xl border border-card-border p-5 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium text-fg/80">המשפט שלי</span>
+              <span className="text-sm font-medium text-fg/80">{t('המשפט שלי')}</span>
               <div className="flex gap-2">
-                {sentenceInput && <button onClick={() => setSentenceInput('')} className="text-xs text-fg/40 hover:text-red-400 px-2 py-1">נקה</button>}
+                {sentenceInput && <button onClick={() => setSentenceInput('')} className="text-xs text-fg/40 hover:text-red-400 px-2 py-1">{t('נקה')}</button>}
                 {sentenceSpeech.supported && (
                   <button onClick={() => sentenceSpeech.isListening ? sentenceSpeech.stop() : sentenceSpeech.start(sentenceInput)}
                     className={`text-sm px-3 py-1.5 rounded-lg font-medium ${sentenceSpeech.isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-500/20'}`}>
-                    {sentenceSpeech.isListening ? '⏹ עצור' : '🎤 הקלט את עצמך'}
+                    {sentenceSpeech.isListening ? t('⏹ עצור') : t('🎤 הקלט את עצמך')}
                   </button>
                 )}
               </div>
             </div>
             <textarea value={sentenceInput} onChange={e => setSentenceInput(e.target.value)}
-              placeholder="כתוב את המשפט שלך כאן..." rows={4}
+              placeholder={t('כתוב את המשפט שלך כאן...')} rows={4}
               className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg" />
           </div>
           <button onClick={onSubmitSentence} disabled={!sentenceInput.trim() || evalLoading}
             className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 disabled:opacity-40 transition">
-            {evalLoading ? 'בודק...' : 'שלח לבדיקה'}
+            {evalLoading ? t('בודק...') : t('שלח לבדיקה')}
           </button>
         </>
       ) : (
@@ -101,19 +102,19 @@ export function SentencePhase({
             <div className={`text-4xl font-bold ${sentenceTextColor(currentFeedback.score)}`}>{currentFeedback.score}/10</div>
           </div>
           <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
-            <p className="text-xs text-fg/40 mb-1">המשפט שלך</p>
+            <p className="text-xs text-fg/40 mb-1">{t('המשפט שלך')}</p>
             <p className="text-fg text-sm">{sentenceInput}</p>
           </div>
           <div className="bg-surface rounded-2xl border border-card-border p-4 mb-3">
             <p className="text-sm text-fg/80">{currentFeedback.feedback}</p>
           </div>
           <div className="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800 rounded-2xl p-4 mb-4">
-            <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">✨ גרסה מושלמת</p>
+            <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">{t('✨ גרסה מושלמת')}</p>
             <p className="text-green-800 dark:text-green-300 text-sm font-medium">{currentFeedback.improved_sentence}</p>
           </div>
           <button onClick={onNextSentence} disabled={submitting}
             className="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl hover:bg-primary-700 disabled:opacity-40 transition">
-            {submitting ? 'שולח...' : currentEx + 1 >= partC.length ? 'עבור לראיון →' : `תרגיל הבא (${currentEx + 2}/${partC.length}) →`}
+            {submitting ? t('שולח...') : currentEx + 1 >= partC.length ? t('עבור לראיון →') : `${t('תרגיל הבא')} (${currentEx + 2}/${partC.length}) →`}
           </button>
         </>
       )}

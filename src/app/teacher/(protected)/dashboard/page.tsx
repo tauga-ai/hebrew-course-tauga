@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { t } from '@/lib/dev-i18n'
 
 interface TeacherStats {
   class_name: string
@@ -34,20 +35,20 @@ export default function TeacherDashboard() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">לוח בקרה - מורה</h1>
+        <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">{t('לוח בקרה - מורה')}</h1>
         <p className="text-sm text-fg/60">{className} · {email}</p>
       </div>
 
       <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-800 rounded-xl p-4 mb-6 flex items-center justify-between">
         <div>
-          <p className="text-xs text-primary-600 dark:text-primary-400 mb-1">קוד הצטרפות לכיתה, לשלוח לתלמידים חדשים</p>
+          <p className="text-xs text-primary-600 dark:text-primary-400 mb-1">{t('קוד הצטרפות לכיתה, לשלוח לתלמידים חדשים')}</p>
           <p className="text-2xl font-bold text-primary-800 dark:text-primary-300 tracking-widest">{joinCode}</p>
         </div>
         <button
           onClick={handleCopyCode}
           className="text-sm bg-surface border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-400 px-3 py-1.5 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-500/20"
         >
-          {copied ? 'הועתק!' : 'העתק'}
+          {copied ? t('הועתק!') : t('העתק')}
         </button>
       </div>
     </>

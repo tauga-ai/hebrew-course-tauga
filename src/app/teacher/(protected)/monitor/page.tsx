@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getClassAndStudents } from '@/lib/teacher-data'
 import { getClassroomActivitySnapshot } from '@/lib/classroom-monitor'
 import { LiveMonitorBoard } from '@/components/teacher/LiveMonitorBoard'
+import { t } from '@/lib/dev-i18n'
 
 /**
  * Server Component by design (not 'use client' like every other teacher
@@ -19,7 +20,7 @@ export default async function TeacherMonitorPage() {
   const db = createServiceClient()
   const classAndStudents = await getClassAndStudents(db, session.email)
   if (!classAndStudents) {
-    return <div className="p-6 text-center text-fg/60">אין כיתה משויכת לחשבון זה.</div>
+    return <div className="p-6 text-center text-fg/60">{t('אין כיתה משויכת לחשבון זה.')}</div>
   }
 
   const { cls, students, lessonGroup } = classAndStudents
@@ -28,8 +29,8 @@ export default async function TeacherMonitorPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-fg mb-1">ניטור בזמן אמת — תרגול בכיתה</h1>
-      <p className="text-sm text-fg/60 mb-4">{cls.name}{lessonGroup !== null ? ` · קבוצה ${lessonGroup}` : ''}</p>
+      <h1 className="text-xl font-bold text-fg mb-1">{t('ניטור בזמן אמת — תרגול בכיתה')}</h1>
+      <p className="text-sm text-fg/60 mb-4">{cls.name}{lessonGroup !== null ? ` · ${t('קבוצה')} ${lessonGroup}` : ''}</p>
       <LiveMonitorBoard classId={cls.id} lessonGroup={lessonGroup} roster={roster} initialSnapshot={initialSnapshot} />
     </div>
   )

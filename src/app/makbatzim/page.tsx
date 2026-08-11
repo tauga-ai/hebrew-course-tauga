@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
+import { t } from '@/lib/dev-i18n'
 
 interface SetMeta {
   key: string
@@ -29,7 +30,7 @@ export default function MakbatzimSetsPage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-md mx-auto w-full">
-      <PageHeader backHref="/menu" title="מקבצים פסיכוטכני" />
+      <PageHeader backHref="/menu" title={t('מקבצים פסיכוטכני')} />
 
       <CardGrid>
         {sets.map(s => (
@@ -37,7 +38,7 @@ export default function MakbatzimSetsPage() {
             key={s.key}
             icon="🧮"
             title={s.labelHe}
-            subtitle={`${s.count} שאלות`}
+            subtitle={`${s.count} ${t('שאלות')}`}
             accentColor="makbatzim"
             href={`/makbatzim/${s.key}`}
             onClick={() => router.push(`/makbatzim/${s.key}`)}
