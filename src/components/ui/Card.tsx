@@ -19,6 +19,7 @@ const ACCENT_STYLES = {
   'tzav-rishon': { badge: 'bg-accent-tzav-rishon/10 text-accent-tzav-rishon-fg', hoverBorder: 'hover:border-accent-tzav-rishon' },
   reading: { badge: 'bg-primary-600/10 text-primary-700 dark:text-primary-400', hoverBorder: 'hover:border-primary-400' },
   makbatzim: { badge: 'bg-accent-makbatzim/10 text-accent-makbatzim', hoverBorder: 'hover:border-accent-makbatzim' },
+  naale: { badge: 'bg-accent-naale/10 text-accent-naale', hoverBorder: 'hover:border-accent-naale' },
 } as const
 
 export type AccentColor = keyof typeof ACCENT_STYLES
