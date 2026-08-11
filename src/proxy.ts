@@ -10,6 +10,8 @@ const PUBLIC_PATHS = new Set([
   '/student/reset-password',
   '/student/complete-profile',
   '/teacher/login',
+  '/naale/login',
+  '/naale/not-authorized',
 ])
 
 /**
@@ -50,7 +52,11 @@ export async function proxy(request: NextRequest) {
   const isAuthExchange = pathname.startsWith('/auth/')
 
   if (!user && !isApiRoute && !isAuthExchange && !PUBLIC_PATHS.has(pathname)) {
-    const target = pathname.startsWith('/teacher') ? '/teacher/login' : '/student'
+    const target = pathname.startsWith('/teacher')
+      ? '/teacher/login'
+      : pathname.startsWith('/naale')
+        ? '/naale/login'
+        : '/student'
     return NextResponse.redirect(new URL(target, request.url))
   }
 
