@@ -9,6 +9,7 @@ import { useLanguage } from '@/components/tzav-rishon/LanguageContext'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
+import { t } from '@/lib/dev-i18n'
 
 interface TopicMeta {
   key: string
@@ -34,7 +35,7 @@ export default function TzavRishonTopicsPage() {
       <div lang={isAr ? 'ar' : 'he'} className="flex-1 p-4 max-w-md mx-auto w-full">
       <PageHeader
         backHref="/menu"
-        title="תרגול עצמי כמותי - עברית וערבית"
+        title={t('תרגול עצמי כמותי - עברית וערבית')}
         titleColorClass="text-accent-tzav-rishon-fg"
       />
 
@@ -47,7 +48,7 @@ export default function TzavRishonTopicsPage() {
               : 'bg-surface text-fg border-card-border hover:border-accent-tzav-rishon'
           }`}
         >
-          עברית
+          {t('עברית')}
         </button>
         <button
           onClick={() => setLanguage('ar')}
@@ -62,15 +63,15 @@ export default function TzavRishonTopicsPage() {
       </div>
 
       <CardGrid>
-        {topics.map(t => (
+        {topics.map(topic => (
           <Card
-            key={t.key}
+            key={topic.key}
             icon="🎯"
-            title={isAr ? t.labelAr : t.labelHe}
-            subtitle={isAr ? `${t.count} سؤال` : `${t.count} שאלות`}
+            title={isAr ? topic.labelAr : topic.labelHe}
+            subtitle={isAr ? `${topic.count} سؤال` : `${topic.count} ${t('שאלות')}`}
             accentColor="tzav-rishon"
-            href={`/tzav-rishon/${t.key}`}
-            onClick={() => router.push(`/tzav-rishon/${t.key}`)}
+            href={`/tzav-rishon/${topic.key}`}
+            onClick={() => router.push(`/tzav-rishon/${topic.key}`)}
             trailing={<span className="text-accent-tzav-rishon-fg text-xl">←</span>}
           />
         ))}

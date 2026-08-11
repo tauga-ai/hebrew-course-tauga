@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { t } from '@/lib/dev-i18n'
 
 export default function TeacherLogin() {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function TeacherLogin() {
     })
 
     if (authError) {
-      setError('שם משתמש או סיסמה שגויים')
+      setError(t('שם משתמש או סיסמה שגויים'))
       setLoading(false)
       return
     }
@@ -37,12 +38,12 @@ export default function TeacherLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">כניסת מורה</h1>
-        <p className="text-center text-fg/60 mb-8 text-sm">תרגול ניצנים</p>
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">{t('כניסת מורה')}</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">{t('תרגול ניצנים')}</p>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-fg/80 mb-1">כתובת מייל</label>
+            <label htmlFor="email" className="block text-sm font-medium text-fg/80 mb-1">{t('כתובת מייל')}</label>
             <input
               id="email"
               type="email"
@@ -55,7 +56,7 @@ export default function TeacherLogin() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-fg/80 mb-1">סיסמה</label>
+            <label htmlFor="password" className="block text-sm font-medium text-fg/80 mb-1">{t('סיסמה')}</label>
             <input
               id="password"
               type="password"
@@ -73,13 +74,13 @@ export default function TeacherLogin() {
             disabled={loading}
             className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
-            {loading ? 'מתחבר...' : 'כניסה'}
+            {loading ? t('מתחבר...') : t('כניסה')}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <a href="/student" className="text-xs text-fg/40 hover:text-fg/70">
-            כניסת תלמיד
+            {t('כניסת תלמיד')}
           </a>
         </div>
       </div>

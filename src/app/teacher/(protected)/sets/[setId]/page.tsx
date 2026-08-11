@@ -6,6 +6,7 @@ import { useTeacherAuth } from '@/lib/hooks/use-teacher-auth'
 import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 interface QuestionAnalytics {
   id: number
@@ -47,16 +48,16 @@ export default function SetAnalyticsPage() {
     <>
       <div className="bg-surface rounded-2xl border border-card-border p-5 mb-6">
         <h1 className="text-xl font-bold text-primary-700 dark:text-primary-400">
-          סט {data.practice_set.set_number}: ניתוח שאלות
+          {t('סט')} {data.practice_set.set_number}: {t('ניתוח שאלות')}
         </h1>
-        <p className="text-sm text-fg/60 mt-1">{data.practice_set.topic} · רמה {data.practice_set.difficulty_level} · {data.class_name}</p>
+        <p className="text-sm text-fg/60 mt-1">{data.practice_set.topic} · {t('רמה')} {data.practice_set.difficulty_level} · {data.class_name}</p>
         <div className="flex gap-6 mt-3 text-sm">
           <div>
-            <span className="text-fg/60">השלימו: </span>
+            <span className="text-fg/60">{t('השלימו')}: </span>
             <span className="font-bold text-fg">{data.total_submissions}</span>
           </div>
           <div>
-            <span className="text-fg/60">ממוצע: </span>
+            <span className="text-fg/60">{t('ממוצע')}: </span>
             <span className={`font-bold ${scoreColor(data.avg_score, { emptyClass: 'text-fg/40' })}`}>
               {data.avg_score === null ? '—' : `${Math.round(data.avg_score)}%`}
             </span>
@@ -75,7 +76,7 @@ export default function SetAnalyticsPage() {
               {/* Question header */}
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs font-semibold text-fg/40 uppercase tracking-wide">
-                  שאלה {qi + 1}
+                  {t('שאלה')} {qi + 1}
                 </span>
                 {total > 0 && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreColor(correctPct, {
@@ -85,11 +86,11 @@ export default function SetAnalyticsPage() {
                       bad: 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400',
                     },
                   })}`}>
-                    {correctPct}% ענו נכון ({q.correct_count}/{total})
+                    {correctPct}% {t('ענו נכון')} ({q.correct_count}/{total})
                   </span>
                 )}
                 {total === 0 && (
-                  <span className="text-xs text-fg/30">אין תשובות עדיין</span>
+                  <span className="text-xs text-fg/30">{t('אין תשובות עדיין')}</span>
                 )}
               </div>
 
@@ -122,13 +123,13 @@ export default function SetAnalyticsPage() {
                             ? 'bg-red-400 text-white'
                             : 'bg-gray-200 dark:bg-white/10 text-fg/60'
                         }`}>
-                          {HEBREW[i]}
+                          {t(HEBREW[i])}
                         </span>
                         <span className={`text-sm flex-1 ${isCorrect ? 'font-semibold text-green-800 dark:text-green-300' : 'text-fg/80'}`}>
                           {opt}
                         </span>
                         {isCorrect && (
-                          <span className="text-green-600 dark:text-green-400 text-xs font-bold">✓ נכון</span>
+                          <span className="text-green-600 dark:text-green-400 text-xs font-bold">✓ {t('נכון')}</span>
                         )}
                         <span className={`text-xs font-semibold ml-1 ${
                           isCorrect ? 'text-green-700 dark:text-green-400' : count > 0 ? 'text-red-500 dark:text-red-400' : 'text-fg/40'

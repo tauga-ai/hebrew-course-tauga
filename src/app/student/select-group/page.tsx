@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStudentSession } from '@/lib/hooks/use-student-session'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { t } from '@/lib/dev-i18n'
 
 const GROUPS = [1, 2, 3] as const
 
@@ -25,10 +26,10 @@ export default function SelectGroupPage() {
         body: JSON.stringify({ lesson_group: group }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       router.push('/menu')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'שגיאה בשמירת הכיתה')
+      setError(err instanceof Error ? err.message : t('שגיאה בשמירת הכיתה'))
       setSaving(null)
     }
   }
@@ -38,11 +39,11 @@ export default function SelectGroupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">איזו כיתה?</h1>
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">{t('איזו כיתה?')}</h1>
         <p className="text-center text-fg/60 mb-8 text-sm">
           {session?.full_name} · {session?.class_name}
           <br />
-          תבחר/י את הכיתה שהמורה הכריז/ה עליה עכשיו בשיעור
+          {t('תבחר/י את הכיתה שהמורה הכריז/ה עליה עכשיו בשיעור')}
         </p>
 
         <div className="grid grid-cols-3 gap-3">
@@ -53,7 +54,7 @@ export default function SelectGroupPage() {
               disabled={saving !== null}
               className="bg-primary-600 text-white font-bold text-xl py-6 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
             >
-              {saving === group ? '...' : `כיתה ${group}`}
+              {saving === group ? '...' : `${t('כיתה')} ${group}`}
             </button>
           ))}
         </div>

@@ -1,11 +1,13 @@
 'use client'
 
+import { t } from '@/lib/dev-i18n'
+
 interface LoadingSpinnerProps {
   label?: string
 }
 
 /** Full-page centered loading indicator — replaces the plain "טוען..." text repeated across pages. */
-export function LoadingSpinner({ label = 'טוען...' }: LoadingSpinnerProps) {
+export function LoadingSpinner({ label = t('טוען...') }: LoadingSpinnerProps) {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">

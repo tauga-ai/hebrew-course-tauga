@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { ClassroomActivityEvent } from '@/lib/realtime-broadcast'
 import { classroomMonitorTopic, subscribeToClassroomMonitor, type MonitorConnectionState } from '@/lib/realtime-monitor-client'
+import { t } from '@/lib/dev-i18n'
 
 export interface MonitorRosterStudent {
   id: string
@@ -20,11 +21,11 @@ export interface LiveMonitorBoardProps {
 
 function timeAgo(at: number): string {
   const seconds = Math.max(0, Math.floor((Date.now() - at) / 1000))
-  if (seconds < 60) return 'עכשיו'
+  if (seconds < 60) return t('עכשיו')
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `לפני ${minutes} דק׳`
+  if (minutes < 60) return `${t('לפני')} ${minutes} ${t('דק׳')}`
   const hours = Math.floor(minutes / 60)
-  return `לפני ${hours} שעות`
+  return `${t('לפני')} ${hours} ${t('שעות')}`
 }
 
 /**
@@ -100,9 +101,9 @@ export function LiveMonitorBoard({ classId, lessonGroup, roster, initialSnapshot
   return (
     <div>
       <div className="mb-3 text-sm">
-        {connection === 'connected' && <span className="text-green-600 dark:text-green-400">🟢 חי</span>}
-        {connection === 'connecting' && <span className="text-yellow-600 dark:text-yellow-400">🟡 מתחבר...</span>}
-        {connection === 'disconnected' && <span className="text-red-600 dark:text-red-400">🔴 מנותק — הנתונים עלולים להיות לא מעודכנים</span>}
+        {connection === 'connected' && <span className="text-green-600 dark:text-green-400">{t('🟢 חי')}</span>}
+        {connection === 'connecting' && <span className="text-yellow-600 dark:text-yellow-400">{t('🟡 מתחבר...')}</span>}
+        {connection === 'disconnected' && <span className="text-red-600 dark:text-red-400">{t('🔴 מנותק — הנתונים עלולים להיות לא מעודכנים')}</span>}
       </div>
       <div className="space-y-2">
         {sorted.map(student => {
@@ -116,7 +117,7 @@ export function LiveMonitorBoard({ classId, lessonGroup, roster, initialSnapshot
                   <span className="block text-xs text-fg/40">{timeAgo(event.at)}</span>
                 </span>
               ) : (
-                <span className="text-sm text-fg/30">אין פעילות עדיין</span>
+                <span className="text-sm text-fg/30">{t('אין פעילות עדיין')}</span>
               )}
             </div>
           )

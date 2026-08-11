@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { t } from '@/lib/dev-i18n'
 
 const LANGUAGES = ['ערבית', 'רוסית'] as const
 
@@ -56,10 +57,10 @@ function CompleteProfileForm() {
         body: JSON.stringify({ full_name: fullName.trim(), class_code: classCode.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       router.push('/menu')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'שגיאה ביצירת הפרופיל')
+      setError(err instanceof Error ? err.message : t('שגיאה ביצירת הפרופיל'))
     } finally {
       setLoading(false)
     }
@@ -70,13 +71,13 @@ function CompleteProfileForm() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
-        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">כמעט סיימנו</h1>
-        <p className="text-center text-fg/60 mb-8 text-sm">רק עוד שני פרטים לפני שמתחילים</p>
+        <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">{t('כמעט סיימנו')}</h1>
+        <p className="text-center text-fg/60 mb-8 text-sm">{t('רק עוד שני פרטים לפני שמתחילים')}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-fg/80 mb-1">
-              שם מלא בעברית, כפי שהמורה מכיר/ה אותך
+              {t('שם מלא בעברית, כפי שהמורה מכיר/ה אותך')}
             </label>
             <input
               id="fullName"
@@ -84,13 +85,13 @@ function CompleteProfileForm() {
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               className="w-full border border-card-border rounded-lg px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface text-fg"
-              placeholder="שם מלא"
+              placeholder={t('שם מלא')}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-fg/80 mb-1">באיזו שפה את/ה לומד/ת?</label>
+            <label className="block text-sm font-medium text-fg/80 mb-1">{t('באיזו שפה את/ה לומד/ת?')}</label>
             <div className="grid grid-cols-2 gap-3">
               {LANGUAGES.map(lang => (
                 <button
@@ -103,7 +104,7 @@ function CompleteProfileForm() {
                       : 'bg-surface text-fg/80 border-card-border hover:border-primary-400'
                   }`}
                 >
-                  {lang}
+                  {t(lang)}
                 </button>
               ))}
             </div>
@@ -116,7 +117,7 @@ function CompleteProfileForm() {
             disabled={loading || !classCode}
             className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition disabled:opacity-50"
           >
-            {loading ? 'שומר/ת...' : 'המשך'}
+            {loading ? t('שומר/ת...') : t('המשך')}
           </button>
         </form>
       </div>

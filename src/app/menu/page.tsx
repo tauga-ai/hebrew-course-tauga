@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card, type AccentColor } from '@/components/ui/Card'
+import { t } from '@/lib/dev-i18n'
 
 interface MenuCard {
   icon: string
@@ -40,36 +41,36 @@ export default function Menu() {
   const classroomCards: MenuCard[] = [
     {
       icon: '🏆',
-      title: 'סימולציה עברית',
-      subtitle: 'חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון',
+      title: t('סימולציה עברית'),
+      subtitle: t('חלק א+ב: הבנת הנקרא, חלק ג: משפטים, חלק ד: ראיון'),
       accentColor: 'simulation',
       href: '/simulation',
     },
     {
       icon: '🧮',
-      title: 'סימולציה דפ״ר',
-      subtitle: '40 שאלות',
+      title: t('סימולציה דפ״ר'),
+      subtitle: t('40 שאלות'),
       accentColor: 'makbatzim',
       href: '/makbatzim/dapar-simulation',
     },
     {
       icon: '✍️',
-      title: 'בניית משפטים',
-      subtitle: '9 סטים, ציון ושיפור',
+      title: t('בניית משפטים'),
+      subtitle: t('9 סטים, ציון ושיפור'),
       accentColor: 'sentence',
       href: '/sentence',
     },
     {
       icon: '📖',
-      title: 'תרגול הבנת הנקרא',
-      subtitle: `${completedCount}/${sets.length} סטים הושלמו`,
+      title: t('תרגול הבנת הנקרא'),
+      subtitle: `${completedCount}/${sets.length} ${t('סטים הושלמו')}`,
       accentColor: 'reading',
       href: '/reading-sets',
     },
     {
       icon: '🧮',
-      title: 'מקבצים פסיכוטכני',
-      subtitle: '5 מקבצי שאלות',
+      title: t('מקבצים פסיכוטכני'),
+      subtitle: t('5 מקבצי שאלות'),
       accentColor: 'makbatzim',
       href: '/makbatzim',
     },
@@ -78,29 +79,29 @@ export default function Menu() {
   const homeCards: MenuCard[] = [
     {
       icon: '🎯',
-      title: 'תרגול עצמי כמותי - עברית וערבית',
-      subtitle: '300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות',
+      title: t('תרגול עצמי כמותי - עברית וערבית'),
+      subtitle: t('300 שאלות: אחוזים, ממוצעים, תנועה, הסתברות'),
       accentColor: 'tzav-rishon',
       href: '/tzav-rishon',
     },
     {
       icon: '🗣️',
-      title: 'ראיון אישי',
-      subtitle: 'סימולציית AI',
+      title: t('ראיון אישי'),
+      subtitle: t('סימולציית AI'),
       accentColor: 'interview',
       href: '/interview',
     },
     {
       icon: '🤖',
-      title: 'הבנת הנקרא',
-      subtitle: 'תרגול עם AI',
+      title: t('הבנת הנקרא'),
+      subtitle: t('תרגול עם AI'),
       accentColor: 'ai-reading',
       href: '/ai-practice/reading',
     },
     {
       icon: '🤖',
-      title: 'בניית משפט',
-      subtitle: 'תרגול עם AI',
+      title: t('בניית משפט'),
+      subtitle: t('תרגול עם AI'),
       accentColor: 'ai-sentence',
       href: '/ai-practice/sentence',
     },
@@ -113,21 +114,21 @@ export default function Menu() {
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mb-6 mt-4">
           <div>
-            <h1 className="text-xl font-bold text-fg">שלום, {session?.full_name}</h1>
+            <h1 className="text-xl font-bold text-fg">{t('שלום')}, {session?.full_name}</h1>
             <p className="text-sm text-fg/60">{session?.class_name}</p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/student/personal-details')} className="text-sm text-fg/50 hover:text-fg">
-              פרטים אישיים
+              {t('פרטים אישיים')}
             </button>
             <button onClick={handleLogout} className="text-sm text-fg/50 hover:text-fg">
-              יציאה
+              {t('יציאה')}
             </button>
           </div>
         </div>
 
         <section>
-          <h2 className="text-base font-bold text-fg mb-3">תרגול בכיתה</h2>
+          <h2 className="text-base font-bold text-fg mb-3">{t('תרגול בכיתה')}</h2>
           <CardGrid>
             {classroomCards.map(c => (
               <Card
@@ -144,7 +145,7 @@ export default function Menu() {
         </section>
 
         <section className="mt-8">
-          <h2 className="text-base font-bold text-fg mb-3">תרגול בבית</h2>
+          <h2 className="text-base font-bold text-fg mb-3">{t('תרגול בבית')}</h2>
           <CardGrid>
             {homeCards.map(c => (
               <Card

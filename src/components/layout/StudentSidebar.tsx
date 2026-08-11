@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { t } from '@/lib/dev-i18n'
 
 interface NavItem {
   href: string
@@ -77,12 +78,12 @@ export function StudentSidebar() {
   return (
     <aside className={`w-full ${collapsed ? 'md:w-14' : 'md:w-60'} shrink-0 md:h-screen md:sticky md:top-0 bg-surface border-b md:border-b-0 md:border-l border-card-border p-4 flex flex-row md:flex-col gap-4 overflow-x-auto md:overflow-visible transition-all`}>
       <div className="flex items-center justify-between shrink-0">
-        <span className={`font-bold text-fg whitespace-nowrap ${hideOnCollapse}`}>תרגול ניצנים</span>
+        <span className={`font-bold text-fg whitespace-nowrap ${hideOnCollapse}`}>{t('תרגול ניצנים')}</span>
         <span className={hideOnCollapse}><ThemeToggle /></span>
         <button
           type="button"
           onClick={toggleCollapsed}
-          title={collapsed ? 'הרחב סרגל' : 'כווץ סרגל'}
+          title={t(collapsed ? 'הרחב סרגל' : 'כווץ סרגל')}
           className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-fg/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-fg/80 transition shrink-0"
         >
           {collapsed ? '▶' : '◀'}
@@ -95,12 +96,12 @@ export function StudentSidebar() {
             in sequence with no visual split (hidden removes them from the
             flex-row flow entirely, so the mobile gap is unaffected). Also
             hidden when collapsed, alongside the nav item labels below. */}
-        <span className={`hidden ${collapsed ? '' : 'md:block'} text-xs font-semibold text-fg/40 px-3 pt-1 pb-1`}>תרגול בכיתה</span>
+        <span className={`hidden ${collapsed ? '' : 'md:block'} text-xs font-semibold text-fg/40 px-3 pt-1 pb-1`}>{t('תרגול בכיתה')}</span>
         {CLASSROOM_ITEMS.map(item => (
           <Link
             key={item.href}
             href={item.href}
-            title={item.label}
+            title={t(item.label)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap md:whitespace-normal transition ${
               isActive(item, pathname)
                 ? 'bg-highlight/10 text-highlight'
@@ -108,15 +109,15 @@ export function StudentSidebar() {
             }`}
           >
             <span>{item.icon}</span>
-            <span className={hideOnCollapse}>{item.label}</span>
+            <span className={hideOnCollapse}>{t(item.label)}</span>
           </Link>
         ))}
-        <span className={`hidden ${collapsed ? '' : 'md:block'} text-xs font-semibold text-fg/40 px-3 pt-3 pb-1 md:border-t md:border-card-border md:mt-2`}>תרגול בבית</span>
+        <span className={`hidden ${collapsed ? '' : 'md:block'} text-xs font-semibold text-fg/40 px-3 pt-3 pb-1 md:border-t md:border-card-border md:mt-2`}>{t('תרגול בבית')}</span>
         {HOME_ITEMS.map(item => (
           <Link
             key={item.href}
             href={item.href}
-            title={item.label}
+            title={t(item.label)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap md:whitespace-normal transition ${
               isActive(item, pathname)
                 ? 'bg-highlight/10 text-highlight'
@@ -124,13 +125,13 @@ export function StudentSidebar() {
             }`}
           >
             <span>{item.icon}</span>
-            <span className={hideOnCollapse}>{item.label}</span>
+            <span className={hideOnCollapse}>{t(item.label)}</span>
           </Link>
         ))}
         <span className={`hidden ${collapsed ? '' : 'md:block'} md:border-t md:border-card-border md:mt-2 md:pt-2`} />
         <Link
           href={PROGRESS_ITEM.href}
-          title={PROGRESS_ITEM.label}
+          title={t(PROGRESS_ITEM.label)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${
             isActive(PROGRESS_ITEM, pathname)
               ? 'bg-highlight/10 text-highlight'
@@ -138,7 +139,7 @@ export function StudentSidebar() {
           }`}
         >
           <span>{PROGRESS_ITEM.icon}</span>
-          <span className={hideOnCollapse}>{PROGRESS_ITEM.label}</span>
+          <span className={hideOnCollapse}>{t(PROGRESS_ITEM.label)}</span>
         </Link>
       </nav>
     </aside>

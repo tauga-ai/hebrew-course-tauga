@@ -11,6 +11,7 @@ import { StudentSidebar } from '@/components/layout/StudentSidebar'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 import { scoreColor } from '@/lib/score-color'
+import { t } from '@/lib/dev-i18n'
 
 export default function ReadingSetsPage() {
   const router = useRouter()
@@ -41,7 +42,7 @@ export default function ReadingSetsPage() {
     <div className="min-h-screen md:flex">
       <StudentSidebar />
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-      <PageHeader backHref="/menu" title="תרגול הבנת הנקרא" right={session?.full_name} />
+      <PageHeader backHref="/menu" title={t('תרגול הבנת הנקרא')} right={session?.full_name} />
 
       {availableDifficulties.length > 1 && (
         <div className="flex flex-wrap gap-2 mb-5">
@@ -52,7 +53,7 @@ export default function ReadingSetsPage() {
               difficultyFilter === null ? 'bg-highlight text-white' : 'bg-surface border border-card-border text-fg/70'
             }`}
           >
-            הכל
+            {t('הכל')}
           </button>
           {availableDifficulties.map(level => (
             <button
@@ -63,7 +64,7 @@ export default function ReadingSetsPage() {
                 difficultyFilter === level ? 'bg-highlight text-white' : 'bg-surface border border-card-border text-fg/70'
               }`}
             >
-              רמה {level}
+              {t('רמה')} {level}
             </button>
           ))}
         </div>
@@ -77,8 +78,8 @@ export default function ReadingSetsPage() {
             <Card
               key={set.id}
               icon="📖"
-              title={`סט ${set.set_number}`}
-              subtitle={`${set.topic}, רמה ${set.difficulty_level}`}
+              title={`${t('סט')} ${set.set_number}`}
+              subtitle={`${set.topic}, ${t('רמה')} ${set.difficulty_level}`}
               accentColor="reading"
               disabled={done}
               href={`/practice/${set.id}`}
@@ -87,7 +88,7 @@ export default function ReadingSetsPage() {
                 done ? (
                   <span className="flex flex-col items-end">
                     <span className={`font-bold text-sm ${scoreColor(sub.score_percentage)}`}>{Math.round(sub.score_percentage)}%</span>
-                    <span className="text-xs text-fg/40">ציון</span>
+                    <span className="text-xs text-fg/40">{t('ציון')}</span>
                   </span>
                 ) : (
                   <span className="text-primary-500 text-sm">←</span>

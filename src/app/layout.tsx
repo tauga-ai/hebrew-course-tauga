@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { DevLangProvider } from "@/components/dev/DevLangProvider";
+import { DevLangToggle } from "@/components/dev/DevLangToggle";
+import { t, isDev } from "@/lib/dev-i18n";
 import "./globals.css";
 
 const heebo = Heebo({
@@ -9,8 +12,8 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "תרגול ניצנים",
-  description: "אתר תרגול הבנת הנקרא לתוכנית ניצנים",
+  title: t("תרגול ניצנים"),
+  description: t("אתר תרגול הבנת הנקרא לתוכנית ניצנים"),
 };
 
 /**
@@ -24,14 +27,28 @@ export const metadata: Metadata = {
  */
 const THEME_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )theme=(dark|light)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':null);if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`;
 
+/**
+ * Dev-only. Mirrors THEME_SCRIPT: reads the toggle cookie synchronously
+ * before paint and corrects lang/dir if it disagrees with the static
+ * isDev-based default below — avoids the flash a server cookies() read
+ * would otherwise require (that's why THEME_SCRIPT itself avoids a
+ * server-side cookies() read in this layout: it would force every route in
+ * the app into dynamic rendering, losing static generation).
+ */
+const DEV_LANG_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )dev-lang=(he|en)/);if(!m)return;var lang=m[1];document.documentElement.lang=lang;document.documentElement.dir=lang==='he'?'rtl':'ltr'}catch(e){}})()`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang={isDev ? "en" : "he"} dir={isDev ? "ltr" : "rtl"} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {isDev && <script dangerouslySetInnerHTML={{ __html: DEV_LANG_SCRIPT }} />}
       </head>
       <body className={`${heebo.variable} min-h-screen font-sans`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {isDev ? <DevLangProvider>{children}</DevLangProvider> : children}
+        </ThemeProvider>
+        {isDev && <DevLangToggle />}
       </body>
     </html>
   );
