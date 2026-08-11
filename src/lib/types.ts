@@ -57,3 +57,57 @@ export interface StudentSession {
   has_lesson_groups: boolean
   lesson_group: number | null
 }
+
+export type NaaleRole = 'student' | 'staff'
+
+export interface NaaleRosterEntry {
+  email: string
+  role: NaaleRole
+  created_at: string
+}
+
+export interface NaaleQuestion {
+  id: string
+  topic: string
+  difficulty: number
+  prompt: string
+  answer_kind: 'mcq' | 'text'
+  options: string[] | null
+  correct_answer: string
+  source_row: number | null
+  created_at: string
+}
+
+export interface NaaleTopicLevel {
+  id: string
+  student_id: string
+  topic: string
+  level: number
+  correct_streak: number
+  wrong_streak: number
+  answered_count: number
+  updated_at: string
+}
+
+export interface NaaleSession {
+  id: string
+  student_id: string
+  kind: 'placement' | 'practice'
+  started_at: string
+  deadline_at: string
+  ended_at: string | null
+  answered_count: number
+  completed: boolean
+}
+
+export interface NaaleAnswer {
+  id: string
+  session_id: string
+  student_id: string
+  question_id: string
+  topic: string
+  difficulty: number
+  level_at_answer: number
+  is_correct: boolean
+  answered_at: string
+}
