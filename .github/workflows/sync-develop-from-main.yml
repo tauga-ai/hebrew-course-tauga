@@ -1,0 +1,30 @@
+name: Sync develop from main
+
+# Keeps develop from drifting behind main. Needed because not every change
+# lands on main via a develop -> main promotion — a hotfix or an admin merge
+# can go straight to main, and without this, develop would silently miss it
+# until someone remembers to merge main back in by hand.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Merge main into develop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge origin/main --no-edit
+          git push origin develop
