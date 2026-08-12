@@ -437,5 +437,9 @@
   "כמה שאלות כדי שנדע מאיפה להתחיל": "A few questions so we know where to start you",
   "לפני שמתחילים לתרגל, נשאל אותך שאלה אחת בכל נושא. אין ציון ואין לחץ זמן — זה רק כדי להתאים את הרמה שלך.": "Before you start practicing, we'll ask you one question per topic. There's no grade and no time pressure — it's just to match your level.",
   "בואו נתחיל": "Let's start",
-  "מעולה! עכשיו נדע מאיפה להתחיל": "Great! Now we'll know where to start you"
+  "מעולה! עכשיו נדע מאיפה להתחיל": "Great! Now we'll know where to start you",
+  "תרגילים שנענו": "Exercises answered",
+  "תרגולים שהושלמו": "Completed practice sessions",
+  "לא התחיל": "Not started",
+  "שגיאה בטעינת המידע": "Error loading data"
 }
