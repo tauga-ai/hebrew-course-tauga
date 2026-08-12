@@ -1,0 +1,356 @@
+'use client'
+
+import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { PageHeader } from '@/components/PageHeader'
+import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
+import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
+import { t, isDev } from '@/lib/dev-i18n'
+import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
+
+interface ServedQuestion {
+  id: string
+  topic: string
+  difficulty: number
+  prompt: string
+  answer_kind: 'mcq' | 'text'
+  options: string[] | null
+  // Dev-only: present only when NODE_ENV === development (see the /next
+  // route). Used purely to render the optional QA hint below — never used
+  // for grading, which always happens server-side via /answer regardless.
+  correct_answer?: string
+}
+
+interface AnswerResult {
+  is_correct: boolean
+  correct_answer: string
+  level: number
+  level_changed: boolean
+}
+
+interface EndSummary {
+  answered_count: number
+  completed: boolean
+  min_answers: number
+}
+
+type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
+
+// Derived, not stored — 'done' whenever a doneReason exists, 'feedback' once
+// an answer's result has come back, 'question' once a question has loaded,
+// and 'loading' otherwise. Avoids a second source of truth alongside the
+// state that already determines each of these.
+type Phase = 'loading' | 'question' | 'feedback' | 'done'
+
+// Dev-only console trace of the session flow — easier to follow along while
+// QA-testing than reading Hebrew UI text. Never runs in production; isDev is
+// a NODE_ENV check, so this whole call is a no-op there regardless of any
+// client state.
+function qaLog(label: string, data?: unknown) {
+  if (!isDev) return
+  if (data === undefined) console.log(`[naale-qa] ${label}`)
+  else console.log(`[naale-qa] ${label}`, data)
+}
+
+function SessionRunner() {
+  const router = useRouter()
+  const sessionId = useSearchParams().get('session_id')
+
+  const [deadlineMs, setDeadlineMs] = useState<number | null>(null)
+  const [question, setQuestion] = useState<ServedQuestion | null>(null)
+  const [selected, setSelected] = useState<string>('')
+  const [result, setResult] = useState<AnswerResult | null>(null)
+  const [doneReason, setDoneReason] = useState<DoneReason | null>(null)
+  const [summary, setSummary] = useState<EndSummary | null>(null)
+  const [answeredCount, setAnsweredCount] = useState(0)
+  const [correctCount, setCorrectCount] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
+
+  const remaining = useCountdown(deadlineMs)
+
+  // Closes the session out server-side (safe to call more than once — /end is
+  // idempotent) and stores its verdict for the summary screen, so "completed"
+  // always reflects the server's own computation rather than a client guess.
+  // setDoneReason happens in the `finally`, after the await — never
+  // synchronously in the caller's effect body, which this repo's stricter
+  // react-hooks/set-state-in-effect lint rule disallows (see the matching
+  // note in use-countdown.ts's Phase 1).
+  const finishSession = useCallback(async (reason: DoneReason) => {
+    if (!sessionId) return
+    try {
+      const res = await fetch('/api/naale/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSummary(data)
+        qaLog(`session ended (${reason})`, data)
+      }
+    } catch {
+      // Best-effort — the summary falls back to the locally-tracked counts.
+    } finally {
+      setDoneReason(reason)
+    }
+  }, [sessionId])
+
+  const loadNext = useCallback(async () => {
+    if (!sessionId) return
+    setResult(null)
+    setSelected('')
+    try {
+      const res = await fetch(`/api/naale/session/next?session_id=${sessionId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (data.done) {
+        qaLog(`/next: done (${data.reason})`)
+        finishSession(data.reason as DoneReason)
+        setQuestion(null)
+        return
+      }
+      qaLog('/next: question served', data.question)
+      setQuestion(data.question)
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'שגיאה בטעינת השאלה')
+    }
+  }, [sessionId, finishSession])
+
+  // Resume from the server's deadline — never a fresh 30 minutes on reload.
+  useEffect(() => {
+    if (!sessionId) { router.replace('/naale'); return }
+    let cancelled = false
+    async function boot() {
+      const res = await fetch(`/api/naale/session/status?session_id=${sessionId}`)
+      if (cancelled) return
+      if (!res.ok) { router.replace('/naale'); return }
+      const data = await res.json()
+      if (cancelled) return
+      qaLog('/status on boot', data)
+      setAnsweredCount(data.answered_count)
+      setDeadlineMs(new Date(data.deadline_at).getTime())
+      if (data.ended || data.expired) { finishSession('time_up'); return }
+      loadNext()
+    }
+    boot()
+    return () => { cancelled = true }
+    // finishSession is stable (only depends on sessionId, same as loadNext),
+    // so this effect still only re-fires when sessionId itself changes.
+  }, [sessionId, router, loadNext, finishSession])
+
+  // The client clock is display-only; the server independently refuses late
+  // answers (ticket 8) and stops serving questions (ticket 7). When it hits
+  // zero we stop asking and close the session out ourselves too, so the
+  // summary is ready without waiting on a stray answer/next call to 409/done.
+  // Deferred via setTimeout rather than called directly: this repo's lint
+  // rule treats a same-tick call to a state-setting function as "synchronous
+  // within the effect" regardless of that function's own internal await —
+  // a genuine callback (timer/promise) boundary is what it wants instead.
+  useEffect(() => {
+    if (remaining === 0 && doneReason === null) {
+      qaLog('countdown reached zero — ending session')
+      const id = setTimeout(() => finishSession('time_up'), 0)
+      return () => clearTimeout(id)
+    }
+  }, [remaining, doneReason, finishSession])
+
+  async function submitAnswer() {
+    if (!question || submitting || selected === '') return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/naale/session/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer: selected }),
+      })
+      const data = await res.json()
+      // 409 = the server already ended the session (its clock is authoritative).
+      if (res.status === 409) { qaLog('/answer: 409, session already ended'); finishSession('time_up'); return }
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      qaLog('/answer: result', data)
+      setResult(data)
+      setAnsweredCount(c => c + 1)
+      if (data.is_correct) setCorrectCount(c => c + 1)
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen p-4 max-w-md mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-red-500 dark:text-red-400 text-sm">{loadError}</p>
+        <button
+          onClick={() => { setLoadError(''); loadNext() }}
+          className="px-4 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5"
+        >
+          {t('נסה שוב')}
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'loading') return <LoadingSpinner />
+
+  if (phase === 'done') {
+    const shownAnswered = summary?.answered_count ?? answeredCount
+
+    return (
+      <div className="min-h-screen p-4 max-w-md mx-auto w-full">
+        <PageHeader backHref="/naale" title={t('תרגול')} />
+        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
+          {doneReason === 'no_topics' ? (
+            <>
+              <div className="text-4xl mb-2">⚠️</div>
+              <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-4">
+                {t('אין תרגילים זמינים כרגע. פנה/י למדריך/ה.')}
+              </h2>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl mb-2">{doneReason === 'bank_exhausted' ? '🎉' : '⏰'}</div>
+              <h2 className="text-lg font-bold text-fg mb-1">
+                {doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום') : t('הזמן נגמר!')}
+              </h2>
+              <p className="text-fg/70 mb-2">
+                {t('ענית על')} <LtrIsolate>{shownAnswered}</LtrIsolate> {t('תרגילים')}, <LtrIsolate>{correctCount}</LtrIsolate> {t('נכונות')}
+              </p>
+              {/* No total/percentage — the session ends on a clock, not on
+                  finishing a fixed set, so there's no denominator to show. */}
+              {summary && (
+                <p className={`text-sm mb-4 ${summary.completed ? 'text-green-700 dark:text-green-400' : 'text-fg/60'}`}>
+                  {summary.completed
+                    ? t('התרגול נחשב כהושלם')
+                    : `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`}
+                </p>
+              )}
+              {/* Room left here for ticket 14's XP/coins/streak numbers. */}
+            </>
+          )}
+          <button
+            onClick={() => router.push('/naale')}
+            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+          >
+            {t('לדף הבית')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // phase is 'question' or 'feedback' from here — question is guaranteed non-null.
+  const q = question!
+
+  return (
+    <div className="min-h-screen p-4 max-w-md mx-auto w-full">
+      <PageHeader
+        backHref="/naale"
+        title={t('תרגול')}
+        right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
+      />
+
+      {/* Count, not a percentage bar — there is no total to divide by; the
+          session ends on the clock, not on exhausting a fixed set. */}
+      <p className="text-xs text-fg/60 mb-4">
+        {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+      </p>
+
+      <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+
+      {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
+          💡 QA hint (dev-only, never shown in production): {q.correct_answer}
+        </p>
+      )}
+
+      {q.answer_kind === 'mcq' && q.options ? (
+        <div className="space-y-3 mb-4">
+          {q.options.map(option => {
+            const isSelected = selected === option
+            const isTheCorrectOne = result?.correct_answer === option
+            // Pre-answer, dev-only QA aid: colors just the option's text green,
+            // using the field /next only ever includes in development. Text
+            // only, no border/background, so it doesn't look like a real
+            // answered-state and can't be confused with the post-answer
+            // feedback below.
+            const isHintedCorrect = !result && isDev && showHint && q.correct_answer === option
+
+            let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
+            if (result) {
+              if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+              else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+              else stateClass = 'bg-surface border-card-border text-fg/60'
+            } else if (isSelected) {
+              stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+            }
+
+            return (
+              <button
+                key={option}
+                onClick={() => !result && setSelected(option)}
+                disabled={!!result || submitting}
+                className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
+              >
+                <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                {result && isTheCorrectOne && (
+                  <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
+                )}
+                {result && isSelected && !isTheCorrectOne && (
+                  <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="mb-4">
+          <textarea
+            value={selected}
+            onChange={e => !result && setSelected(e.target.value)}
+            disabled={!!result || submitting}
+            placeholder={t('כתוב את תשובתך כאן...')}
+            rows={5}
+            className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
+          />
+          {result && (
+            <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
+              {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!result ? (
+        <button
+          onClick={submitAnswer}
+          disabled={submitting || selected === ''}
+          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+        >
+          {t('שלח תשובה')}
+        </button>
+      ) : (
+        <button
+          onClick={loadNext}
+          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+        >
+          {t('השאלה הבאה')}
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function NaaleSessionPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <SessionRunner />
+    </Suspense>
+  )
+}

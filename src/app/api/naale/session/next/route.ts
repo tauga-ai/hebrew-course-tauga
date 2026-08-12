@@ -11,7 +11,16 @@ type PublicQuestion = {
   prompt: string
   answer_kind: string
   options: string[] | null
+  // Present in the DB row always, but deliberately stripped from `served`
+  // below unless isDev — see that assignment for why.
+  correct_answer?: string
 }
+
+// Dev-only QA hint (src/components/dev/DevPanel.tsx lets a tester toggle
+// whether to actually display it). Gated on NODE_ENV alone, never on
+// anything client-supplied — a cookie/header can be forged, an environment
+// variable set by the deploy platform cannot.
+const isDev = process.env.NODE_ENV === 'development'
 
 /**
  * The next question for an in-progress session.
@@ -23,8 +32,10 @@ type PublicQuestion = {
  * excluded from rotation — the spec is explicit that repeating a question is
  * not an acceptable fallback.
  *
- * The response deliberately omits correct_answer: grading is server-side
+ * The response omits correct_answer in production: grading is server-side
  * only (see the answer route), so the answer must never reach the browser.
+ * In development only, it's included so the dev QA hint toggle has
+ * something to show — see SELECT_FIELDS above.
  */
 export async function GET(req: NextRequest) {
   const session = await getNaaleSession()
@@ -46,29 +57,37 @@ export async function GET(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const { data: levels } = await db
-    .from('naale_topic_levels')
-    .select('topic, level')
-    .eq('student_id', session.student.id)
+  // The whole bank fetched ONCE and filtered in memory below, rather than a
+  // separate query per (topic, difficulty) tried — with ~164 rows total this
+  // is trivial to hold in memory, and it turns what could be 15+ sequential
+  // round-trips (3 topics x up to 5 levels each) into one. Measured on the
+  // remote project: each round-trip here runs 250ms-1000ms, so the original
+  // per-level-query version could take 3+ seconds for a single /next call.
+  // These three queries are independent of each other, so they run in
+  // parallel too.
+  const [{ data: levels }, { data: bank }, { data: answered }] = await Promise.all([
+    db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
+    db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer'),
+    // Every question this student has ever answered, in any session —
+    // "unseen" is lifetime-scoped, not session-scoped.
+    db.from('naale_answers').select('question_id, topic, answered_at').eq('student_id', session.student.id).order('answered_at', { ascending: false }),
+  ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
+
+  const bankByTopic = new Map<string, PublicQuestion[]>()
+  for (const row of bank ?? []) {
+    if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
+    bankByTopic.get(row.topic)!.push(row)
+  }
+  const allTopics = [...bankByTopic.keys()]
 
   // A topic the student has no level row for yet (added to the bank after
   // they were placed, or before placement ever ran) starts at MIN_LEVEL
   // rather than being invisible to rotation.
-  const { data: bankTopics } = await db.from('naale_questions').select('topic')
-  const allTopics = [...new Set((bankTopics ?? []).map(r => r.topic))]
   for (const topic of allTopics) {
     if (!levelByTopic.has(topic)) levelByTopic.set(topic, MIN_LEVEL)
   }
-
-  // Every question this student has ever answered, in any session — "unseen"
-  // is lifetime-scoped, not session-scoped.
-  const { data: answered } = await db
-    .from('naale_answers')
-    .select('question_id, topic, answered_at')
-    .eq('student_id', session.student.id)
-    .order('answered_at', { ascending: false })
 
   const seenIds = new Set((answered ?? []).map(a => a.question_id))
   const prevTopic = answered?.[0]?.topic ?? null
@@ -84,19 +103,17 @@ export async function GET(req: NextRequest) {
     if (!topic) break
 
     const level = levelByTopic.get(topic) ?? MIN_LEVEL
+    const topicQuestions = bankByTopic.get(topic) ?? []
     let served: PublicQuestion | null = null
 
     for (const difficulty of difficultyLadder(level)) {
-      // NOTE: correct_answer is deliberately NOT selected.
-      const { data: pool } = await db
-        .from('naale_questions')
-        .select('id, topic, difficulty, prompt, answer_kind, options')
-        .eq('topic', topic)
-        .eq('difficulty', difficulty)
-
-      const unseen = (pool ?? []).filter(q => !seenIds.has(q.id))
+      const unseen = topicQuestions.filter(q => q.difficulty === difficulty && !seenIds.has(q.id))
       if (unseen.length > 0) {
-        served = unseen[Math.floor(Math.random() * unseen.length)] as PublicQuestion
+        const picked = unseen[Math.floor(Math.random() * unseen.length)]
+        // Stripped in production: JSON.stringify omits an explicit `undefined`
+        // value, so the key is genuinely absent from the response, not just
+        // empty. isDev is a NODE_ENV check, never client-controlled.
+        served = isDev ? picked : { ...picked, correct_answer: undefined }
         break
       }
     }

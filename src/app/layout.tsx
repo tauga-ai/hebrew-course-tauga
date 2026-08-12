@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { DevLangProvider } from "@/components/dev/DevLangProvider";
-import { DevLangToggle } from "@/components/dev/DevLangToggle";
+import { DevPanel } from "@/components/dev/DevPanel";
 import { t, isDev } from "@/lib/dev-i18n";
 import "./globals.css";
 
@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           {isDev ? <DevLangProvider>{children}</DevLangProvider> : children}
         </ThemeProvider>
-        {isDev && <DevLangToggle />}
+        {isDev && <DevPanel />}
       </body>
     </html>
   );
