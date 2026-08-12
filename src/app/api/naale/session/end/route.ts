@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
   const [{ data: sessionAnswers }, { data: allSessions }] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean }[] })
-      : db.from('naale_answers').select('is_correct').eq('session_id', s.id),
+      // Review answers (ticket 15) excluded too — same working decision as
+      // my-stats and staff/students, naale-track-first-build/CONTEXT.md §9.
+      : db.from('naale_answers').select('is_correct').eq('session_id', s.id).eq('is_review', false),
     db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id),
   ])
 

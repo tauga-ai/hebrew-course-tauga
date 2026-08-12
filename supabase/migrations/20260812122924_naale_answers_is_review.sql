@@ -1,0 +1,12 @@
+-- Ticket 15 (session-opener review). Marks an answer as a re-served review
+-- question rather than fresh material, so leveling/completion/reward queries
+-- can exclude it without losing the record of it happening.
+--
+-- Working decision (naale-track-first-build/CONTEXT.md §9), not yet
+-- Yuval-confirmed: review answers count toward none of XP/coins, the
+-- 3-question completion minimum, or the leveling streak. Defaulting existing
+-- rows to false is correct — every naale_answers row before this migration
+-- predates the review feature and is genuinely non-review history.
+--
+-- Additive, defaulted, safe on a live table.
+alter table naale_answers add column if not exists is_review boolean not null default false;

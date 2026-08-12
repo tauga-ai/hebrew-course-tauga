@@ -21,6 +21,11 @@ interface ServedQuestion {
   // route). Used purely to render the optional QA hint below — never used
   // for grading, which always happens server-side via /answer regardless.
   correct_answer?: string
+  // Ticket 15: true when this question came from /review-next rather than
+  // /next — 2-3 hard exercises from the student's previous practice session,
+  // re-served before new material. Purely a UI hint; the server independently
+  // verifies review status when the answer is submitted.
+  is_review?: boolean
 }
 
 interface AnswerResult {
@@ -62,6 +67,13 @@ function SessionRunner() {
   const sessionId = useSearchParams().get('session_id')
 
   const [deadlineMs, setDeadlineMs] = useState<number | null>(null)
+  // Ticket 15: only practice sessions review; placement never does. Read
+  // once at boot from /status and never changes for the life of a session.
+  const [kind, setKind] = useState<'placement' | 'practice' | null>(null)
+  // Once /review-next reports nothing left, stop asking it every subsequent
+  // "next question" click — a small optimization, not a correctness need
+  // (it would just cheaply report done again).
+  const [reviewExhausted, setReviewExhausted] = useState(false)
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
   const [selected, setSelected] = useState<string>('')
   const [result, setResult] = useState<AnswerResult | null>(null)
@@ -102,11 +114,28 @@ function SessionRunner() {
     }
   }, [sessionId])
 
-  const loadNext = useCallback(async () => {
+  // kindOverride exists purely to dodge a stale-closure race on the very
+  // first call out of boot(): setKind() and this call happen in the same
+  // tick, so the `kind` state this callback closed over wouldn't be updated
+  // yet on that first invocation. Every later call (from the "next question"
+  // button) omits it and reads the by-then-fresh `kind` state instead.
+  const loadNext = useCallback(async (kindOverride?: 'placement' | 'practice') => {
     if (!sessionId) return
     setResult(null)
     setSelected('')
     try {
+      const effectiveKind = kindOverride ?? kind
+      if (!reviewExhausted && effectiveKind === 'practice') {
+        const reviewRes = await fetch(`/api/naale/session/review-next?session_id=${sessionId}`)
+        const reviewData = await reviewRes.json()
+        if (reviewRes.ok && !reviewData.done) {
+          qaLog('/review-next: question served', reviewData.question)
+          setQuestion(reviewData.question)
+          return
+        }
+        setReviewExhausted(true)
+      }
+
       const res = await fetch(`/api/naale/session/next?session_id=${sessionId}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
@@ -121,7 +150,7 @@ function SessionRunner() {
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'שגיאה בטעינת השאלה')
     }
-  }, [sessionId, finishSession])
+  }, [sessionId, finishSession, kind, reviewExhausted])
 
   // Resume from the server's deadline — never a fresh 30 minutes on reload.
   useEffect(() => {
@@ -136,8 +165,9 @@ function SessionRunner() {
       qaLog('/status on boot', data)
       setAnsweredCount(data.answered_count)
       setDeadlineMs(new Date(data.deadline_at).getTime())
+      setKind(data.kind)
       if (data.ended || data.expired) { finishSession('time_up'); return }
-      loadNext()
+      loadNext(data.kind)
     }
     boot()
     return () => { cancelled = true }
@@ -272,6 +302,17 @@ function SessionRunner() {
         {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
       </p>
 
+      {/* Ticket 15: visually distinguishes a re-served question from new
+          material, and doubles as the "why am I seeing this again" intro the
+          task calls for — shown on every review question rather than once,
+          since that's simpler than tracking a one-shot "have I told them
+          yet" flag and no less clear repeated. */}
+      {q.is_review && (
+        <p className="text-xs font-medium text-accent-naale mb-3 text-right">
+          🔄 {t('חוזרים על שאלה מהתרגול הקודם')}
+        </p>
+      )}
+
       <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
 
       {/* Lightweight, no animation — the spec is explicit "no need for
@@ -356,7 +397,7 @@ function SessionRunner() {
         </button>
       ) : (
         <button
-          onClick={loadNext}
+          onClick={() => loadNext()}
           className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
         >
           {t('השאלה הבאה')}
