@@ -38,10 +38,19 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
   const db = createServiceClient()
 
   // Roster check FIRST — an off-roster email must never reach the insert below.
+  //
+  // Case-insensitive on purpose: Supabase Auth always lowercases user.email
+  // (verified empirically — creating a user with mixed-case input returns it
+  // lowercased), but naale_roster.email is a plain varchar with no case
+  // normalization enforced on write. A school-supplied CSV with any case
+  // variation (e.g. "John.Doe@School.org") would otherwise lock out a
+  // genuinely rostered student — confirmed live during Ticket 16's QA pass.
+  // ilike with no wildcard characters (a valid email can't contain % or _
+  // meaningfully) behaves as a case-insensitive exact match.
   const { data: rosterRow } = await db
     .from('naale_roster')
     .select('email, role')
-    .eq('email', user.email)
+    .ilike('email', user.email)
     .maybeSingle()
 
   if (!rosterRow) return { status: 'not_on_roster', user }
@@ -66,6 +75,20 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
     // the same person exists on two tracks. Refuse rather than silently
     // reading/writing across the isolation boundary.
     if (existing.class_id !== naaleClass.id) return { status: 'not_on_roster', user }
+
+    // Keep the denormalized students.naale_role column in sync with the
+    // roster on every login, not just at first creation. Without this, a
+    // role change in naale_roster (student promoted to staff, say) takes
+    // effect for the SESSION's own role (always read fresh above) but not
+    // for this column — and /api/naale/staff/students filters on exactly
+    // this column, so a promoted staff member would keep appearing in their
+    // own staff-facing student list. Confirmed live during Ticket 16's QA
+    // pass; this self-heals it rather than requiring a manual backfill.
+    if (existing.naale_role !== role) {
+      await db.from('students').update({ naale_role: role }).eq('id', existing.id)
+      return { status: 'ok', user, role, student: { ...existing, naale_role: role } as Student }
+    }
+
     return { status: 'ok', user, role, student: existing as Student }
   }
 
