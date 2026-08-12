@@ -432,5 +432,10 @@
   "נכונות": "correct",
   "התרגול נחשב כהושלם": "This session counted as completed",
   "התרגול לא נחשב כהושלם - נדרשות לפחות": "This session did not count as completed — at least",
-  "ענית על": "You answered"
+  "ענית על": "You answered",
+  "שאלון קצר": "Quick questionnaire",
+  "כמה שאלות כדי שנדע מאיפה להתחיל": "A few questions so we know where to start you",
+  "לפני שמתחילים לתרגל, נשאל אותך שאלה אחת בכל נושא. אין ציון ואין לחץ זמן — זה רק כדי להתאים את הרמה שלך.": "Before you start practicing, we'll ask you one question per topic. There's no grade and no time pressure — it's just to match your level.",
+  "בואו נתחיל": "Let's start",
+  "מעולה! עכשיו נדע מאיפה להתחיל": "Great! Now we'll know where to start you"
 }
