@@ -5,12 +5,19 @@ import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
+import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { createClient } from '@/lib/supabase/client'
 import { t } from '@/lib/dev-i18n'
 
 interface NaaleMe {
   role: 'student' | 'staff'
   student: { id: string; full_name: string }
+}
+
+interface MyStatsTotals {
+  xp: number
+  coins: number
+  streak: number
 }
 
 /**
@@ -24,6 +31,7 @@ interface NaaleMe {
 export default function NaaleHome() {
   const router = useRouter()
   const [me, setMe] = useState<NaaleMe | null>(null)
+  const [rewards, setRewards] = useState<MyStatsTotals | null>(null)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
 
@@ -40,6 +48,16 @@ export default function NaaleHome() {
       // Staff get their own view — the email decided this, not a picker.
       if (data.role === 'staff') { router.replace('/naale/staff'); return }
       setMe(data)
+
+      // Best-effort: a failed rewards fetch shouldn't block the home screen
+      // itself from rendering, so it's fetched separately and just omitted
+      // (streak/xp/coins badge simply doesn't show) rather than surfaced as
+      // a page-blocking error.
+      const statsRes = await fetch('/api/naale/my-stats')
+      if (cancelled || !statsRes.ok) return
+      const statsData = await statsRes.json()
+      if (cancelled) return
+      setRewards(statsData.totals)
     }
     load()
     return () => { cancelled = true }
@@ -94,6 +112,18 @@ export default function NaaleHome() {
           {t('יציאה')}
         </button>
       </div>
+
+      {rewards && (
+        <div className="flex items-center justify-between gap-2 mb-6 text-sm bg-surface rounded-xl border border-card-border px-4 py-2.5">
+          <span className="flex items-center gap-1 text-fg/70">
+            🔥 <LtrIsolate>{rewards.streak}</LtrIsolate> {t('שבועות ברצף')}
+          </span>
+          <span className="flex items-center gap-3 text-fg/70">
+            <span>⭐ <LtrIsolate>{rewards.xp}</LtrIsolate></span>
+            <span>🪙 <LtrIsolate>{rewards.coins}</LtrIsolate></span>
+          </span>
+        </div>
+      )}
 
       <CardGrid>
         <Card

@@ -10,7 +10,7 @@ import { t } from '@/lib/dev-i18n'
 
 interface MyStats {
   topics: NaaleTopicStat[]
-  totals: { answered: number; correct: number; sessions: number; completed_sessions: number }
+  totals: { answered: number; correct: number; sessions: number; completed_sessions: number; xp: number; coins: number; streak: number }
 }
 
 /** The student's own progress. No sidebar, matching /student/personal-details. */
@@ -37,9 +37,21 @@ export default function NaaleStatsPage() {
           <span className="text-fg/60">{t('תרגילים שנענו')}</span>
           <span className="font-semibold text-fg"><LtrIsolate>{`${data.totals.correct}/${data.totals.answered}`}</LtrIsolate></span>
         </div>
-        <div className="flex justify-between items-center text-sm">
+        <div className="flex justify-between items-center text-sm mb-2">
           <span className="text-fg/60">{t('תרגולים שהושלמו')}</span>
           <span className="font-semibold text-fg"><LtrIsolate>{String(data.totals.completed_sessions)}</LtrIsolate></span>
+        </div>
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span className="text-fg/60">⭐ {t('נקודות XP')}</span>
+          <span className="font-semibold text-fg"><LtrIsolate>{String(data.totals.xp)}</LtrIsolate></span>
+        </div>
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span className="text-fg/60">🪙 {t('מטבעות')}</span>
+          <span className="font-semibold text-fg"><LtrIsolate>{String(data.totals.coins)}</LtrIsolate></span>
+        </div>
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-fg/60">🔥 {t('שבועות ברצף')}</span>
+          <span className="font-semibold text-fg"><LtrIsolate>{String(data.totals.streak)}</LtrIsolate></span>
         </div>
       </div>
 

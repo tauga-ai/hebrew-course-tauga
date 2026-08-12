@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
+import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, isDev } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 
@@ -33,6 +34,9 @@ interface EndSummary {
   answered_count: number
   completed: boolean
   min_answers: number
+  xp_earned: number
+  coins_earned: number
+  streak: number
 }
 
 type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
@@ -231,7 +235,13 @@ function SessionRunner() {
                     : `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`}
                 </p>
               )}
-              {/* Room left here for ticket 14's XP/coins/streak numbers. */}
+              {summary && (
+                <div className="flex items-center justify-center gap-4 text-sm text-fg/70 mb-4">
+                  <span>⭐ <LtrIsolate>{summary.xp_earned}</LtrIsolate> XP</span>
+                  <span>🪙 <LtrIsolate>{summary.coins_earned}</LtrIsolate></span>
+                  <span>🔥 <LtrIsolate>{summary.streak}</LtrIsolate> {t('שבועות ברצף')}</span>
+                </div>
+              )}
             </>
           )}
           <button
@@ -263,6 +273,15 @@ function SessionRunner() {
       </p>
 
       <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+
+      {/* Lightweight, no animation — the spec is explicit "no need for
+          elaborate animation," just the "Duolingo feel" of a small reward
+          note appearing right after a correct answer. */}
+      {result?.is_correct && (
+        <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-4 text-right">
+          <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
+        </p>
+      )}
 
       {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
         <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">

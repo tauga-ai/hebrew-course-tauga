@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionCompleted, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
+import { computeRewards, computeStreak } from '@/lib/naale/rewards'
 
 /**
  * Ends a session and decides whether it counts as "completed" — reaching the
@@ -11,6 +12,11 @@ import { loadOwnedSession, isSessionCompleted, MIN_ANSWERS_FOR_COMPLETION } from
  * Safe to call twice: an already-ended session is returned unchanged rather
  * than re-stamped, so a "finish" button double-tap or an unload handler firing
  * alongside an explicit end can't rewrite history.
+ *
+ * Also returns this session's own XP/coins earned and the updated overall
+ * streak (ticket 14) — computed the same way on both the fresh-end and
+ * already-ended paths, so a reload lands on the same summary numbers rather
+ * than a blank one.
  */
 export async function POST(req: NextRequest) {
   const session = await getNaaleSession()
@@ -30,29 +36,47 @@ export async function POST(req: NextRequest) {
   if (!owned.ok) return NextResponse.json({ error: 'תרגול לא נמצא' }, { status: 404 })
 
   const s = owned.session
+  const db = createServiceClient()
+
+  let completed: boolean
+  let alreadyEnded: boolean
+
   if (s.ended_at) {
-    return NextResponse.json({
-      answered_count: s.answered_count,
-      completed: s.completed,
-      min_answers: MIN_ANSWERS_FOR_COMPLETION,
-      already_ended: true,
-    })
+    completed = s.completed
+    alreadyEnded = true
+  } else {
+    completed = isSessionCompleted(s.deadline_at, s.answered_count)
+    alreadyEnded = false
+    const { error } = await db
+      .from('naale_sessions')
+      .update({ ended_at: new Date().toISOString(), completed })
+      .eq('id', s.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const completed = isSessionCompleted(s.deadline_at, s.answered_count)
+  // Placement sessions never earn XP/coins — same reasoning as the my-stats
+  // route: placement is calibration, not practice. `completed` is already
+  // always false for placement (excluding the +50 bonus), but the
+  // per-correct-answer XP needs this explicit kind check too.
+  const [{ data: sessionAnswers }, { data: allSessions }] = await Promise.all([
+    s.kind === 'placement'
+      ? Promise.resolve({ data: [] as { is_correct: boolean }[] })
+      : db.from('naale_answers').select('is_correct').eq('session_id', s.id),
+    db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id),
+  ])
 
-  const db = createServiceClient()
-  const { error } = await db
-    .from('naale_sessions')
-    .update({ ended_at: new Date().toISOString(), completed })
-    .eq('id', s.id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const { xp: xp_earned, coins: coins_earned } = computeRewards(sessionAnswers ?? [], [{ completed }])
+  const streak = computeStreak(
+    (allSessions ?? []).filter(x => x.completed).map(x => new Date(x.started_at))
+  )
 
   return NextResponse.json({
     answered_count: s.answered_count,
     completed,
     min_answers: MIN_ANSWERS_FOR_COMPLETION,
-    already_ended: false,
+    already_ended: alreadyEnded,
+    xp_earned,
+    coins_earned,
+    streak,
   })
 }

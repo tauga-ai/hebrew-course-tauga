@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, isExpired, secondsRemaining } from '@/lib/naale/session'
+import { SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining } from '@/lib/naale/session'
 
 /**
  * Starts (or resumes) the authenticated student's 30-minute session.
@@ -21,6 +21,31 @@ export async function POST() {
   }
 
   const db = createServiceClient()
+
+  // Settle any expired-but-unended sessions before anything else. A session
+  // abandoned by closing the tab keeps ended_at null and its `completed`
+  // value never gets evaluated — /session/end is the only other place that
+  // sets it, and an abandoned session never calls it. Left unsettled, ticket
+  // 14's XP-completion-bonus and weekly streak would silently undercount,
+  // since both only look at completed sessions. No cron job needed: this
+  // runs lazily, the next time the student starts anything.
+  const { data: stale } = await db
+    .from('naale_sessions')
+    .select('id, deadline_at, answered_count')
+    .eq('student_id', session.student.id)
+    .is('ended_at', null)
+
+  for (const s of stale ?? []) {
+    if (isExpired(s.deadline_at)) {
+      await db
+        .from('naale_sessions')
+        .update({
+          ended_at: new Date().toISOString(),
+          completed: isSessionCompleted(s.deadline_at, s.answered_count),
+        })
+        .eq('id', s.id)
+    }
+  }
 
   // Resume a still-live session rather than starting a second one.
   const { data: live } = await db
