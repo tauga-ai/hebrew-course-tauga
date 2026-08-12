@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { buildTopicStats } from '@/lib/naale/stats'
+import { computeRewards, computeStreak } from '@/lib/naale/rewards'
 
 /**
  * The authenticated Naale student's own progress — per-topic level and exercise
@@ -23,12 +24,30 @@ export async function GET() {
   const [{ data: bankTopics }, { data: levels }, { data: answers }, { data: sessions }] = await Promise.all([
     db.from('naale_questions').select('topic'),
     db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
-    db.from('naale_answers').select('topic, is_correct').eq('student_id', session.student.id),
-    db.from('naale_sessions').select('id, completed').eq('student_id', session.student.id),
+    db.from('naale_answers').select('topic, is_correct, session_id').eq('student_id', session.student.id),
+    db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', session.student.id),
   ])
 
   const allTopics = [...new Set((bankTopics ?? []).map(r => r.topic))].sort()
   const topics = buildTopicStats(allTopics, levels ?? [], answers ?? [])
+
+  // XP/coins/streak: ticket 14's motivational layer, derived at read time from
+  // the rows above — see src/lib/naale/rewards.ts for why this is derived
+  // rather than a stored, incrementable counter.
+  //
+  // Placement answers are excluded from XP/coins: placement is calibration,
+  // not practice, same reasoning ticket 11 already used to exclude it from
+  // the leveling streak and the session-completion bonus (naale_sessions
+  // .completed is always false for placement, which already excludes it
+  // from the bonus/streak below — this filter is what additionally excludes
+  // it from the per-correct-answer XP, which isn't gated by `completed`).
+  const practiceSessionIds = new Set((sessions ?? []).filter(s => s.kind === 'practice').map(s => s.id))
+  const practiceAnswers = (answers ?? []).filter(a => practiceSessionIds.has(a.session_id))
+
+  const { xp, coins } = computeRewards(practiceAnswers, sessions ?? [])
+  const streak = computeStreak(
+    (sessions ?? []).filter(s => s.completed).map(s => new Date(s.started_at))
+  )
 
   return NextResponse.json({
     topics,
@@ -37,6 +56,9 @@ export async function GET() {
       correct: (answers ?? []).filter(a => a.is_correct).length,
       sessions: (sessions ?? []).length,
       completed_sessions: (sessions ?? []).filter(s => s.completed).length,
+      xp,
+      coins,
+      streak,
     },
   })
 }
