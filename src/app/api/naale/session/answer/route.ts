@@ -40,23 +40,17 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const { data: question } = await db
-    .from('naale_questions')
-    .select('id, topic, difficulty, answer_kind, correct_answer')
-    .eq('id', question_id)
-    .maybeSingle()
+  // Independent of each other (one keys on question_id, the other on
+  // student_id+question_id) — run together rather than one after another to
+  // cut a round-trip off this route's latency against the remote DB.
+  const [{ data: question }, { data: alreadyAnswered }] = await Promise.all([
+    db.from('naale_questions').select('id, topic, difficulty, answer_kind, correct_answer').eq('id', question_id).maybeSingle(),
+    // Answering the same question twice would double-count the streak and
+    // inflate answered_count toward the 3-question completion minimum.
+    db.from('naale_answers').select('id').eq('student_id', session.student.id).eq('question_id', question_id).maybeSingle(),
+  ])
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
-
-  // Answering the same question twice would double-count the streak and inflate
-  // answered_count toward the 3-question completion minimum.
-  const { data: alreadyAnswered } = await db
-    .from('naale_answers')
-    .select('id')
-    .eq('student_id', session.student.id)
-    .eq('question_id', question_id)
-    .maybeSingle()
-
   if (alreadyAnswered) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו' }, { status: 409 })
   }

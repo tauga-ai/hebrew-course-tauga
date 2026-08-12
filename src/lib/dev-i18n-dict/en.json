@@ -420,5 +420,17 @@
   "נסה/י להתחבר עם חשבון אחר": "Try signing in with a different account",
   "בקרוב...": "Coming soon...",
   "תרגול": "Practice",
-  "30 דקות": "30 minutes"
+  "30 דקות": "30 minutes",
+  "שגיאה בטעינת השאלה": "Error loading the question",
+  "שגיאה בשליחת התשובה": "Error submitting the answer",
+  "שלח תשובה": "Submit answer",
+  "השאלה הבאה": "Next question",
+  "כל הכבוד! סיימת את כל התרגילים להיום": "Well done! You've finished all today's exercises",
+  "הזמן נגמר!": "Time's up!",
+  "אין תרגילים זמינים כרגע. פנה/י למדריך/ה.": "No exercises available right now. Contact your counselor.",
+  "לדף הבית": "To home page",
+  "נכונות": "correct",
+  "התרגול נחשב כהושלם": "This session counted as completed",
+  "התרגול לא נחשב כהושלם - נדרשות לפחות": "This session did not count as completed — at least",
+  "ענית על": "You answered"
 }

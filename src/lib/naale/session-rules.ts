@@ -1,6 +1,6 @@
 /** The session length from the spec. One constant so it's changeable in one
  *  place — and so QA can shorten it instead of waiting 30 real minutes. */
-export const SESSION_MINUTES = 30
+export const SESSION_MINUTES = 1 // TEMP for QA — revert to 30 after testing Ticket 10's expiry path
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3
 
