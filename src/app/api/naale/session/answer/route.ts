@@ -4,6 +4,7 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { applyAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { isAnswerCorrect } from '@/lib/naale/grading'
+import { getReviewQuestionIds } from '@/lib/naale/review-queue'
 
 /**
  * Grades one answer, logs the attempt, and re-levels the topic — all in this
@@ -40,18 +41,27 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
 
-  // Independent of each other (one keys on question_id, the other on
-  // student_id+question_id) — run together rather than one after another to
-  // cut a round-trip off this route's latency against the remote DB.
-  const [{ data: question }, { data: alreadyAnswered }] = await Promise.all([
+  // Independent of each other — run together rather than one after another
+  // to cut round-trips off this route's latency against the remote DB.
+  const [{ data: question }, { data: answeredThisSession }, { data: answeredEver }, reviewQueue] = await Promise.all([
     db.from('naale_questions').select('id, topic, difficulty, answer_kind, correct_answer').eq('id', question_id).maybeSingle(),
-    // Answering the same question twice would double-count the streak and
-    // inflate answered_count toward the 3-question completion minimum.
+    // Hard-blocked always, review or not: answering the same question twice
+    // inside one session would double-count regardless.
+    db.from('naale_answers').select('id').eq('session_id', session_id).eq('question_id', question_id).maybeSingle(),
+    // Cross-session re-answer. Blocked UNLESS this is a sanctioned review
+    // question (ticket 15) — checked against reviewQueue below, never
+    // trusted from the client.
     db.from('naale_answers').select('id').eq('student_id', session.student.id).eq('question_id', question_id).maybeSingle(),
+    getReviewQuestionIds(session.student.id, session_id),
   ])
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
-  if (alreadyAnswered) {
+  if (answeredThisSession) {
+    return NextResponse.json({ error: 'כבר ענית על שאלה זו' }, { status: 409 })
+  }
+
+  const isSanctionedReview = reviewQueue.includes(question_id)
+  if (answeredEver && !isSanctionedReview) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו' }, { status: 409 })
   }
 
@@ -70,7 +80,11 @@ export async function POST(req: NextRequest) {
     ? { level: levelRow.level, correct_streak: levelRow.correct_streak, wrong_streak: levelRow.wrong_streak }
     : { level: MIN_LEVEL, correct_streak: 0, wrong_streak: 0 }
 
-  const after = applyAnswer(before, isCorrect)
+  // Working decision (ticket 15, naale-track-first-build/CONTEXT.md §9,
+  // pending Yuval): a review answer is graded and recorded, but never moves
+  // the level — it's re-shown BECAUSE it was hard, so feeding it into
+  // applyAnswer() risks a downward spiral on a student's worst topic.
+  const after = isSanctionedReview ? before : applyAnswer(before, isCorrect)
 
   // Attempt row first: if a later write fails, a logged answer with a missed
   // level effect is recoverable, whereas a level change for an unrecorded
@@ -83,24 +97,34 @@ export async function POST(req: NextRequest) {
     difficulty: question.difficulty,
     level_at_answer: before.level,
     is_correct: isCorrect,
+    is_review: isSanctionedReview,
   })
   if (answerError) return NextResponse.json({ error: answerError.message }, { status: 500 })
 
-  const { error: levelError } = await db.from('naale_topic_levels').upsert({
-    student_id: session.student.id,
-    topic: question.topic,
-    level: after.level,
-    correct_streak: after.correct_streak,
-    wrong_streak: after.wrong_streak,
-    answered_count: (levelRow?.answered_count ?? 0) + 1,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'student_id,topic' })
-  if (levelError) return NextResponse.json({ error: levelError.message }, { status: 500 })
+  // Same working decision: a review answer doesn't move the level (handled
+  // above) and doesn't bump this topic's answered_count either, so it can't
+  // look like double-counted progress on the stats screen.
+  if (!isSanctionedReview) {
+    const { error: levelError } = await db.from('naale_topic_levels').upsert({
+      student_id: session.student.id,
+      topic: question.topic,
+      level: after.level,
+      correct_streak: after.correct_streak,
+      wrong_streak: after.wrong_streak,
+      answered_count: (levelRow?.answered_count ?? 0) + 1,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'student_id,topic' })
+    if (levelError) return NextResponse.json({ error: levelError.message }, { status: 500 })
+  }
 
-  await db
-    .from('naale_sessions')
-    .update({ answered_count: owned.session.answered_count + 1 })
-    .eq('id', session_id)
+  // Same working decision: a review answer doesn't count toward the
+  // 3-question completion minimum.
+  if (!isSanctionedReview) {
+    await db
+      .from('naale_sessions')
+      .update({ answered_count: owned.session.answered_count + 1 })
+      .eq('id', session_id)
+  }
 
   return NextResponse.json({
     is_correct: isCorrect,
@@ -108,6 +132,7 @@ export async function POST(req: NextRequest) {
     correct_answer: question.correct_answer,
     level: after.level,
     level_changed: after.level !== before.level,
-    answered_count: owned.session.answered_count + 1,
+    answered_count: isSanctionedReview ? owned.session.answered_count : owned.session.answered_count + 1,
+    is_review: isSanctionedReview,
   })
 }

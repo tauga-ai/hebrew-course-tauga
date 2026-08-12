@@ -55,13 +55,18 @@ export async function GET() {
   const studentIds = (students ?? []).map(s => s.id)
   const [{ data: levels }, { data: answers }, { data: sessions }] = await Promise.all([
     db.from('naale_topic_levels').select('student_id, topic, level').in('student_id', studentIds),
-    db.from('naale_answers').select('student_id, topic, is_correct').in('student_id', studentIds),
+    db.from('naale_answers').select('student_id, topic, is_correct, is_review').in('student_id', studentIds),
     db.from('naale_sessions').select('student_id, completed').in('student_id', studentIds),
   ])
 
+  // Review answers (ticket 15) excluded — same working decision as
+  // /api/naale/my-stats, so a student's own view and staff's view of them
+  // never disagree.
+  const nonReviewAnswers = (answers ?? []).filter(a => !a.is_review)
+
   const rows = (students ?? []).map(s => {
     const myLevels = (levels ?? []).filter(l => l.student_id === s.id)
-    const myAnswers = (answers ?? []).filter(a => a.student_id === s.id)
+    const myAnswers = nonReviewAnswers.filter(a => a.student_id === s.id)
     const mySessions = (sessions ?? []).filter(x => x.student_id === s.id)
     return {
       student_id: s.id,

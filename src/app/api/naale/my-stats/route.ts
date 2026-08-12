@@ -24,12 +24,18 @@ export async function GET() {
   const [{ data: bankTopics }, { data: levels }, { data: answers }, { data: sessions }] = await Promise.all([
     db.from('naale_questions').select('topic'),
     db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
-    db.from('naale_answers').select('topic, is_correct, session_id').eq('student_id', session.student.id),
+    db.from('naale_answers').select('topic, is_correct, session_id, is_review').eq('student_id', session.student.id),
     db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', session.student.id),
   ])
 
+  // Review answers (ticket 15) are excluded from every count below — a
+  // re-answer of an already-answered question would otherwise look like
+  // double-counted progress. Working decision, naale-track-first-build
+  // /CONTEXT.md §9, not yet Yuval-confirmed.
+  const nonReviewAnswers = (answers ?? []).filter(a => !a.is_review)
+
   const allTopics = [...new Set((bankTopics ?? []).map(r => r.topic))].sort()
-  const topics = buildTopicStats(allTopics, levels ?? [], answers ?? [])
+  const topics = buildTopicStats(allTopics, levels ?? [], nonReviewAnswers)
 
   // XP/coins/streak: ticket 14's motivational layer, derived at read time from
   // the rows above — see src/lib/naale/rewards.ts for why this is derived
@@ -42,7 +48,7 @@ export async function GET() {
   // from the bonus/streak below — this filter is what additionally excludes
   // it from the per-correct-answer XP, which isn't gated by `completed`).
   const practiceSessionIds = new Set((sessions ?? []).filter(s => s.kind === 'practice').map(s => s.id))
-  const practiceAnswers = (answers ?? []).filter(a => practiceSessionIds.has(a.session_id))
+  const practiceAnswers = nonReviewAnswers.filter(a => practiceSessionIds.has(a.session_id))
 
   const { xp, coins } = computeRewards(practiceAnswers, sessions ?? [])
   const streak = computeStreak(
@@ -52,8 +58,8 @@ export async function GET() {
   return NextResponse.json({
     topics,
     totals: {
-      answered: (answers ?? []).length,
-      correct: (answers ?? []).filter(a => a.is_correct).length,
+      answered: nonReviewAnswers.length,
+      correct: nonReviewAnswers.filter(a => a.is_correct).length,
       sessions: (sessions ?? []).length,
       completed_sessions: (sessions ?? []).filter(s => s.completed).length,
       xp,
