@@ -66,3 +66,10 @@ Don't assume one content system when working on the other — check which `api/`
 - `src/lib/` — shared logic: Supabase clients, auth helpers, grading/content modules, hooks under `lib/hooks/`.
 - `supabase/` — schema and seed data. Two migration eras exist here, both still real: `supabase/migration_*.sql` are ~20 flat, hand-run files from before the CLI workflow was adopted (2026-08-11) — historical record, applied by hand in the Dashboard, never delete or renumber them. `supabase/migrations/` is the CLI-tracked workflow going forward: `supabase migration new <name>` to scaffold a new dated file, `supabase db push` to apply it (there is no staging environment, so this pushes straight to the one production project — `supabase db push --dry-run` first to preview). The remote's migration history was baselined via `supabase db pull` against the schema the old flat files had already produced, so `db push` only ever needs to carry *new* changes from here on.
 - `tests/` — unit tests for pure functions in `lib/`, plus the static auth-guard test described above.
+
+## Temporary dev/test additions — remove before presenting
+
+Running list of things added purely for local QA that must be cleaned up before a demo or production use. Code-side dev-only gates (`isDev`/`NODE_ENV === 'development'`) are safe by construction — Next.js dead-code-eliminates them from production builds, so there's no risk of a stray dev UI shipping live. The risk is DATA: rows created by a script persist in whichever Supabase project `.env.local` points to, regardless of build mode, and won't clean themselves up.
+
+- **Naale dev-only login fallback** (`src/app/naale/login/page.tsx`, the `isDev`-gated email/password form) — code-safe, but remove once Naale no longer needs password-based QA logins.
+- **`scripts/create-naale-test-users.ts`** and the 6 accounts it seeds (`naale_student1-3@test.com`, `naale_staff1-3@test.com`, password `Password123!`, documented in the gitignored `test-user.md`) — real rows in `naale_roster` + Supabase Auth. Delete these (roster rows + auth users) before a real demo/production use of that project.
