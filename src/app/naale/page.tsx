@@ -52,7 +52,8 @@ export default function NaaleHome() {
       const res = await fetch('/api/naale/session/start', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
-      router.push(`/naale/session?session_id=${data.session_id}`)
+      const destination = data.kind === 'placement' ? '/naale/placement' : '/naale/session'
+      router.push(`${destination}?session_id=${data.session_id}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'שגיאה בפתיחת תרגול')
       setStarting(false)
