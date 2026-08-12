@@ -46,7 +46,12 @@ test('every service-role API route derives identity from an auth helper', () => 
       // same Supabase-user lookup and additionally checks the caller's roster
       // role and that their class is on the 'naale' track (see
       // src/lib/naale/auth.ts). A real auth helper, not an exemption.
-      content.includes('getNaaleSession')
+      content.includes('getNaaleSession') ||
+      // requireNaaleStaff() wraps getNaaleSession() with an additional
+      // role === 'staff' check, for the handful of routes only staff may
+      // call (e.g. reading every student's stats) — same relationship as
+      // requireTeacher() to the main app's auth.
+      content.includes('requireNaaleStaff')
 
     if (!hasAuthHelper && !PUBLIC_ROUTES.has(relPath)) {
       violations.push(relPath)

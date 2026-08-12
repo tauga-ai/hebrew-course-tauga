@@ -9,6 +9,9 @@ export interface Student {
   class_id: number
   created_at: string
   lesson_group: number | null
+  /** Naale track only — denormalized from naale_roster at provisioning time
+   *  (see requireNaaleStaff()/getNaaleSession()). Null on the other two tracks. */
+  naale_role?: 'student' | 'staff' | null
 }
 
 export interface PracticeSet {

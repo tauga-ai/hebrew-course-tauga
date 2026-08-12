@@ -13,7 +13,7 @@ export type NaaleSessionResult =
   | { status: 'ok'; user: User; role: NaaleRole; student: Student }
 
 const NAALE_TRACK = 'naale'
-const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group'
+const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group, naale_role'
 
 /**
  * Resolves a Naale-track caller from the Supabase session.
@@ -74,7 +74,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
 
   const { data: created, error } = await db
     .from('students')
-    .insert({ full_name: fullName, class_id: naaleClass.id, auth_user_id: user.id })
+    .insert({ full_name: fullName, class_id: naaleClass.id, auth_user_id: user.id, naale_role: role })
     .select(STUDENT_COLUMNS)
     .single()
 
@@ -93,4 +93,25 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
   }
 
   throw new Error(`failed to provision naale student: ${error?.message}`)
+}
+
+export type NaaleStaffResult =
+  | { status: 'unauthenticated' }
+  | { status: 'forbidden' }
+  | { status: 'ok'; user: User; student: Student }
+
+/**
+ * Staff-only gate for the Naale track. Counselors and teachers share the single
+ * 'staff' role (identical permissions, per the spec), so this is a plain role
+ * check with no further capability tiers.
+ *
+ * Returns 'forbidden' for a Naale *student* — students see only their own stats
+ * via /api/naale/my-stats, never each other's.
+ */
+export async function requireNaaleStaff(): Promise<NaaleStaffResult> {
+  const session = await getNaaleSession()
+  if (session.status === 'unauthenticated') return { status: 'unauthenticated' }
+  if (session.status === 'not_on_roster') return { status: 'forbidden' }
+  if (session.role !== 'staff') return { status: 'forbidden' }
+  return { status: 'ok', user: session.user, student: session.student }
 }
