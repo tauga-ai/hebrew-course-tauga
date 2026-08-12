@@ -29,12 +29,26 @@ function findRouteFiles(dir) {
   return results
 }
 
+// Strips comments before matching — otherwise a route whose real auth-helper
+// call is removed but whose explanatory comment still names the helper (a
+// documentation style this codebase encourages, see src/lib/naale/auth.ts's
+// own docblocks) would silently keep passing. Found by deliberately removing
+// a real call and watching this test NOT go red, per this ticket's own
+// "a guard test nobody has seen fail is not known to work" standard.
+// Simple regex strip, not a real parser — good enough for this purpose;
+// doesn't need to handle a helper name appearing inside a string literal.
+function stripComments(code) {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+}
+
 test('every service-role API route derives identity from an auth helper', () => {
   const violations = []
 
   for (const file of findRouteFiles(API_DIR)) {
     const relPath = relative(API_DIR, file).replace(/\\/g, '/')
-    const content = readFileSync(file, 'utf-8')
+    const content = stripComments(readFileSync(file, 'utf-8'))
 
     const usesServiceClient = content.includes('createServiceClient')
     if (!usesServiceClient) continue
