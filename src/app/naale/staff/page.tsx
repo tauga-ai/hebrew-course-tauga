@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
+import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { useResource } from '@/lib/hooks/use-resource'
 import { createClient } from '@/lib/supabase/client'
 import { scoreColor } from '@/lib/score-color'
@@ -60,69 +61,72 @@ export default function NaaleStaffPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-md mx-auto w-full">
-      <div className="flex justify-between items-center mt-4 mb-6">
-        <h1 className="font-bold text-primary-700 dark:text-primary-400">{t('תלמידים')}</h1>
-        <button type="button" onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
-          {t('יציאה')}
-        </button>
-      </div>
-
-      <button
-        onClick={handlePractice}
-        disabled={starting}
-        className="w-full py-3 mb-4 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
-      >
-        {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
-      </button>
-      {startError && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>}
-
-      {loading && <LoadingSpinner />}
-
-      {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
-
-      {data && (
-        <div className="bg-surface rounded-2xl shadow-sm border border-card-border divide-y divide-card-border">
-          {data.students.length === 0 && (
-            <p className="text-fg/50 text-sm text-center p-6">{t('אין עדיין תלמידים')}</p>
-          )}
-          {data.students.map(s => (
-            <div key={s.student_id}>
-              <button
-                onClick={() => setExpanded(expanded === s.student_id ? null : s.student_id)}
-                className="w-full flex justify-between items-center text-sm p-4 hover:bg-black/5 dark:hover:bg-white/5 transition text-right"
-              >
-                <span className="text-fg font-medium">{s.full_name}</span>
-                <span className="text-fg/60 flex items-center gap-2 shrink-0">
-                  <LtrIsolate>{`${s.totals.correct}/${s.totals.answered}`}</LtrIsolate>
-                  <span className="text-fg/30">{expanded === s.student_id ? '▲' : '▼'}</span>
-                </span>
-              </button>
-              {expanded === s.student_id && (
-                <div className="px-4 pb-4 space-y-2">
-                  {s.topics.map(topic => (
-                    <div key={topic.topic} className="flex justify-between items-center text-sm">
-                      <span className="text-fg/70 flex-1 min-w-0 truncate">{topic.topic}</span>
-                      {topic.started ? (
-                        <span className="flex items-center gap-3 shrink-0">
-                          <span className="text-fg/50 text-xs">
-                            {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
-                          </span>
-                          <span className={`font-semibold ${scoreColor(topic.accuracy_pct)}`}>
-                            <LtrIsolate>{`${topic.correct}/${topic.answered}`}</LtrIsolate>
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-fg/30 text-xs shrink-0">{t('לא התחיל')}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+    <div className="min-h-screen md:flex">
+      <NaaleSidebar role="staff" />
+      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
+        <div className="flex justify-between items-center mt-4 mb-6">
+          <h1 className="font-bold text-primary-700 dark:text-primary-400">{t('תלמידים')}</h1>
+          <button type="button" onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
+            {t('יציאה')}
+          </button>
         </div>
-      )}
+
+        <button
+          onClick={handlePractice}
+          disabled={starting}
+          className="w-full py-3 mb-4 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+        >
+          {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
+        </button>
+        {startError && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>}
+
+        {loading && <LoadingSpinner />}
+
+        {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
+
+        {data && (
+          <div className="bg-surface rounded-2xl shadow-sm border border-card-border divide-y divide-card-border">
+            {data.students.length === 0 && (
+              <p className="text-fg/50 text-sm text-center p-6">{t('אין עדיין תלמידים')}</p>
+            )}
+            {data.students.map(s => (
+              <div key={s.student_id}>
+                <button
+                  onClick={() => setExpanded(expanded === s.student_id ? null : s.student_id)}
+                  className="w-full flex justify-between items-center text-sm p-4 hover:bg-black/5 dark:hover:bg-white/5 transition text-right"
+                >
+                  <span className="text-fg font-medium">{s.full_name}</span>
+                  <span className="text-fg/60 flex items-center gap-2 shrink-0">
+                    <LtrIsolate>{`${s.totals.correct}/${s.totals.answered}`}</LtrIsolate>
+                    <span className="text-fg/30">{expanded === s.student_id ? '▲' : '▼'}</span>
+                  </span>
+                </button>
+                {expanded === s.student_id && (
+                  <div className="px-4 pb-4 space-y-2">
+                    {s.topics.map(topic => (
+                      <div key={topic.topic} className="flex justify-between items-center text-sm">
+                        <span className="text-fg/70 flex-1 min-w-0 truncate">{topic.topic}</span>
+                        {topic.started ? (
+                          <span className="flex items-center gap-3 shrink-0">
+                            <span className="text-fg/50 text-xs">
+                              {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
+                            </span>
+                            <span className={`font-semibold ${scoreColor(topic.accuracy_pct)}`}>
+                              <LtrIsolate>{`${topic.correct}/${topic.answered}`}</LtrIsolate>
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-fg/30 text-xs shrink-0">{t('לא התחיל')}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

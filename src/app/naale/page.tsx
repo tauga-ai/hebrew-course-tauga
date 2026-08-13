@@ -6,7 +6,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
+import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { createClient } from '@/lib/supabase/client'
+import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
 
 interface NaaleMe {
@@ -20,18 +22,40 @@ interface MyStatsTotals {
   streak: number
 }
 
+// The real workbook's 6 not-yet-imported topics (naale-track-first-build/
+// CONTEXT.md's data audit, 2026-08-10) — shown honestly as locked rather
+// than hidden, since a student otherwise has no way to know 7 topics exist
+// at all. Static, not DB-sourced: naale_questions has no rows for these yet
+// (buildTopicStats()'s allTopics comes from the question bank, so a topic
+// with zero rows simply never appears there), and this list is real content
+// from the source spreadsheet, not invented placeholder text.
+const LOCKED_TOPICS = ['נרדפות והופכיות', 'הבנת הנקרא', 'תיקון משפטים', 'סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר']
+
+/** Small filled/unfilled dot row — level N out of 5, or all-unfilled when locked. */
+function LevelSteps({ level, locked }: { level: number; locked?: boolean }) {
+  return (
+    <span className="flex items-center gap-0.5" aria-hidden>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span
+          key={i}
+          className={`w-2.5 h-2.5 rounded-full ${!locked && i < level ? 'bg-accent-naale' : 'bg-gray-200 dark:bg-white/10'}`}
+        />
+      ))}
+    </span>
+  )
+}
+
 /**
- * The Naale student home. Deliberately just two destinations — per the product
- * owner, this track's first build is "a session and a profile with stats", and
- * it inherits none of the draft-prep menu's activities (/menu is untouched).
- *
- * No StudentSidebar: that component's nav is hardcoded to draft-prep routes,
- * and with two destinations there's nothing to navigate.
+ * The Naale student home — now a desktop-aware shell (NaaleSidebar +
+ * max-w-5xl content area) instead of a single centered mobile column, per
+ * Ticket 17. The two-destination CardGrid is unchanged; the new addition is
+ * the "levels by topic" section below it.
  */
 export default function NaaleHome() {
   const router = useRouter()
   const [me, setMe] = useState<NaaleMe | null>(null)
   const [rewards, setRewards] = useState<MyStatsTotals | null>(null)
+  const [topics, setTopics] = useState<NaaleTopicStat[] | null>(null)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
 
@@ -58,6 +82,7 @@ export default function NaaleHome() {
       const statsData = await statsRes.json()
       if (cancelled) return
       setRewards(statsData.totals)
+      setTopics(statsData.topics)
     }
     load()
     return () => { cancelled = true }
@@ -98,52 +123,86 @@ export default function NaaleHome() {
   if (!me) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen p-4 max-w-md mx-auto w-full">
-      <div className="mt-4 mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-fg">{t('שלום')}, {me.student.full_name}</h1>
-          <p className="text-sm text-fg/60">{t('נעלה')}</p>
+    <div className="min-h-screen md:flex">
+      <NaaleSidebar role="student" />
+      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
+        <div className="mt-4 mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-fg">{t('שלום')}, {me.student.full_name}</h1>
+            <p className="text-sm text-fg/60">{t('נעלה')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="text-sm text-fg/40 hover:text-fg/70"
+          >
+            {t('יציאה')}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-sm text-fg/40 hover:text-fg/70"
-        >
-          {t('יציאה')}
-        </button>
+
+        {rewards && (
+          <div className="flex items-center justify-between gap-2 mb-6 text-sm bg-surface rounded-xl border border-card-border px-4 py-2.5">
+            <span className="flex items-center gap-1 text-fg/70">
+              🔥 <LtrIsolate>{rewards.streak}</LtrIsolate> {t('שבועות ברצף')}
+            </span>
+            <span className="flex items-center gap-3 text-fg/70">
+              <span>⭐ <LtrIsolate>{rewards.xp}</LtrIsolate></span>
+              <span>🪙 <LtrIsolate>{rewards.coins}</LtrIsolate></span>
+            </span>
+          </div>
+        )}
+
+        <CardGrid>
+          <Card
+            icon="▶️"
+            title={t('תרגול')}
+            subtitle={t('30 דקות')}
+            accentColor="naale"
+            onClick={handleStart}
+            disabled={starting}
+          />
+          <Card
+            icon="📊"
+            title={t('ההתקדמות שלי')}
+            accentColor="naale"
+            href="/naale/stats"
+            onClick={() => router.push('/naale/stats')}
+          />
+        </CardGrid>
+
+        <h2 className="text-sm font-semibold text-fg/70 mt-6 mb-2">{t('רמות לפי נושא')}</h2>
+        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 space-y-3">
+          {topics?.map(topic => (
+            <div key={topic.topic} className="flex items-center justify-between gap-3">
+              <span className="text-sm text-fg/80 flex-1 min-w-0 truncate">{topic.topic}</span>
+              {topic.started ? (
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-fg/50">
+                    {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
+                  </span>
+                  <LevelSteps level={topic.level ?? 1} />
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
+                  <LevelSteps level={0} />
+                </span>
+              )}
+            </div>
+          ))}
+          {LOCKED_TOPICS.map(name => (
+            <div key={name} className="flex items-center justify-between gap-3 opacity-50">
+              <span className="text-sm text-fg/80 flex-1 min-w-0 truncate">{name}</span>
+              <span className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-fg/40">🔒 {t('בקרוב...')}</span>
+                <LevelSteps level={0} locked />
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>}
       </div>
-
-      {rewards && (
-        <div className="flex items-center justify-between gap-2 mb-6 text-sm bg-surface rounded-xl border border-card-border px-4 py-2.5">
-          <span className="flex items-center gap-1 text-fg/70">
-            🔥 <LtrIsolate>{rewards.streak}</LtrIsolate> {t('שבועות ברצף')}
-          </span>
-          <span className="flex items-center gap-3 text-fg/70">
-            <span>⭐ <LtrIsolate>{rewards.xp}</LtrIsolate></span>
-            <span>🪙 <LtrIsolate>{rewards.coins}</LtrIsolate></span>
-          </span>
-        </div>
-      )}
-
-      <CardGrid>
-        <Card
-          icon="▶️"
-          title={t('תרגול')}
-          subtitle={t('30 דקות')}
-          accentColor="naale"
-          onClick={handleStart}
-          disabled={starting}
-        />
-        <Card
-          icon="📊"
-          title={t('ההתקדמות שלי')}
-          accentColor="naale"
-          href="/naale/stats"
-          onClick={() => router.push('/naale/stats')}
-        />
-      </CardGrid>
-
-      {error && <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>}
     </div>
   )
 }
