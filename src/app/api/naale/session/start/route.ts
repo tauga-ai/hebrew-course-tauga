@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining } from '@/lib/naale/session'
+import { isDev } from '@/lib/dev-i18n'
+import { DEV_SESSION_MINUTES_COOKIE } from '@/lib/naale/dev-fast-session'
 
 /**
  * Starts (or resumes) the authenticated student's 30-minute session.
@@ -77,7 +80,17 @@ export async function POST() {
     .eq('student_id', session.student.id)
 
   const kind = (levelCount ?? 0) === 0 ? 'placement' : 'practice'
-  const deadline = new Date(Date.now() + SESSION_MINUTES * 60 * 1000).toISOString()
+
+  // Dev-only QA convenience (DevPanel's "Custom session length" field): a
+  // client cookie can ask for any length, and only takes effect when isDev
+  // is true here, server-side — NODE_ENV is fixed at build time, so this
+  // cookie has zero effect against a production deployment regardless of
+  // what a client sends. Anything non-numeric or <= 0 falls back to the
+  // real SESSION_MINUTES rather than producing a degenerate deadline.
+  const overrideRaw = isDev ? (await cookies()).get(DEV_SESSION_MINUTES_COOKIE)?.value : undefined
+  const override = overrideRaw ? Number(overrideRaw) : NaN
+  const minutes = Number.isFinite(override) && override > 0 ? override : SESSION_MINUTES
+  const deadline = new Date(Date.now() + minutes * 60 * 1000).toISOString()
 
   const { data: created, error } = await db
     .from('naale_sessions')

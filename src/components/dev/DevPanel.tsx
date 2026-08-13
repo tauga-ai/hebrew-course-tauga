@@ -3,6 +3,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { getDevLang, setDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { getShowHint, setShowHint, subscribeShowHint } from '@/lib/dev-hint'
+import {
+  DEV_SESSION_MINUTES_COOKIE,
+  getSessionMinutesOverride,
+  setSessionMinutesOverride,
+  subscribeSessionMinutesOverride,
+} from '@/lib/naale/dev-fast-session'
 
 /**
  * Dev-only. Renders only because layout.tsx wraps this in {isDev && ...}.
@@ -15,14 +21,21 @@ import { getShowHint, setShowHint, subscribeShowHint } from '@/lib/dev-hint'
 export function DevPanel() {
   const lang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
+  const sessionMinutesOverride = useSyncExternalStore(
+    subscribeSessionMinutesOverride,
+    getSessionMinutesOverride,
+    getSessionMinutesOverride
+  )
   const [open, setOpen] = useState(false)
 
   // DevLangProvider restores dev-lang's cookie on mount itself (it needs to,
-  // for the remount-key trick). The hint toggle has no such provider, so it
-  // restores its own persisted value here instead.
+  // for the remount-key trick). The hint and session-length toggles have no
+  // such provider, so they restore their own persisted value here instead.
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|; )dev-hint=(0|1)/)
-    if (match) setShowHint(match[1] === '1')
+    const hintMatch = document.cookie.match(/(?:^|; )dev-hint=(0|1)/)
+    if (hintMatch) setShowHint(hintMatch[1] === '1')
+    const minutesMatch = document.cookie.match(new RegExp(`(?:^|; )${DEV_SESSION_MINUTES_COOKIE}=([0-9]+)`))
+    if (minutesMatch) setSessionMinutesOverride(Number(minutesMatch[1]))
   }, [])
 
   return (
@@ -76,6 +89,25 @@ export function DevPanel() {
               >
                 {showHint ? 'On' : 'Off'}
               </button>
+            </div>
+
+            <div className="flex items-center justify-between py-3 border-t border-card-border">
+              <div>
+                <div className="text-sm text-fg">Session length override</div>
+                <div className="text-xs text-fg/50">minutes — next session you start; blank = real 30</div>
+              </div>
+              <input
+                type="number"
+                min={1}
+                placeholder="30"
+                value={sessionMinutesOverride ?? ''}
+                onChange={e => {
+                  const raw = e.target.value
+                  const n = raw === '' ? NaN : Number(raw)
+                  setSessionMinutesOverride(Number.isFinite(n) && n > 0 ? n : null)
+                }}
+                className="w-16 text-xs font-medium px-2 py-1.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg text-center"
+              />
             </div>
           </div>
         </div>
