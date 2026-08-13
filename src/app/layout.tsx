@@ -3,7 +3,7 @@ import { Heebo } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { DevLangProvider } from "@/components/dev/DevLangProvider";
 import { DevPanel } from "@/components/dev/DevPanel";
-import { t, isDev } from "@/lib/dev-i18n";
+import { t, debugMode } from "@/lib/dev-i18n";
 import "./globals.css";
 
 const heebo = Heebo({
@@ -30,7 +30,7 @@ const THEME_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )theme
 /**
  * Dev-only. Mirrors THEME_SCRIPT: reads the toggle cookie synchronously
  * before paint and corrects lang/dir if it disagrees with the static
- * isDev-based default below — avoids the flash a server cookies() read
+ * debugMode-based default below — avoids the flash a server cookies() read
  * would otherwise require (that's why THEME_SCRIPT itself avoids a
  * server-side cookies() read in this layout: it would force every route in
  * the app into dynamic rendering, losing static generation).
@@ -39,16 +39,16 @@ const DEV_LANG_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )de
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={isDev ? "en" : "he"} dir={isDev ? "ltr" : "rtl"} suppressHydrationWarning>
+    <html lang={debugMode ? "en" : "he"} dir={debugMode ? "ltr" : "rtl"} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-        {isDev && <script dangerouslySetInnerHTML={{ __html: DEV_LANG_SCRIPT }} />}
+        {debugMode && <script dangerouslySetInnerHTML={{ __html: DEV_LANG_SCRIPT }} />}
       </head>
       <body className={`${heebo.variable} min-h-screen font-sans`}>
         <ThemeProvider>
-          {isDev ? <DevLangProvider>{children}</DevLangProvider> : children}
+          {debugMode ? <DevLangProvider>{children}</DevLangProvider> : children}
         </ThemeProvider>
-        {isDev && <DevPanel />}
+        {debugMode && <DevPanel />}
       </body>
     </html>
   );

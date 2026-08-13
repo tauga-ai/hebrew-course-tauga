@@ -15,12 +15,12 @@ const GRADING_ROUTES = new Set([
   'session/answer/route.ts',
   'placement/answer/route.ts',
 ])
-//  - The three question-serving routes gate it behind `isDev` (a
-//    process.env.NODE_ENV check, never client-controlled) purely for the QA
-//    hint toggle (DevPanel), and explicitly strip it on every other path.
-//    Allowlisted here ONLY because each is separately verified below to
-//    still contain that exact strip — a route added to this set without the
-//    strip still fails.
+//  - The three question-serving routes gate it behind `debugMode` (a
+//    process.env.NEXT_PUBLIC_DEBUG_MODE check, baked in at build time, never
+//    client-controlled) purely for the QA hint toggle (DevPanel), and
+//    explicitly strip it on every other path. Allowlisted here ONLY because
+//    each is separately verified below to still contain that exact strip —
+//    a route added to this set without the strip still fails.
 const DEV_HINT_ROUTES = new Set([
   'session/next/route.ts',
   'session/review-next/route.ts',
@@ -51,6 +51,6 @@ test('no question-serving Naale route selects correct_answer', () => {
   assert.deepEqual(
     violations,
     [],
-    `Routes referencing correct_answer outside the allowed routes, or missing the isDev strip (the answer must never reach the browser before submission, except behind a server-only isDev check that explicitly strips it elsewhere): ${violations.join(', ')}`
+    `Routes referencing correct_answer outside the allowed routes, or missing the debugMode strip (the answer must never reach the browser before submission, except behind a server-only debugMode check that explicitly strips it elsewhere): ${violations.join(', ')}`
   )
 })

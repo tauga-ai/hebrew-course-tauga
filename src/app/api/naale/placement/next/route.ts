@@ -6,8 +6,9 @@ import { getPlacementQuestions } from '@/lib/naale/placement'
 
 // Dev-only QA hint, same gate as the practice /next route — DevPanel lets a
 // tester toggle whether to actually display it, but the field itself is only
-// ever present when NODE_ENV === development, never on anything client-supplied.
-const isDev = process.env.NODE_ENV === 'development'
+// ever present when NEXT_PUBLIC_DEBUG_MODE is true at build time, never on
+// anything client-supplied.
+const debugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true'
 
 /**
  * The next unanswered placement question, in the fixed one-per-topic order
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   const picked = questions[index]
   // Stripped in production: JSON.stringify omits an explicit `undefined`
   // value, so the key is genuinely absent from the response, not just empty.
-  const served = isDev ? picked : { ...picked, correct_answer: undefined }
+  const served = debugMode ? picked : { ...picked, correct_answer: undefined }
 
   return NextResponse.json({
     question: served,

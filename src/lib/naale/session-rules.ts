@@ -3,7 +3,7 @@
  *  DevPanel toggle, applied where the deadline is actually computed
  *  (session/start/route.ts) rather than here — this file stays a plain,
  *  side-effect-free constant so it can be imported from a bare `tsx --test`
- *  run with no isDev/env-var wiring to worry about. */
+ *  run with no debugMode/env-var wiring to worry about. */
 export const SESSION_MINUTES = 30
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3

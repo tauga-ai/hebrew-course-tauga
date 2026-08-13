@@ -12,15 +12,15 @@ type PublicQuestion = {
   answer_kind: string
   options: string[] | null
   // Present in the DB row always, but deliberately stripped from `served`
-  // below unless isDev — see that assignment for why.
+  // below unless debugMode — see that assignment for why.
   correct_answer?: string
 }
 
 // Dev-only QA hint (src/components/dev/DevPanel.tsx lets a tester toggle
-// whether to actually display it). Gated on NODE_ENV alone, never on
-// anything client-supplied — a cookie/header can be forged, an environment
-// variable set by the deploy platform cannot.
-const isDev = process.env.NODE_ENV === 'development'
+// whether to actually display it). Gated on NEXT_PUBLIC_DEBUG_MODE alone,
+// never on anything client-supplied — a cookie/header can be forged, this
+// is baked into the build.
+const debugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true'
 
 /**
  * The next question for an in-progress session.
@@ -112,8 +112,8 @@ export async function GET(req: NextRequest) {
         const picked = unseen[Math.floor(Math.random() * unseen.length)]
         // Stripped in production: JSON.stringify omits an explicit `undefined`
         // value, so the key is genuinely absent from the response, not just
-        // empty. isDev is a NODE_ENV check, never client-controlled.
-        served = isDev ? picked : { ...picked, correct_answer: undefined }
+        // empty. debugMode is a build-time env-var check, never client-controlled.
+        served = debugMode ? picked : { ...picked, correct_answer: undefined }
         break
       }
     }

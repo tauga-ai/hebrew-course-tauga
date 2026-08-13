@@ -8,7 +8,7 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
-import { t, isDev } from '@/lib/dev-i18n'
+import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 
 interface ServedQuestion {
@@ -18,9 +18,10 @@ interface ServedQuestion {
   prompt: string
   answer_kind: 'mcq' | 'text'
   options: string[] | null
-  // Dev-only: present only when NODE_ENV === development (see the /next
-  // route). Used purely to render the optional QA hint below — never used
-  // for grading, which always happens server-side via /answer regardless.
+  // Dev-only: present only when NEXT_PUBLIC_DEBUG_MODE is true at build
+  // time (see the /next route). Used purely to render the optional QA hint
+  // below — never used for grading, which always happens server-side via
+  // /answer regardless.
   correct_answer?: string
   // Ticket 15: true when this question came from /review-next rather than
   // /next — 2-3 hard exercises from the student's previous practice session,
@@ -54,11 +55,11 @@ type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
 type Phase = 'loading' | 'question' | 'feedback' | 'done'
 
 // Dev-only console trace of the session flow — easier to follow along while
-// QA-testing than reading Hebrew UI text. Never runs in production; isDev is
-// a NODE_ENV check, so this whole call is a no-op there regardless of any
-// client state.
+// QA-testing than reading Hebrew UI text. A no-op whenever
+// NEXT_PUBLIC_DEBUG_MODE is off at build time, regardless of any client
+// state.
 function qaLog(label: string, data?: unknown) {
-  if (!isDev) return
+  if (!debugMode) return
   if (data === undefined) console.log(`[naale-qa] ${label}`)
   else console.log(`[naale-qa] ${label}`, data)
 }
@@ -324,7 +325,7 @@ function SessionRunner() {
           </p>
         )}
 
-        {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+        {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
             💡 QA hint (dev-only, never shown in production): {q.correct_answer}
           </p>
@@ -340,7 +341,7 @@ function SessionRunner() {
               // only, no border/background, so it doesn't look like a real
               // answered-state and can't be confused with the post-answer
               // feedback below.
-              const isHintedCorrect = !result && isDev && showHint && q.correct_answer === option
+              const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
 
               let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
               if (result) {
