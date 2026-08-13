@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   // A late answer must not count. The deadline is server-authoritative, so a
   // paused tab or a tampered clock can't sneak one in.
   if (owned.session.ended_at || isExpired(owned.session.deadline_at)) {
-    return NextResponse.json({ error: 'הזמן נגמר' }, { status: 409 })
+    return NextResponse.json({ error: 'הזמן נגמר', code: 'expired' }, { status: 409 })
   }
 
   const db = createServiceClient()
@@ -57,12 +57,12 @@ export async function POST(req: NextRequest) {
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
   if (answeredThisSession) {
-    return NextResponse.json({ error: 'כבר ענית על שאלה זו' }, { status: 409 })
+    return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 
   const isSanctionedReview = reviewQueue.includes(question_id)
   if (answeredEver && !isSanctionedReview) {
-    return NextResponse.json({ error: 'כבר ענית על שאלה זו' }, { status: 409 })
+    return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 
   const isCorrect = isAnswerCorrect(String(answer), question.correct_answer, question.answer_kind)

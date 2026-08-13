@@ -276,8 +276,19 @@ function SessionRunner() {
         body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer }),
       })
       const data = await res.json()
-      // 409 = the server already ended the session (its clock is authoritative).
-      if (res.status === 409) { qaLog('/answer: 409, session already ended'); finishSession('time_up'); return }
+      if (res.status === 409) {
+        if (data.code === 'expired') {
+          // The server's clock is authoritative — a real timeout ends the session.
+          qaLog('/answer: 409 expired, ending session')
+          finishSession('time_up')
+          return
+        }
+        // A safely-rejected duplicate submission — the answer was already
+        // recorded correctly the first time. Not a real problem: just move on.
+        qaLog('/answer: 409 duplicate_answer, continuing to next question')
+        loadNext()
+        return
+      }
       if (!res.ok) throw new Error(data.error || 'שגיאה')
       qaLog('/answer: result', data)
       setResult(data)
