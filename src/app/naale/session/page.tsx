@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, debugMode } from '@/lib/dev-i18n'
@@ -87,6 +88,16 @@ function SessionRunner() {
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
 
+  // Background-prefetch target for the NEXT question, filled in only once
+  // THIS answer's result is known (never earlier — session/next's difficulty
+  // pick depends on naale_topic_levels.level, which answering can just have
+  // changed). Refs, not state: nothing needs to re-render off these, and a
+  // ref sidesteps loadNext() picking up a new identity on every answer (a
+  // state version here would re-trigger the boot effect below every
+  // question, since it depends on loadNext).
+  const prefetchedQuestion = useRef<ServedQuestion | null>(null)
+  const prefetchedDone = useRef<{ reason: DoneReason } | null>(null)
+
   const remaining = useCountdown(deadlineMs)
 
   // Closes the session out server-side (safe to call more than once — /end is
@@ -116,15 +127,20 @@ function SessionRunner() {
     }
   }, [sessionId])
 
+  // Pure fetch — no state clearing, just resolves what the next question (or
+  // end reason) IS. Extracted from the old loadNext so the prefetch effect
+  // below can call it without touching `question`/`result` directly (a
+  // prefetch must never make the CURRENT question disappear from under the
+  // student).
+  //
   // kindOverride exists purely to dodge a stale-closure race on the very
   // first call out of boot(): setKind() and this call happen in the same
   // tick, so the `kind` state this callback closed over wouldn't be updated
-  // yet on that first invocation. Every later call (from the "next question"
-  // button) omits it and reads the by-then-fresh `kind` state instead.
-  const loadNext = useCallback(async (kindOverride?: 'placement' | 'practice') => {
-    if (!sessionId) return
-    setResult(null)
-    setSelected('')
+  // yet on that first invocation. Every later call omits it and reads the
+  // by-then-fresh `kind` state instead.
+  const fetchNextQuestion = useCallback(async (
+    kindOverride?: 'placement' | 'practice'
+  ): Promise<{ question: ServedQuestion } | { done: true; reason: DoneReason } | { error: string }> => {
     try {
       const effectiveKind = kindOverride ?? kind
       if (!reviewExhausted && effectiveKind === 'practice') {
@@ -132,8 +148,7 @@ function SessionRunner() {
         const reviewData = await reviewRes.json()
         if (reviewRes.ok && !reviewData.done) {
           qaLog('/review-next: question served', reviewData.question)
-          setQuestion(reviewData.question)
-          return
+          return { question: reviewData.question }
         }
         setReviewExhausted(true)
       }
@@ -143,16 +158,70 @@ function SessionRunner() {
       if (!res.ok) throw new Error(data.error || 'שגיאה')
       if (data.done) {
         qaLog(`/next: done (${data.reason})`)
-        finishSession(data.reason as DoneReason)
-        setQuestion(null)
-        return
+        return { done: true, reason: data.reason as DoneReason }
       }
       qaLog('/next: question served', data.question)
-      setQuestion(data.question)
+      return { question: data.question }
     } catch (err: unknown) {
-      setLoadError(err instanceof Error ? err.message : 'שגיאה בטעינת השאלה')
+      return { error: err instanceof Error ? err.message : 'שגיאה בטעינת השאלה' }
     }
-  }, [sessionId, finishSession, kind, reviewExhausted])
+  }, [sessionId, kind, reviewExhausted])
+
+  // Advances to the next question — instantly, if the prefetch below already
+  // resolved one; otherwise falls back to fetching on demand (today's only
+  // path), so a slow/failed prefetch degrades to the old behavior rather
+  // than hanging or erroring.
+  const loadNext = useCallback(async (kindOverride?: 'placement' | 'practice') => {
+    if (!sessionId) return
+    setResult(null)
+    setSelected('')
+
+    if (prefetchedQuestion.current) {
+      setQuestion(prefetchedQuestion.current)
+      prefetchedQuestion.current = null
+      prefetchedDone.current = null
+      return
+    }
+    if (prefetchedDone.current) {
+      const { reason } = prefetchedDone.current
+      prefetchedDone.current = null
+      finishSession(reason)
+      setQuestion(null)
+      return
+    }
+
+    const outcome = await fetchNextQuestion(kindOverride)
+    if ('error' in outcome) { setLoadError(outcome.error); return }
+    if ('done' in outcome) { finishSession(outcome.reason); setQuestion(null); return }
+    setQuestion(outcome.question)
+  }, [sessionId, fetchNextQuestion, finishSession])
+
+  // Kicks off the NEXT question's fetch as soon as THIS answer's result is
+  // known — not before (see the prefetchedQuestion/prefetchedDone doc
+  // comment above for why timing matters here). Correct answers already
+  // pause ~700ms for the reward flash before auto-advancing, and a wrong
+  // answer's Continue click rarely beats this — so by the time loadNext()
+  // actually runs, the result is usually already sitting in the ref.
+  //
+  // Deferred via setTimeout rather than called directly: fetchNextQuestion
+  // can itself call setReviewExhausted, so this repo's
+  // react-hooks/set-state-in-effect lint rule treats invoking it directly as
+  // synchronous state-setting within the effect — same rationale as the
+  // countdown-expiry effect above and DevPanel.tsx's refresh calls.
+  useEffect(() => {
+    if (!result) return
+    let cancelled = false
+    const id = setTimeout(() => {
+      fetchNextQuestion().then(outcome => {
+        if (cancelled) return
+        if ('question' in outcome) prefetchedQuestion.current = outcome.question
+        else if ('done' in outcome) prefetchedDone.current = { reason: outcome.reason }
+        // 'error' outcome: left unset — loadNext()'s fallback fetch will just
+        // retry for real and surface loadError normally if that fails too.
+      })
+    }, 0)
+    return () => { cancelled = true; clearTimeout(id) }
+  }, [result, fetchNextQuestion])
 
   // Resume from the server's deadline — never a fresh 30 minutes on reload.
   useEffect(() => {
@@ -193,14 +262,18 @@ function SessionRunner() {
     }
   }, [remaining, doneReason, finishSession])
 
-  async function submitAnswer() {
-    if (!question || submitting || selected === '') return
+  // Takes the answer explicitly rather than reading `selected` internally —
+  // selectAndSubmit() below calls this in the same tick it sets `selected`,
+  // before that state update has actually landed, so reading `selected` here
+  // would see the PREVIOUS value, not the option just clicked.
+  async function submitAnswer(answer: string) {
+    if (!question || submitting || answer === '') return
     setSubmitting(true)
     try {
       const res = await fetch('/api/naale/session/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer: selected }),
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer }),
       })
       const data = await res.json()
       // 409 = the server already ended the session (its clock is authoritative).
@@ -216,6 +289,26 @@ function SessionRunner() {
       setSubmitting(false)
     }
   }
+
+  // Auto-submits an MCQ option the instant it's clicked — no separate submit
+  // button for multiple-choice, matching Quizlet's Learn-mode "tap an answer,
+  // it's graded immediately" flow.
+  function selectAndSubmit(option: string) {
+    setSelected(option)
+    submitAnswer(option)
+  }
+
+  // Correct answers auto-advance after the reward flash — no click needed.
+  // Wrong answers deliberately do NOT auto-advance (the Continue button
+  // below handles those) so the student has a moment to actually read the
+  // correct answer before it's replaced. 700ms is a feel judgment, not a
+  // measured value — tune it live against how the reward flash actually reads.
+  useEffect(() => {
+    if (result?.is_correct) {
+      const id = setTimeout(() => { loadNext() }, 700)
+      return () => clearTimeout(id)
+    }
+  }, [result, loadNext])
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
 
@@ -297,113 +390,164 @@ function SessionRunner() {
           right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
         />
 
-        {/* Count, not a percentage bar — there is no total to divide by; the
-            session ends on the clock, not on exhausting a fixed set. */}
-        <p className="text-xs text-fg/60 mb-4">
-          {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
-        </p>
+        {/* justify-between: prompt (+ review banner / reward flash / hint)
+            at the top, choices (+ submit/continue) pushed down rather than
+            immediately following the prompt text. */}
+        {/* key={q.id} forces a remount (and replays the enter animation)
+            every time the question changes — including auto-advance and
+            Continue, not just the very first question. */}
+        <div key={q.id} className="flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+          <div>
+            {/* Count, not a percentage bar — there is no total to divide by;
+                the session ends on the clock, not on exhausting a fixed set. */}
+            <p className="text-xs text-fg/60 mb-4">
+              {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+            </p>
 
-        {/* Ticket 15: visually distinguishes a re-served question from new
-            material, and doubles as the "why am I seeing this again" intro the
-            task calls for — shown on every review question rather than once,
-            since that's simpler than tracking a one-shot "have I told them
-            yet" flag and no less clear repeated. */}
-        {q.is_review && (
-          <p className="text-xs font-medium text-accent-naale mb-3 text-right">
-            🔄 {t('חוזרים על שאלה מהתרגול הקודם')}
-          </p>
-        )}
+            {/* Ticket 15: visually distinguishes a re-served question from new
+                material, and doubles as the "why am I seeing this again" intro the
+                task calls for — shown on every review question rather than once,
+                since that's simpler than tracking a one-shot "have I told them
+                yet" flag and no less clear repeated. */}
+            {q.is_review && (
+              <p className="text-xs font-medium text-accent-naale mb-3 text-right">
+                🔄 {t('חוזרים על שאלה מהתרגול הקודם')}
+              </p>
+            )}
 
-        <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+            <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
 
-        {/* Lightweight, no animation — the spec is explicit "no need for
-            elaborate animation," just the "Duolingo feel" of a small reward
-            note appearing right after a correct answer. */}
-        {result?.is_correct && (
-          <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-4 text-right">
-            <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
-          </p>
-        )}
+            {/* A confetti burst plus the reward note on a correct answer —
+                relative positioning here is what anchors ConfettiBurst's
+                absolutely-positioned pieces to this spot. A wrapping <div>,
+                not <p>, since ConfettiBurst renders a block-level <div> and
+                a <div> inside a <p> is invalid HTML (the browser would
+                silently close the <p> early). */}
+            {result?.is_correct && (
+              <div className="relative mb-4">
+                <ConfettiBurst />
+                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 text-right">
+                  <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
+                </p>
+              </div>
+            )}
 
-        {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
-            💡 QA hint (dev-only, never shown in production): {q.correct_answer}
-          </p>
-        )}
-
-        {q.answer_kind === 'mcq' && q.options ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            {q.options.map(option => {
-              const isSelected = selected === option
-              const isTheCorrectOne = result?.correct_answer === option
-              // Pre-answer, dev-only QA aid: colors just the option's text green,
-              // using the field /next only ever includes in development. Text
-              // only, no border/background, so it doesn't look like a real
-              // answered-state and can't be confused with the post-answer
-              // feedback below.
-              const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
-
-              let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
-              if (result) {
-                if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
-                else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
-                else stateClass = 'bg-surface border-card-border text-fg/60'
-              } else if (isSelected) {
-                stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
-              }
-
-              return (
-                <button
-                  key={option}
-                  onClick={() => !result && setSelected(option)}
-                  disabled={!!result || submitting}
-                  className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
-                >
-                  <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
-                  {result && isTheCorrectOne && (
-                    <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
-                  )}
-                  {result && isSelected && !isTheCorrectOne && (
-                    <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="mb-4">
-            <textarea
-              value={selected}
-              onChange={e => !result && setSelected(e.target.value)}
-              disabled={!!result || submitting}
-              placeholder={t('כתוב את תשובתך כאן...')}
-              rows={5}
-              className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
-            />
-            {result && (
-              <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
-                {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+            {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
+                💡 QA hint (dev-only, never shown in production): {q.correct_answer}
               </p>
             )}
           </div>
-        )}
 
-        {!result ? (
-          <button
-            onClick={submitAnswer}
-            disabled={submitting || selected === ''}
-            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
-          >
-            {t('שלח תשובה')}
-          </button>
-        ) : (
-          <button
-            onClick={() => loadNext()}
-            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
-          >
-            {t('השאלה הבאה')}
-          </button>
-        )}
+          <div>
+            {q.answer_kind === 'mcq' && q.options ? (
+              // Always a single stacked column — never a 2-up grid, even on
+              // wide screens (explicit request, reverses ticket 17's
+              // responsive grid).
+              <div className="space-y-3 mb-4">
+                {q.options.map(option => {
+                  const isSelected = selected === option
+                  const isTheCorrectOne = result?.correct_answer === option
+                  // Pre-answer, dev-only QA aid: colors just the option's text green,
+                  // using the field /next only ever includes in development. Text
+                  // only, no border/background, so it doesn't look like a real
+                  // answered-state and can't be confused with the post-answer
+                  // feedback below.
+                  const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
+
+                  let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
+                  if (result) {
+                    if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+                    else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+                    else stateClass = 'bg-surface border-card-border text-fg/60'
+                  } else if (submitting) {
+                    // Grading request in flight: the clicked option stays
+                    // highlighted, every other option visibly dims — not
+                    // just functionally disabled (the `disabled` prop below
+                    // already blocked clicks on all of them), but genuinely
+                    // reading as inert rather than looking identical to the
+                    // untouched idle state.
+                    stateClass = isSelected
+                      ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+                      : 'bg-surface border-card-border text-fg/30 opacity-50'
+                  } else if (isSelected) {
+                    stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+                  }
+
+                  return (
+                    <button
+                      key={option}
+                      // Auto-submits on click — no separate submit button for
+                      // MCQ (Quizlet-style). `!submitting` guards the brief
+                      // in-flight window, same as the `disabled` prop below.
+                      onClick={() => !result && !submitting && selectAndSubmit(option)}
+                      disabled={!!result || submitting}
+                      className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
+                    >
+                      <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                      {result && isTheCorrectOne && (
+                        <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
+                      )}
+                      {result && isSelected && !isTheCorrectOne && (
+                        <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="mb-4">
+                <textarea
+                  value={selected}
+                  onChange={e => !result && setSelected(e.target.value)}
+                  onKeyDown={e => {
+                    // Enter submits (Shift+Enter still inserts a newline, the
+                    // usual textarea convention) — free-text has no "click an
+                    // option" gesture to auto-submit on, so this is its
+                    // equivalent shortcut. The button below still works too.
+                    if (e.key === 'Enter' && !e.shiftKey && !result && !submitting && selected !== '') {
+                      e.preventDefault()
+                      submitAnswer(selected)
+                    }
+                  }}
+                  disabled={!!result || submitting}
+                  placeholder={t('כתוב את תשובתך כאן...')}
+                  rows={5}
+                  className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
+                />
+                {result && (
+                  <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
+                    {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Free-text is the only branch that still needs an explicit
+                submit — MCQ auto-submits on click above. */}
+            {!result && q.answer_kind !== 'mcq' && (
+              <button
+                onClick={() => submitAnswer(selected)}
+                disabled={submitting || selected === ''}
+                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+              >
+                {t('שלח תשובה')}
+              </button>
+            )}
+
+            {/* Correct answers auto-advance (see the setTimeout effect above)
+                — only a wrong answer gets a button, so there's time to
+                actually read the correct one before it's replaced. */}
+            {result && !result.is_correct && (
+              <button
+                onClick={() => loadNext()}
+                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+              >
+                {t('המשך')}
+              </button>
+            )}
+          </div>
+        </div>
       </>
     )
   }
