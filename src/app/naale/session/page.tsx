@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { Suspense, useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
+import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, isDev } from '@/lib/dev-i18n'
@@ -217,9 +218,11 @@ function SessionRunner() {
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
 
+  let content: ReactNode
+
   if (loadError) {
-    return (
-      <div className="min-h-screen p-4 max-w-md mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
+    content = (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
         <p className="text-red-500 dark:text-red-400 text-sm">{loadError}</p>
         <button
           onClick={() => { setLoadError(''); loadNext() }}
@@ -229,15 +232,13 @@ function SessionRunner() {
         </button>
       </div>
     )
-  }
-
-  if (phase === 'loading') return <LoadingSpinner />
-
-  if (phase === 'done') {
+  } else if (phase === 'loading') {
+    content = <LoadingSpinner />
+  } else if (phase === 'done') {
     const shownAnswered = summary?.answered_count ?? answeredCount
 
-    return (
-      <div className="min-h-screen p-4 max-w-md mx-auto w-full">
+    content = (
+      <>
         <PageHeader backHref="/naale" title={t('תרגול')} />
         <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
           {doneReason === 'no_topics' ? (
@@ -281,128 +282,135 @@ function SessionRunner() {
             {t('לדף הבית')}
           </button>
         </div>
-      </div>
+      </>
+    )
+  } else {
+    // phase is 'question' or 'feedback' here — question is guaranteed non-null.
+    const q = question!
+
+    content = (
+      <>
+        <PageHeader
+          backHref="/naale"
+          title={t('תרגול')}
+          right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
+        />
+
+        {/* Count, not a percentage bar — there is no total to divide by; the
+            session ends on the clock, not on exhausting a fixed set. */}
+        <p className="text-xs text-fg/60 mb-4">
+          {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+        </p>
+
+        {/* Ticket 15: visually distinguishes a re-served question from new
+            material, and doubles as the "why am I seeing this again" intro the
+            task calls for — shown on every review question rather than once,
+            since that's simpler than tracking a one-shot "have I told them
+            yet" flag and no less clear repeated. */}
+        {q.is_review && (
+          <p className="text-xs font-medium text-accent-naale mb-3 text-right">
+            🔄 {t('חוזרים על שאלה מהתרגול הקודם')}
+          </p>
+        )}
+
+        <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+
+        {/* Lightweight, no animation — the spec is explicit "no need for
+            elaborate animation," just the "Duolingo feel" of a small reward
+            note appearing right after a correct answer. */}
+        {result?.is_correct && (
+          <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-4 text-right">
+            <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
+          </p>
+        )}
+
+        {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
+            💡 QA hint (dev-only, never shown in production): {q.correct_answer}
+          </p>
+        )}
+
+        {q.answer_kind === 'mcq' && q.options ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            {q.options.map(option => {
+              const isSelected = selected === option
+              const isTheCorrectOne = result?.correct_answer === option
+              // Pre-answer, dev-only QA aid: colors just the option's text green,
+              // using the field /next only ever includes in development. Text
+              // only, no border/background, so it doesn't look like a real
+              // answered-state and can't be confused with the post-answer
+              // feedback below.
+              const isHintedCorrect = !result && isDev && showHint && q.correct_answer === option
+
+              let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
+              if (result) {
+                if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+                else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+                else stateClass = 'bg-surface border-card-border text-fg/60'
+              } else if (isSelected) {
+                stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+              }
+
+              return (
+                <button
+                  key={option}
+                  onClick={() => !result && setSelected(option)}
+                  disabled={!!result || submitting}
+                  className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
+                >
+                  <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                  {result && isTheCorrectOne && (
+                    <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
+                  )}
+                  {result && isSelected && !isTheCorrectOne && (
+                    <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mb-4">
+            <textarea
+              value={selected}
+              onChange={e => !result && setSelected(e.target.value)}
+              disabled={!!result || submitting}
+              placeholder={t('כתוב את תשובתך כאן...')}
+              rows={5}
+              className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
+            />
+            {result && (
+              <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
+                {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {!result ? (
+          <button
+            onClick={submitAnswer}
+            disabled={submitting || selected === ''}
+            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+          >
+            {t('שלח תשובה')}
+          </button>
+        ) : (
+          <button
+            onClick={() => loadNext()}
+            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+          >
+            {t('השאלה הבאה')}
+          </button>
+        )}
+      </>
     )
   }
 
-  // phase is 'question' or 'feedback' from here — question is guaranteed non-null.
-  const q = question!
-
   return (
-    <div className="min-h-screen p-4 max-w-md mx-auto w-full">
-      <PageHeader
-        backHref="/naale"
-        title={t('תרגול')}
-        right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
-      />
-
-      {/* Count, not a percentage bar — there is no total to divide by; the
-          session ends on the clock, not on exhausting a fixed set. */}
-      <p className="text-xs text-fg/60 mb-4">
-        {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
-      </p>
-
-      {/* Ticket 15: visually distinguishes a re-served question from new
-          material, and doubles as the "why am I seeing this again" intro the
-          task calls for — shown on every review question rather than once,
-          since that's simpler than tracking a one-shot "have I told them
-          yet" flag and no less clear repeated. */}
-      {q.is_review && (
-        <p className="text-xs font-medium text-accent-naale mb-3 text-right">
-          🔄 {t('חוזרים על שאלה מהתרגול הקודם')}
-        </p>
-      )}
-
-      <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
-
-      {/* Lightweight, no animation — the spec is explicit "no need for
-          elaborate animation," just the "Duolingo feel" of a small reward
-          note appearing right after a correct answer. */}
-      {result?.is_correct && (
-        <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-4 text-right">
-          <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
-        </p>
-      )}
-
-      {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
-        <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
-          💡 QA hint (dev-only, never shown in production): {q.correct_answer}
-        </p>
-      )}
-
-      {q.answer_kind === 'mcq' && q.options ? (
-        <div className="space-y-3 mb-4">
-          {q.options.map(option => {
-            const isSelected = selected === option
-            const isTheCorrectOne = result?.correct_answer === option
-            // Pre-answer, dev-only QA aid: colors just the option's text green,
-            // using the field /next only ever includes in development. Text
-            // only, no border/background, so it doesn't look like a real
-            // answered-state and can't be confused with the post-answer
-            // feedback below.
-            const isHintedCorrect = !result && isDev && showHint && q.correct_answer === option
-
-            let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
-            if (result) {
-              if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
-              else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
-              else stateClass = 'bg-surface border-card-border text-fg/60'
-            } else if (isSelected) {
-              stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
-            }
-
-            return (
-              <button
-                key={option}
-                onClick={() => !result && setSelected(option)}
-                disabled={!!result || submitting}
-                className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
-              >
-                <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
-                {result && isTheCorrectOne && (
-                  <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
-                )}
-                {result && isSelected && !isTheCorrectOne && (
-                  <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="mb-4">
-          <textarea
-            value={selected}
-            onChange={e => !result && setSelected(e.target.value)}
-            disabled={!!result || submitting}
-            placeholder={t('כתוב את תשובתך כאן...')}
-            rows={5}
-            className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
-          />
-          {result && (
-            <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
-              {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
-            </p>
-          )}
-        </div>
-      )}
-
-      {!result ? (
-        <button
-          onClick={submitAnswer}
-          disabled={submitting || selected === ''}
-          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
-        >
-          {t('שלח תשובה')}
-        </button>
-      ) : (
-        <button
-          onClick={() => loadNext()}
-          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
-        >
-          {t('השאלה הבאה')}
-        </button>
-      )}
+    <div className="min-h-screen md:flex">
+      <NaaleSidebar role="student" />
+      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">{content}</div>
     </div>
   )
 }
