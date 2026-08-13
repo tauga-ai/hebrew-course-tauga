@@ -3,9 +3,12 @@
  * never influence which question is served or how a topic's level moves, so
  * ticket 2's leveling tests stay meaningful.
  *
- * Values are the spec's PROPOSED numbers, pending product sign-off — they live
- * here as named constants precisely so changing them is a one-line edit. See
- * ticket 14's task.md and naale-track-first-build/CONTEXT.md §7/§9 for status.
+ * Values are Yuval-confirmed (2026-08-13) as final — they live here as named
+ * constants because that's still good practice, not because they're pending
+ * sign-off. See ticket 14's task.md and naale-track-first-build/CONTEXT.md
+ * §7/§9 for the confirmation record. Staff earn these identically to
+ * students — there is deliberately no role check anywhere in this file or
+ * its callers.
  */
 export const XP_PER_CORRECT = 10
 export const XP_PER_COMPLETED_SESSION = 50
@@ -13,9 +16,9 @@ export const COINS_PER_CORRECT = 1
 export const SESSIONS_PER_WEEK_FOR_STREAK = 2
 
 /**
- * Israel time, Sunday-start — the natural default for an Israeli school
- * calendar. Not in the written spec; a working decision (see
- * naale-track-first-build/CONTEXT.md §7), swappable via this one constant.
+ * Israel time, Sunday-start — Yuval-confirmed 2026-08-13 ("from 00:01 every
+ * Sunday morning"; read as plain-language for local midnight, which is what
+ * this already computes — see naale-track-first-build/CONTEXT.md §9).
  */
 const STREAK_TIMEZONE = 'Asia/Jerusalem'
 
