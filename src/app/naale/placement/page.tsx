@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
@@ -44,6 +44,13 @@ function PlacementRunner() {
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
 
+  // Background-prefetch target for the next placement question — same
+  // ref-based approach as session/page.tsx's prefetch (see that file's doc
+  // comment): filled in only once THIS answer's result is known, and a ref
+  // rather than state so loadNext()'s identity doesn't churn every question.
+  const prefetchedQuestion = useRef<{ question: ServedQuestion; question_number: number; total: number } | null>(null)
+  const prefetchedDone = useRef(false)
+
   useEffect(() => {
     if (!sessionId) router.replace('/naale')
   }, [sessionId, router])
@@ -63,33 +70,88 @@ function PlacementRunner() {
     }
   }, [sessionId])
 
-  const loadNext = useCallback(async () => {
-    if (!sessionId) return
-    setResult(null)
-    setSelected('')
-    setPhase('loading')
+  // Pure fetch — no phase/state clearing, just resolves what the next
+  // question is (or that placement is done). Extracted so the prefetch
+  // effect below can call it without touching `question`/`phase` directly.
+  const fetchNextQuestion = useCallback(async (): Promise<
+    { question: ServedQuestion; question_number: number; total: number } | { done: true } | { error: string }
+  > => {
     try {
       const res = await fetch(`/api/naale/placement/next?session_id=${sessionId}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
-      if (data.done) { finishPlacement(); return }
-      setQuestion(data.question)
-      setQuestionNumber(data.question_number)
-      setTotal(data.total)
-      setPhase('question')
+      if (data.done) return { done: true }
+      return { question: data.question, question_number: data.question_number, total: data.total }
     } catch (err: unknown) {
-      setLoadError(err instanceof Error ? err.message : 'שגיאה בטעינת השאלה')
+      return { error: err instanceof Error ? err.message : 'שגיאה בטעינת השאלה' }
     }
-  }, [sessionId, finishPlacement])
+  }, [sessionId])
 
-  async function submitAnswer() {
-    if (!question || submitting || selected === '') return
+  // Advances to the next question — instantly, if the prefetch below
+  // already resolved one; otherwise falls back to fetching on demand
+  // (today's only path, complete with the loading phase).
+  const loadNext = useCallback(async () => {
+    if (!sessionId) return
+    setResult(null)
+    setSelected('')
+
+    if (prefetchedQuestion.current) {
+      const { question, question_number, total } = prefetchedQuestion.current
+      prefetchedQuestion.current = null
+      prefetchedDone.current = false
+      setQuestion(question)
+      setQuestionNumber(question_number)
+      setTotal(total)
+      setPhase('question')
+      return
+    }
+    if (prefetchedDone.current) {
+      prefetchedDone.current = false
+      finishPlacement()
+      return
+    }
+
+    setPhase('loading')
+    const outcome = await fetchNextQuestion()
+    if ('error' in outcome) { setLoadError(outcome.error); return }
+    if ('done' in outcome) { finishPlacement(); return }
+    setQuestion(outcome.question)
+    setQuestionNumber(outcome.question_number)
+    setTotal(outcome.total)
+    setPhase('question')
+  }, [sessionId, fetchNextQuestion, finishPlacement])
+
+  // Kicks off the next question's fetch as soon as THIS answer's result is
+  // known — see session/page.tsx's matching effect for why the timing here
+  // (after grading, never before) matters. Deferred via setTimeout for the
+  // same react-hooks/set-state-in-effect reason as that file (fetchNextQuestion
+  // itself only sets loadError on failure, but calling it directly here still
+  // trips the rule the same way).
+  useEffect(() => {
+    if (phase !== 'feedback') return
+    let cancelled = false
+    const id = setTimeout(() => {
+      fetchNextQuestion().then(outcome => {
+        if (cancelled) return
+        if ('question' in outcome) prefetchedQuestion.current = outcome
+        else if ('done' in outcome) prefetchedDone.current = true
+        // 'error' outcome: left unset — loadNext()'s fallback fetch retries for real.
+      })
+    }, 0)
+    return () => { cancelled = true; clearTimeout(id) }
+  }, [phase, fetchNextQuestion])
+
+  // Takes the answer explicitly rather than reading `selected` internally —
+  // selectAndSubmit() below calls this in the same tick it sets `selected`,
+  // before that state update has landed.
+  async function submitAnswer(answer: string) {
+    if (!question || submitting || answer === '') return
     setSubmitting(true)
     try {
       const res = await fetch('/api/naale/placement/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer: selected }),
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, answer }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
@@ -101,6 +163,23 @@ function PlacementRunner() {
       setSubmitting(false)
     }
   }
+
+  // Auto-submits an MCQ option the instant it's clicked — no separate submit
+  // button for multiple-choice (Quizlet-style).
+  function selectAndSubmit(option: string) {
+    setSelected(option)
+    submitAnswer(option)
+  }
+
+  // Correct answers auto-advance after a beat; wrong answers wait for the
+  // Continue button so there's time to read the correct answer. 700ms is a
+  // feel judgment, matching session/page.tsx's — tune live, not exact here.
+  useEffect(() => {
+    if (phase === 'feedback' && result?.is_correct) {
+      const id = setTimeout(() => { loadNext() }, 700)
+      return () => clearTimeout(id)
+    }
+  }, [phase, result, loadNext])
 
   if (loadError) {
     return (
@@ -164,90 +243,118 @@ function PlacementRunner() {
     <div className="min-h-screen p-4 max-w-md mx-auto w-full">
       <PageHeader backHref="/naale" title={t('שאלון קצר')} />
 
-      {/* Unlike practice (ticket 10), placement has a real denominator — one
-          question per topic, fixed — so n of total is meaningful here. */}
-      <p className="text-xs text-fg/60 mb-4">
-        {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
-      </p>
+      {/* justify-between: prompt (+ hint) at the top, choices (+ submit/
+          continue) pushed down rather than immediately following the
+          prompt text. */}
+      {/* key={q.id} forces a remount (and replays the enter animation)
+          every time the question changes. */}
+      <div key={q.id} className="flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+        <div>
+          {/* Unlike practice (ticket 10), placement has a real denominator —
+              one question per topic, fixed — so n of total is meaningful here. */}
+          <p className="text-xs text-fg/60 mb-4">
+            {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
+          </p>
 
-      <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+          <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
 
-      {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
-        <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
-          💡 QA hint (dev-only, never shown in production): {q.correct_answer}
-        </p>
-      )}
-
-      {q.answer_kind === 'mcq' && q.options ? (
-        <div className="space-y-3 mb-4">
-          {q.options.map(option => {
-            const isSelected = selected === option
-            const isTheCorrectOne = result?.correct_answer === option
-            // Pre-answer, dev-only QA aid: colors just the option's text
-            // green, using the field /next only ever includes in development.
-            const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
-
-            let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
-            if (result) {
-              if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
-              else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
-              else stateClass = 'bg-surface border-card-border text-fg/60'
-            } else if (isSelected) {
-              stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
-            }
-
-            return (
-              <button
-                key={option}
-                onClick={() => !result && setSelected(option)}
-                disabled={!!result || submitting}
-                className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
-              >
-                <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
-                {result && isTheCorrectOne && (
-                  <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
-                )}
-                {result && isSelected && !isTheCorrectOne && (
-                  <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="mb-4">
-          <textarea
-            value={selected}
-            onChange={e => !result && setSelected(e.target.value)}
-            disabled={!!result || submitting}
-            placeholder={t('כתוב את תשובתך כאן...')}
-            rows={5}
-            className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
-          />
-          {result && (
-            <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
-              {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+          {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
+              💡 QA hint (dev-only, never shown in production): {q.correct_answer}
             </p>
           )}
         </div>
-      )}
 
-      {!result ? (
-        <button
-          onClick={submitAnswer}
-          disabled={submitting || selected === ''}
-          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
-        >
-          {t('שלח תשובה')}
-        </button>
-      ) : (
-        <button
-          onClick={loadNext}
-          className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
-        >
-          {t('השאלה הבאה')}
-        </button>
-      )}
+        <div>
+          {q.answer_kind === 'mcq' && q.options ? (
+            <div className="space-y-3 mb-4">
+              {q.options.map(option => {
+                const isSelected = selected === option
+                const isTheCorrectOne = result?.correct_answer === option
+                // Pre-answer, dev-only QA aid: colors just the option's text
+                // green, using the field /next only ever includes in development.
+                const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
+
+                let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
+                if (result) {
+                  if (isTheCorrectOne) stateClass = 'bg-green-50 border-green-400 text-green-800 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300'
+                  else if (isSelected) stateClass = 'bg-red-50 border-red-400 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300'
+                  else stateClass = 'bg-surface border-card-border text-fg/60'
+                } else if (submitting) {
+                  // Grading request in flight: the clicked option stays
+                  // highlighted, every other option visibly dims — not just
+                  // functionally disabled, genuinely reads as inert.
+                  stateClass = isSelected
+                    ? 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+                    : 'bg-surface border-card-border text-fg/30 opacity-50'
+                } else if (isSelected) {
+                  stateClass = 'bg-primary-50 dark:bg-primary-500/10 border-primary-400 text-fg'
+                }
+
+                return (
+                  <button
+                    key={option}
+                    // Auto-submits on click — no separate submit button for
+                    // MCQ (Quizlet-style).
+                    onClick={() => !result && !submitting && selectAndSubmit(option)}
+                    disabled={!!result || submitting}
+                    className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
+                  >
+                    <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                    {result && isTheCorrectOne && (
+                      <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
+                    )}
+                    {result && isSelected && !isTheCorrectOne && (
+                      <span className="text-red-700 dark:text-red-400 font-bold flex-shrink-0">✗<span className="sr-only">{t(' בחרת בתשובה זו, שגויה')}</span></span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="mb-4">
+              <textarea
+                value={selected}
+                onChange={e => !result && setSelected(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey && !result && !submitting && selected !== '') {
+                    e.preventDefault()
+                    submitAnswer(selected)
+                  }
+                }}
+                disabled={!!result || submitting}
+                placeholder={t('כתוב את תשובתך כאן...')}
+                rows={5}
+                className="w-full border border-card-border rounded-xl px-4 py-3 text-right resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 bg-surface text-fg disabled:opacity-70"
+              />
+              {result && (
+                <p className={`mt-2 text-sm ${result.is_correct ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400 underline'}`}>
+                  {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {!result && q.answer_kind !== 'mcq' && (
+            <button
+              onClick={() => submitAnswer(selected)}
+              disabled={submitting || selected === ''}
+              className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+            >
+              {t('שלח תשובה')}
+            </button>
+          )}
+
+          {result && !result.is_correct && (
+            <button
+              onClick={() => loadNext()}
+              className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+            >
+              {t('המשך')}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
