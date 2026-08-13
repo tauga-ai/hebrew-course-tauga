@@ -99,7 +99,18 @@ export async function POST(req: NextRequest) {
     is_correct: isCorrect,
     is_review: isSanctionedReview,
   })
-  if (answerError) return NextResponse.json({ error: answerError.message }, { status: 500 })
+  if (answerError) {
+    // 23505 = Postgres unique_violation, from the naale_answers_session_question_unique
+    // constraint. This is the DB-level backstop for the race the SELECT-based
+    // checks above can't catch on their own (two near-simultaneous requests for
+    // the same question can both pass those checks before either one's insert
+    // commits) — same response shape as those checks, so the client's existing
+    // duplicate_answer handling covers this path too without any client change.
+    if (answerError.code === '23505') {
+      return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
+    }
+    return NextResponse.json({ error: answerError.message }, { status: 500 })
+  }
 
   // Same working decision: a review answer doesn't move the level (handled
   // above) and doesn't bump this topic's answered_count either, so it can't
