@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleIcon } from '@/components/ui/GoogleIcon'
-import { t, isDev } from '@/lib/dev-i18n'
+import { t, debugMode } from '@/lib/dev-i18n'
 
 export default function NaaleLoginPage() {
   const router = useRouter()
@@ -12,11 +12,12 @@ export default function NaaleLoginPage() {
   const [error, setError] = useState('')
 
   // Dev-only fallback so local QA doesn't need a real Google OAuth
-  // round-trip — never rendered in production (isDev is a NODE_ENV check,
-  // dead-code eliminated from prod bundles, same as DevPanel). Real students
-  // still only ever see the Google button below: per ticket 3, Google is the
-  // deliberate identity check for the roster model, not just a convenience.
-  // See scripts/create-naale-test-users.ts / test-user.md for the account
+  // round-trip — never rendered unless NEXT_PUBLIC_DEBUG_MODE is true at
+  // build time (dead-code eliminated otherwise, same as DevPanel). Real
+  // students still only ever see the Google button below: per ticket 3,
+  // Google is the deliberate identity check for the roster model, not just
+  // a convenience. See scripts/create-naale-test-users.ts / test-user.md for
+  // the account
   // this signs in as.
   const [devEmail, setDevEmail] = useState('')
   const [devPassword, setDevPassword] = useState('')
@@ -77,7 +78,7 @@ export default function NaaleLoginPage() {
 
         {error && <p className="text-red-500 dark:text-red-400 text-sm mt-4">{error}</p>}
 
-        {isDev && (
+        {debugMode && (
           <>
             <div className="flex items-center gap-3 my-5">
               <div className="h-px bg-card-border flex-1" />

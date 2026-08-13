@@ -7,8 +7,8 @@
  *
  * The cookie alone is never trusted for anything: the actual override only
  * takes effect server-side, in /api/naale/session/start, and only when
- * isDev is true there. Setting this cookie against a production deployment
- * has zero effect, since NODE_ENV is fixed at build time — not something a
+ * debugMode is true there. Setting this cookie against a deployment built
+ * with NEXT_PUBLIC_DEBUG_MODE off has zero effect — not something a
  * client-supplied cookie can influence.
  */
 export const DEV_SESSION_MINUTES_COOKIE = 'naale-dev-session-minutes'

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { t, isDev } from '@/lib/dev-i18n'
+import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 
 interface ServedQuestion {
@@ -15,9 +15,10 @@ interface ServedQuestion {
   prompt: string
   answer_kind: 'mcq' | 'text'
   options: string[] | null
-  // Dev-only: present only when NODE_ENV === development (see the /next
-  // route). Used purely to render the optional QA hint below — never used
-  // for grading, which always happens server-side via /answer regardless.
+  // Dev-only: present only when NEXT_PUBLIC_DEBUG_MODE is true at build
+  // time (see the /next route). Used purely to render the optional QA hint
+  // below — never used for grading, which always happens server-side via
+  // /answer regardless.
   correct_answer?: string
 }
 
@@ -171,7 +172,7 @@ function PlacementRunner() {
 
       <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
 
-      {isDev && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
+      {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
         <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
           💡 QA hint (dev-only, never shown in production): {q.correct_answer}
         </p>
@@ -184,7 +185,7 @@ function PlacementRunner() {
             const isTheCorrectOne = result?.correct_answer === option
             // Pre-answer, dev-only QA aid: colors just the option's text
             // green, using the field /next only ever includes in development.
-            const isHintedCorrect = !result && isDev && showHint && q.correct_answer === option
+            const isHintedCorrect = !result && debugMode && showHint && q.correct_answer === option
 
             let stateClass = 'bg-surface border-card-border hover:border-accent-naale text-fg'
             if (result) {

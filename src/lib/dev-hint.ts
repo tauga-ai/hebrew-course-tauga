@@ -7,8 +7,9 @@
  * This toggle only controls whether an ALREADY-dev-only field gets
  * *displayed* — it never controls whether the field gets *sent*. The actual
  * security gate lives server-side in /api/naale/session/next, keyed on
- * NODE_ENV alone: production never includes correct_answer regardless of
- * this toggle's (client-controlled, therefore untrusted) state.
+ * debugMode (NEXT_PUBLIC_DEBUG_MODE) alone: a build with that flag off never
+ * includes correct_answer regardless of this toggle's (client-controlled,
+ * therefore untrusted) state.
  */
 export const DEV_HINT_COOKIE = 'dev-hint'
 

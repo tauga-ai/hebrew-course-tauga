@@ -12,9 +12,9 @@ import { createServiceClient } from '@/lib/supabase/service'
  *
  * correct_answer IS selected here, same as the practice /next route's bank
  * query — stripping it for production happens at the route level (gated on
- * NODE_ENV, never client-controlled), which is also what lets the dev-only
- * "show answer hints" toggle work for placement the same way it does for
- * practice.
+ * debugMode/NEXT_PUBLIC_DEBUG_MODE, never client-controlled), which is also
+ * what lets the dev-only "show answer hints" toggle work for placement the
+ * same way it does for practice.
  */
 export async function getPlacementQuestions() {
   const db = createServiceClient()

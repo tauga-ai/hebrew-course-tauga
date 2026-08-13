@@ -5,7 +5,7 @@ import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { getReviewQuestionIds } from '@/lib/naale/review-queue'
 
 // Dev-only QA hint, same gate as /next — see that route's comment.
-const isDev = process.env.NODE_ENV === 'development'
+const debugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true'
 
 /**
  * The next review question for this session — ticket 15's session-opener:
@@ -69,6 +69,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    question: isDev ? { ...question, is_review: true } : { ...question, correct_answer: undefined, is_review: true },
+    question: debugMode ? { ...question, is_review: true } : { ...question, correct_answer: undefined, is_review: true },
   })
 }
