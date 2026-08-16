@@ -1,5 +1,8 @@
 import 'server-only'
+import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
+import { debugMode } from '@/lib/dev-i18n'
+import { DEV_SESSION_MINUTES_COOKIE } from '@/lib/naale/dev-fast-session'
 import type { NaaleSession } from '@/lib/types'
 
 // Pure completion/timing rules live in session-rules.ts, without the
@@ -13,6 +16,21 @@ export { SESSION_MINUTES, MIN_ANSWERS_FOR_COMPLETION, isSessionCompleted, hasRea
 export type OwnedSessionResult =
   | { ok: false }
   | { ok: true; session: NaaleSession }
+
+/**
+ * Dev-only: the QA session-length override minutes, if debugMode is on and a
+ * valid one is set, else null ("use the real SESSION_MINUTES / stored
+ * deadline"). Shared by session/start (recomputes on resume) and
+ * session/status (recomputes on a plain page reload) — a reload is what the
+ * client actually calls to restore an in-progress session, so the override
+ * must be picked up there too, not only via session/start's resume branch.
+ */
+export async function readDevSessionMinutesOverride(): Promise<number | null> {
+  if (!debugMode) return null
+  const raw = (await cookies()).get(DEV_SESSION_MINUTES_COOKIE)?.value
+  const n = raw ? Number(raw) : NaN
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 /**
  * Loads a session and verifies it belongs to this student. A session_id is

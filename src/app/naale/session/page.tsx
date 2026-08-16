@@ -11,6 +11,7 @@ import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
+import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
 
 interface ServedQuestion {
   id: string
@@ -96,6 +97,7 @@ function SessionRunner() {
   const [submitting, setSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
+  const showQuestionBadge = useSyncExternalStore(subscribeShowQuestionBadge, getShowQuestionBadge, getShowQuestionBadge)
 
   // Background-prefetch target for the NEXT question, filled in only once
   // THIS answer's result is known (never earlier — session/next's difficulty
@@ -491,6 +493,11 @@ function SessionRunner() {
                 the session ends on the clock, not on exhausting a fixed set. */}
             <p className="text-xs text-fg/60 mb-4">
               {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+              {debugMode && showQuestionBadge && (
+                <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
+                  {q.topic} · L{q.difficulty}
+                </span>
+              )}
             </p>
 
             {/* Ticket 15: visually distinguishes a re-served question from new
