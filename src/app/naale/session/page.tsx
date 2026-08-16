@@ -50,6 +50,13 @@ interface EndSummary {
 
 type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
 
+// Upper bound on how long a correct answer's auto-advance will wait on a
+// slow prefetch before giving up and advancing anyway (falling into
+// loadNext()'s own loading-spinner fallback). Not a measured value — just
+// comfortably above this environment's observed per-call latency (up to
+// ~3.6s), so ordinary network variance never hits it in practice.
+const SAFETY_CAP_MS = 5000
+
 // Derived, not stored — 'done' whenever a doneReason exists, 'feedback' once
 // an answer's result has come back, 'question' once a question has loaded,
 // and 'loading' otherwise. Avoids a second source of truth alongside the
@@ -98,6 +105,15 @@ function SessionRunner() {
   // question, since it depends on loadNext).
   const prefetchedQuestion = useRef<ServedQuestion | null>(null)
   const prefetchedDone = useRef<{ reason: DoneReason } | null>(null)
+  // Resolves once the prefetch above has landed in one of the two refs
+  // above (or given up as an error) — lets the correct-answer auto-advance
+  // effect below wait for the prefetch instead of firing on a blind timer,
+  // so it never has to fall into loadNext()'s loading-spinner fallback in
+  // the common case. Assigned synchronously in the prefetch effect (a plain
+  // ref write, not a state update) even though what it resolves to is
+  // produced by a deferred call — see that effect for why the call itself
+  // has to be deferred.
+  const prefetchPromise = useRef<Promise<void> | null>(null)
 
   const remaining = useCountdown(deadlineMs)
 
@@ -144,18 +160,31 @@ function SessionRunner() {
   ): Promise<{ question: ServedQuestion } | { done: true; reason: DoneReason } | { error: string }> => {
     try {
       const effectiveKind = kindOverride ?? kind
-      if (!reviewExhausted && effectiveKind === 'practice') {
-        const reviewRes = await fetch(`/api/naale/session/review-next?session_id=${sessionId}`)
-        const reviewData = await reviewRes.json()
-        if (reviewRes.ok && !reviewData.done) {
-          qaLog('/review-next: question served', reviewData.question)
-          return { question: reviewData.question }
+      const checkReview = !reviewExhausted && effectiveKind === 'practice'
+
+      // Fired together, not sequentially: both are pure reads with no side
+      // effects, so there's no correctness reason to only start /next after
+      // review-next comes back. Paying for both round-trips back-to-back was
+      // often enough on its own to blow past the 700ms auto-advance window —
+      // see naale-stale-question-transition's addendum.
+      const [reviewOutcome, nextOutcome] = await Promise.all([
+        checkReview
+          ? fetch(`/api/naale/session/review-next?session_id=${sessionId}`).then(async res => ({ res, data: await res.json() }))
+          : null,
+        fetch(`/api/naale/session/next?session_id=${sessionId}`).then(async res => ({ res, data: await res.json() })),
+      ])
+
+      if (reviewOutcome) {
+        if (reviewOutcome.res.ok && !reviewOutcome.data.done) {
+          qaLog('/review-next: question served', reviewOutcome.data.question)
+          return { question: reviewOutcome.data.question }
         }
+        // Nothing queued (or the request failed) — reviewExhausted still
+        // flips exactly when review-next reports done, same as before.
         setReviewExhausted(true)
       }
 
-      const res = await fetch(`/api/naale/session/next?session_id=${sessionId}`)
-      const data = await res.json()
+      const { res, data } = nextOutcome
       if (!res.ok) throw new Error(data.error || 'שגיאה')
       if (data.done) {
         qaLog(`/next: done (${data.reason})`)
@@ -181,16 +210,22 @@ function SessionRunner() {
       setQuestion(prefetchedQuestion.current)
       prefetchedQuestion.current = null
       prefetchedDone.current = null
+      prefetchPromise.current = null
       return
     }
     if (prefetchedDone.current) {
       const { reason } = prefetchedDone.current
       prefetchedDone.current = null
+      prefetchPromise.current = null
       finishSession(reason)
       setQuestion(null)
       return
     }
 
+    // No prefetch ready yet — clear the stale (already-answered) question so
+    // the derived `phase` shows 'loading' for this gap instead of re-rendering
+    // the previous question as if it were fresh and clickable.
+    setQuestion(null)
     const outcome = await fetchNextQuestion(kindOverride)
     if ('error' in outcome) { setLoadError(outcome.error); return }
     if ('done' in outcome) { finishSession(outcome.reason); setQuestion(null); return }
@@ -212,16 +247,29 @@ function SessionRunner() {
   useEffect(() => {
     if (!result) return
     let cancelled = false
-    const id = setTimeout(() => {
-      fetchNextQuestion().then(outcome => {
-        if (cancelled) return
-        if ('question' in outcome) prefetchedQuestion.current = outcome.question
-        else if ('done' in outcome) prefetchedDone.current = { reason: outcome.reason }
-        // 'error' outcome: left unset — loadNext()'s fallback fetch will just
-        // retry for real and surface loadError normally if that fails too.
-      })
-    }, 0)
-    return () => { cancelled = true; clearTimeout(id) }
+    let timeoutId: ReturnType<typeof setTimeout>
+    // prefetchPromise.current is assigned HERE, synchronously, so the
+    // correct-answer auto-advance effect (which runs right after this one,
+    // same commit) can always read a live promise off the ref rather than
+    // racing to see it before this effect has had a chance to set it. Only
+    // the fetchNextQuestion() call itself is deferred (see below); wrapping
+    // it in `new Promise` and writing the wrapper to the ref immediately is
+    // a plain synchronous ref write, not a state update.
+    prefetchPromise.current = new Promise<void>(resolve => {
+      timeoutId = setTimeout(() => {
+        fetchNextQuestion().then(outcome => {
+          if (!cancelled) {
+            if ('question' in outcome) prefetchedQuestion.current = outcome.question
+            else if ('done' in outcome) prefetchedDone.current = { reason: outcome.reason }
+            // 'error' outcome: left unset — loadNext()'s fallback fetch will
+            // just retry for real and surface loadError normally if that
+            // fails too.
+          }
+          resolve()
+        })
+      }, 0)
+    })
+    return () => { cancelled = true; clearTimeout(timeoutId) }
   }, [result, fetchNextQuestion])
 
   // Resume from the server's deadline — never a fresh 30 minutes on reload.
@@ -315,11 +363,28 @@ function SessionRunner() {
   // below handles those) so the student has a moment to actually read the
   // correct answer before it's replaced. 700ms is a feel judgment, not a
   // measured value — tune it live against how the reward flash actually reads.
+  //
+  // Waits for the prefetch too, not just the 700ms flash: advancing on a
+  // blind timer meant that whenever the prefetch hadn't resolved yet,
+  // loadNext() would fall into its (correct, but visually jarring) loading
+  // spinner right after the celebratory flash. Holding the flash open a
+  // little longer instead — until the prefetch actually lands — means the
+  // correct-answer path only ever shows the spinner in a genuinely
+  // pathological case (the SAFETY_CAP_MS below), not on ordinary network
+  // variance. A wrong answer's Continue click is unaffected: that's a
+  // deliberate user-initiated pause already, not this fix's target.
   useEffect(() => {
-    if (result?.is_correct) {
-      const id = setTimeout(() => { loadNext() }, 700)
-      return () => clearTimeout(id)
-    }
+    if (!result?.is_correct) return
+    let cancelled = false
+    let minDelayId: ReturnType<typeof setTimeout>
+    let safetyId: ReturnType<typeof setTimeout>
+    const minDelay = new Promise<void>(resolve => { minDelayId = setTimeout(resolve, 700) })
+    const safetyCap = new Promise<void>(resolve => { safetyId = setTimeout(resolve, SAFETY_CAP_MS) })
+    const prefetchReady = prefetchPromise.current ?? Promise.resolve()
+    Promise.race([Promise.all([minDelay, prefetchReady]), safetyCap]).then(() => {
+      if (!cancelled) loadNext()
+    })
+    return () => { cancelled = true; clearTimeout(minDelayId); clearTimeout(safetyId) }
   }, [result, loadNext])
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
