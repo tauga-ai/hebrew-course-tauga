@@ -56,6 +56,13 @@ export function DevPanel() {
     getSessionMinutesOverride
   )
   const [open, setOpen] = useState(false)
+  // Staged, not auto-committed on every keystroke: typing here only updates
+  // this local field. Only clicking Save (or the "1 min" preset, which
+  // commits directly) writes the cookie and notifies subscribers — that
+  // notification is what src/app/naale/session/page.tsx listens for to
+  // re-fetch its deadline immediately, so a session open in this tab
+  // reflects the change live instead of needing a manual reload.
+  const [pendingMinutes, setPendingMinutes] = useState('')
 
   const [activeSession, setActiveSession] = useState<ActiveSession | null | undefined>(undefined)
   const [topics, setTopics] = useState<string[]>([])
@@ -75,6 +82,19 @@ export function DevPanel() {
     const minutesMatch = document.cookie.match(new RegExp(`(?:^|; )${DEV_SESSION_MINUTES_COOKIE}=([0-9]+)`))
     if (minutesMatch) setSessionMinutesOverride(Number(minutesMatch[1]))
   }, [])
+
+  // Keeps the staged field in sync whenever the committed value changes from
+  // elsewhere (the cookie restore above, or the "1 min" preset) — never
+  // overwrites it just because the user is mid-typing towards a Save.
+  // Deferred via setTimeout, same as elsewhere in this file: this repo's
+  // react-hooks/set-state-in-effect lint rule wants a genuine callback
+  // boundary rather than a same-tick setState call in the effect body.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setPendingMinutes(sessionMinutesOverride === null ? '' : String(sessionMinutesOverride))
+    }, 0)
+    return () => clearTimeout(id)
+  }, [sessionMinutesOverride])
 
   async function refreshSessionState() {
     try {
@@ -220,7 +240,7 @@ export function DevPanel() {
               <div>
                 <div className="text-sm text-fg">Session length override</div>
                 <div className="text-xs text-fg/50">
-                  minutes — applies next time the session page loads; blank = real 30
+                  minutes — Save applies instantly to an open session; blank = real 30
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -235,14 +255,20 @@ export function DevPanel() {
                   type="number"
                   min={1}
                   placeholder="30"
-                  value={sessionMinutesOverride ?? ''}
-                  onChange={e => {
-                    const raw = e.target.value
-                    const n = raw === '' ? NaN : Number(raw)
-                    setSessionMinutesOverride(Number.isFinite(n) && n > 0 ? n : null)
-                  }}
+                  value={pendingMinutes}
+                  onChange={e => setPendingMinutes(e.target.value)}
                   className="w-16 text-xs font-medium px-2 py-1.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg text-center"
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = pendingMinutes === '' ? NaN : Number(pendingMinutes)
+                    setSessionMinutesOverride(Number.isFinite(n) && n > 0 ? n : null)
+                  }}
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  Save
+                </button>
               </div>
             </div>
 

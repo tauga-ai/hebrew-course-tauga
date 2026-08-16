@@ -12,6 +12,7 @@ import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
+import { getSessionMinutesOverride, subscribeSessionMinutesOverride } from '@/lib/naale/dev-fast-session'
 
 interface ServedQuestion {
   id: string
@@ -98,6 +99,11 @@ function SessionRunner() {
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
   const showQuestionBadge = useSyncExternalStore(subscribeShowQuestionBadge, getShowQuestionBadge, getShowQuestionBadge)
+  const sessionMinutesOverride = useSyncExternalStore(
+    subscribeSessionMinutesOverride,
+    getSessionMinutesOverride,
+    getSessionMinutesOverride
+  )
 
   // Background-prefetch target for the NEXT question, filled in only once
   // THIS answer's result is known (never earlier — session/next's difficulty
@@ -297,6 +303,31 @@ function SessionRunner() {
     // finishSession is stable (only depends on sessionId, same as loadNext),
     // so this effect still only re-fires when sessionId itself changes.
   }, [sessionId, router, loadNext, finishSession])
+
+  // Dev-only: DevPanel's session-length override notifies subscribers only
+  // when a value is actually committed (Save, or the "1 min" preset) — never
+  // on every keystroke, since typing only updates DevPanel's own local
+  // staged field until then. Re-fetching status here is what makes that
+  // commit apply immediately to a session already open in this tab, instead
+  // of requiring a manual reload. isFirstSync skips the mount-time fire,
+  // since boot() above already covers the initial fetch.
+  const isFirstOverrideSync = useRef(true)
+  useEffect(() => {
+    if (isFirstOverrideSync.current) { isFirstOverrideSync.current = false; return }
+    if (!sessionId) return
+    let cancelled = false
+    async function revalidate() {
+      const res = await fetch(`/api/naale/session/status?session_id=${sessionId}`)
+      if (cancelled || !res.ok) return
+      const data = await res.json()
+      if (cancelled) return
+      qaLog('/status on dev override save', data)
+      setDeadlineMs(new Date(data.deadline_at).getTime())
+      if (data.ended || data.expired) finishSession('time_up')
+    }
+    revalidate()
+    return () => { cancelled = true }
+  }, [sessionMinutesOverride, sessionId, finishSession])
 
   // The client clock is display-only; the server independently refuses late
   // answers (ticket 8) and stops serving questions (ticket 7). When it hits
