@@ -257,7 +257,7 @@ function PlacementRunner() {
             {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
           </p>
 
-          <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+          <p className="text-fg font-medium mb-4 text-right whitespace-pre-line">{q.prompt}</p>
 
           {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
