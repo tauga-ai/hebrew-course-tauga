@@ -182,6 +182,26 @@ function PlacementRunner() {
     }
   }, [phase, result, loadNext])
 
+  // Warn before leaving mid-placement — same rationale as the practice
+  // session page's matching guard (see that file's comment for why this
+  // can't just be a shared hook: two call sites, ~6 lines each, not worth
+  // the abstraction).
+  useEffect(() => {
+    if (phase !== 'question' && phase !== 'feedback') return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [phase])
+
+  function handleBackClick() {
+    if (window.confirm(t('אם תעזוב/י עכשיו יתכן שתאבד/י התקדמות בתרגול. לצאת בכל זאת?'))) {
+      router.push('/naale')
+    }
+  }
+
   if (loadError) {
     return (
       <div className="min-h-screen p-4 max-w-md mx-auto w-full flex flex-col items-center justify-center gap-4 text-center">
@@ -242,7 +262,7 @@ function PlacementRunner() {
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto w-full">
-      <PageHeader backHref="/naale" title={t('שאלון קצר')} />
+      <PageHeader onBack={handleBackClick} title={t('שאלון קצר')} />
 
       {/* justify-between: prompt (+ hint) at the top, choices (+ submit/
           continue) pushed down rather than immediately following the
