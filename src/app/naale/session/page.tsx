@@ -492,7 +492,7 @@ function SessionRunner() {
               </p>
             )}
 
-            <p className="text-fg font-medium mb-4 text-right">{q.prompt}</p>
+            <p className="text-fg font-medium mb-4 text-right whitespace-pre-line">{q.prompt}</p>
 
             {/* A confetti burst plus the reward note on a correct answer —
                 relative positioning here is what anchors ConfettiBurst's

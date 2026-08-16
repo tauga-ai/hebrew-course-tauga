@@ -1,20 +1,12 @@
 /**
- * Imports the "השלמת משפטים" (sentence completion) sheet from Yuval's Naale
- * question workbook into the naale_questions table.
- *
- * Scope: this is the ONLY sheet with real, complete content today — the
- * other 6 in-scope topics are 3-row examples with no difficulty ratings, and
- * 3 of the deferred/incomplete topics (story continuation, WhatsApp
- * messages, short-text summary) have no fixed correct answer at all (open
- * writing tasks needing AI grading — out of scope for this script). Per the
- * addendum in .claude/requirements/naale-hebrew-track-tasks.md, the adaptive
- * engine is being built against sentence completion only for the demo.
- * Adding more topics later needs zero code changes beyond appending to
- * EXPECTED_SHEETS, PROVIDED the new sheet shares this exact column layout
- * (sentence + 3 lettered options + a correct-answer letter + difficulty). A
- * sheet with a different layout (free text, no correct answer, "whole row is
- * the answer key") needs its own reader function first — see the workbook's
- * own "Example (EN) - DO NOT IMPORT" guide sheet for the other patterns.
+ * Imports real-content sheets from Yuval's Naale question workbook into the
+ * naale_questions table. Each sheet is registered in SHEET_READERS below with
+ * its own reader function, since sheets vary in column layout (different
+ * option counts, different prompt shapes) — see the workbook's own
+ * "Example (EN) - DO NOT IMPORT" guide sheet for the full set of patterns.
+ * Sheets without real content yet (3-row examples, no difficulty ratings) or
+ * needing AI grading (open writing tasks with no fixed correct answer) are
+ * intentionally not registered here.
  *
  * Run with:
  *   npx tsx --env-file=.env.local scripts/import-naale-questions.ts <path-to-xlsx> [--dry-run]
@@ -39,15 +31,12 @@
 import * as XLSX from 'xlsx'
 import { createServiceClient } from '../src/lib/supabase/service'
 
-/** The sheet name IS the topic key — every session query matches on this
- *  exact string. Only one sheet today; see the header comment for why. */
-const EXPECTED_SHEETS = ['השלמת משפטים']
-
-// This sheet's real layout: a title row, a blank row, THEN the header row —
-// not row 1 like a plain spreadsheet. Confirmed against the delivered file.
+// Every registered sheet shares this layout: a title row, a blank row, THEN
+// the header row — not row 1 like a plain spreadsheet. Confirmed against the
+// delivered file for every sheet below.
 const HEADER_ROW_INDEX = 2
 
-const COL = {
+const SENTENCE_COMPLETION_COL = {
   prompt: 'משפט (עם חסר)',
   answerA: 'תשובה A',
   answerB: 'תשובה B',
@@ -56,8 +45,30 @@ const COL = {
   explanation: 'הסבר לתשובה הנכונה',
   difficulty: 'רמת קושי (1-5)',
 } as const
-const REQUIRED_COLUMNS = Object.values(COL)
-const LETTER_TO_COLUMN = { A: COL.answerA, B: COL.answerB, C: COL.answerC } as const
+const SENTENCE_COMPLETION_REQUIRED = Object.values(SENTENCE_COMPLETION_COL)
+const SENTENCE_COMPLETION_LETTER_TO_COLUMN = {
+  A: SENTENCE_COMPLETION_COL.answerA,
+  B: SENTENCE_COMPLETION_COL.answerB,
+  C: SENTENCE_COMPLETION_COL.answerC,
+} as const
+
+const SENTENCE_CORRECTION_COL = {
+  errorType: 'סוג השגיאה',
+  brokenSentence: 'משפט שגוי',
+  answerA: 'תשובה A',
+  answerB: 'תשובה B',
+  answerC: 'תשובה C',
+  answerD: 'תשובה D',
+  correctLetter: 'תשובה נכונה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const SENTENCE_CORRECTION_REQUIRED = Object.values(SENTENCE_CORRECTION_COL)
+const SENTENCE_CORRECTION_LETTER_TO_COLUMN = {
+  A: SENTENCE_CORRECTION_COL.answerA,
+  B: SENTENCE_CORRECTION_COL.answerB,
+  C: SENTENCE_CORRECTION_COL.answerC,
+  D: SENTENCE_CORRECTION_COL.answerD,
+} as const
 
 const MIN_LEVEL = 1
 const MAX_LEVEL = 5
@@ -75,52 +86,102 @@ interface QuestionRow {
 
 /** Maps each required column name to its index in this sheet's own header
  *  row (not assumed to share a fixed position with any other sheet). */
-function buildColumnMap(headerRow: string[], sheetName: string): Record<string, number> {
+function buildColumnMap(headerRow: string[], requiredColumns: string[], sheetName: string): Record<string, number> {
   const map: Record<string, number> = {}
   headerRow.forEach((name, i) => { map[name.trim()] = i })
-  for (const col of REQUIRED_COLUMNS) {
+  for (const col of requiredColumns) {
     if (!(col in map)) throw new Error(`${sheetName}: missing expected column "${col}" in header row`)
   }
   return map
 }
 
-function readSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
+function readSentenceCompletionSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
   const ws = wb.Sheets[sheetName]
   const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
   const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
-  const col = buildColumnMap(header, sheetName)
+  const col = buildColumnMap(header, SENTENCE_COMPLETION_REQUIRED, sheetName)
   const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
 
   return dataRows
-    .filter(row => String(row[col[COL.prompt]] ?? '').trim() !== '')
+    .filter(row => String(row[col[SENTENCE_COMPLETION_COL.prompt]] ?? '').trim() !== '')
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx // 1-based spreadsheet row number
 
-      const difficulty = parseInt(cell(COL.difficulty), 10)
+      const difficulty = parseInt(cell(SENTENCE_COMPLETION_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
-        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be ${MIN_LEVEL}-${MAX_LEVEL}, got ${JSON.stringify(cell(COL.difficulty))}`)
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be ${MIN_LEVEL}-${MAX_LEVEL}, got ${JSON.stringify(cell(SENTENCE_COMPLETION_COL.difficulty))}`)
       }
 
-      const options = [cell(COL.answerA), cell(COL.answerB), cell(COL.answerC)].filter(Boolean)
+      const options = [cell(SENTENCE_COMPLETION_COL.answerA), cell(SENTENCE_COMPLETION_COL.answerB), cell(SENTENCE_COMPLETION_COL.answerC)].filter(Boolean)
       // A blank/invalid letter is a content smell (empty or malformed answer
       // key), not a structural parse failure — leave correct_answer empty and
       // let validate() flag it below, rather than aborting the whole import
       // over one bad row.
-      const letter = cell(COL.correctLetter).toUpperCase()
-      const correctColumn = LETTER_TO_COLUMN[letter as keyof typeof LETTER_TO_COLUMN]
+      const letter = cell(SENTENCE_COMPLETION_COL.correctLetter).toUpperCase()
+      const correctColumn = SENTENCE_COMPLETION_LETTER_TO_COLUMN[letter as keyof typeof SENTENCE_COMPLETION_LETTER_TO_COLUMN]
 
       return {
         topic: sheetName,
         difficulty,
-        prompt: cell(COL.prompt),
+        prompt: cell(SENTENCE_COMPLETION_COL.prompt),
         answer_kind: 'mcq',
         options,
         correct_answer: correctColumn ? cell(correctColumn) : '',
-        explanation: cell(COL.explanation),
+        explanation: cell(SENTENCE_COMPLETION_COL.explanation),
         source_row: sourceRow,
       }
     })
+}
+
+/** Unlike שלמת משפטים's blank ("_____"), the broken sentence alone doesn't
+ *  self-signal the task ("pick the corrected version below") — a fixed
+ *  instruction line is prepended. Exact wording is a placeholder pending
+ *  Yuval's sign-off; a one-line template change, not a re-import, to adjust. */
+function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, SENTENCE_CORRECTION_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[SENTENCE_CORRECTION_COL.brokenSentence]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+
+      const difficulty = parseInt(cell(SENTENCE_CORRECTION_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be ${MIN_LEVEL}-${MAX_LEVEL}, got ${JSON.stringify(cell(SENTENCE_CORRECTION_COL.difficulty))}`)
+      }
+
+      const options = (['A', 'B', 'C', 'D'] as const)
+        .map(l => cell(SENTENCE_CORRECTION_LETTER_TO_COLUMN[l]))
+        .filter(Boolean)
+      const letter = cell(SENTENCE_CORRECTION_COL.correctLetter).toUpperCase()
+      const correctColumn = SENTENCE_CORRECTION_LETTER_TO_COLUMN[letter as keyof typeof SENTENCE_CORRECTION_LETTER_TO_COLUMN]
+
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: `תקן את המשפט הבא:\n${cell(SENTENCE_CORRECTION_COL.brokenSentence)}`,
+        answer_kind: 'mcq',
+        options,
+        correct_answer: correctColumn ? cell(correctColumn) : '',
+        explanation: '',
+        source_row: sourceRow,
+      }
+    })
+}
+
+/** Every real-content sheet registered for import, keyed by its exact sheet
+ *  name (which is also the topic key every session query matches on). Add a
+ *  new entry here once a topic has real content, pairing it with a reader
+ *  matching its own column layout. */
+const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => QuestionRow[]> = {
+  'השלמת משפטים': readSentenceCompletionSheet,
+  'תיקון משפטים': readSentenceCorrectionSheet,
 }
 
 function validate(topic: string, questions: QuestionRow[], anomalies: string[]) {
@@ -176,7 +237,7 @@ async function main() {
   const summary: { topic: string; count: number; byLevel: string }[] = []
   const allRows: QuestionRow[] = []
 
-  for (const sheetName of EXPECTED_SHEETS) {
+  for (const [sheetName, readSheet] of Object.entries(SHEET_READERS)) {
     if (!wb.Sheets[sheetName]) {
       anomalies.push(`Sheet not found in workbook: ${sheetName}`)
       continue
@@ -191,9 +252,10 @@ async function main() {
     summary.push({ topic: sheetName, count: questions.length, byLevel })
   }
 
-  const unexpected = wb.SheetNames.filter(n => !EXPECTED_SHEETS.includes(n))
+  const expectedSheets = Object.keys(SHEET_READERS)
+  const unexpected = wb.SheetNames.filter(n => !expectedSheets.includes(n))
   if (unexpected.length > 0) {
-    console.log(`Skipping ${unexpected.length} sheet(s) not in EXPECTED_SHEETS (expected — see header comment): ${unexpected.join(', ')}`)
+    console.log(`Skipping ${unexpected.length} sheet(s) not registered in SHEET_READERS (expected — see header comment): ${unexpected.join(', ')}`)
   }
 
   console.log('Parsed:')
@@ -209,13 +271,13 @@ async function main() {
     console.log('\n--dry-run: nothing written.')
   }
 
-  // Reported, never deleted — see the header comment. Scoped to
-  // EXPECTED_SHEETS so rows seeded for other (not-yet-imported) topics don't
-  // get flagged as orphans of a workbook that never covered them.
+  // Reported, never deleted — see the header comment. Scoped to the
+  // registered sheets so rows seeded for other (not-yet-imported) topics
+  // don't get flagged as orphans of a workbook that never covered them.
   const { data: existing } = await db
     .from('naale_questions')
     .select('topic, prompt')
-    .in('topic', EXPECTED_SHEETS)
+    .in('topic', expectedSheets)
   const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.prompt}`))
   const orphans = (existing ?? []).filter(r => !workbookKeys.has(`${r.topic} ${r.prompt}`))
   if (orphans.length > 0) {
