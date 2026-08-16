@@ -54,3 +54,22 @@ test('no question-serving Naale route selects correct_answer', () => {
     `Routes referencing correct_answer outside the allowed routes, or missing the debugMode strip (the answer must never reach the browser before submission, except behind a server-only debugMode check that explicitly strips it elsewhere): ${violations.join(', ')}`
   )
 })
+
+// Same leak vector, second field: the per-question explanation text. Unlike
+// correct_answer, there's no QA-hint use case for showing this pre-answer, so
+// the question-serving routes never select or return it in any mode — no
+// debugMode carve-out here, the bar is just "never referenced at all".
+test('no question-serving Naale route references explanation', () => {
+  const violations = []
+  for (const file of findRouteFiles(NAALE_API_DIR)) {
+    const relPath = relative(NAALE_API_DIR, file).replace(/\\/g, '/')
+    if (GRADING_ROUTES.has(relPath)) continue
+    const content = readFileSync(file, 'utf-8')
+    if (content.includes('explanation')) violations.push(relPath)
+  }
+  assert.deepEqual(
+    violations,
+    [],
+    `Routes referencing explanation outside the grading routes (it must never reach the browser before submission): ${violations.join(', ')}`
+  )
+})

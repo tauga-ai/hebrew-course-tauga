@@ -34,6 +34,7 @@ interface ServedQuestion {
 interface AnswerResult {
   is_correct: boolean
   correct_answer: string
+  explanation?: string
   level: number
   level_changed: boolean
 }
@@ -531,6 +532,23 @@ function SessionRunner() {
                     {result.is_correct ? t('תשובה נכונה') : `${t('התשובה הנכונה')}: ${result.correct_answer}`}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Only shown on a wrong answer — a correct one needs no
+                explaining. Present for both MCQ and free-text, since neither
+                branch above surfaces it. A bordered, tinted callout (not a
+                plain line of text) so it reads as its own "here's why" beat,
+                distinct from the red/green correct-answer indicator above it
+                — the Quizlet Learn-mode reference for this ticket. */}
+            {result && !result.is_correct && result.explanation && (
+              <div className="mt-3 mb-4 rounded-xl border-r-4 border-accent-naale bg-accent-naale/5 dark:bg-accent-naale/10 p-4 text-right">
+                <p className="text-xs font-semibold text-accent-naale mb-1">
+                  {t('הסבר')}
+                </p>
+                <p className="text-sm text-fg/80 leading-relaxed">
+                  {result.explanation}
+                </p>
               </div>
             )}
 

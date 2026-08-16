@@ -53,6 +53,7 @@ const COL = {
   answerB: 'תשובה B',
   answerC: 'תשובה C',
   correctLetter: 'תשובה נכונה',
+  explanation: 'הסבר לתשובה הנכונה',
   difficulty: 'רמת קושי (1-5)',
 } as const
 const REQUIRED_COLUMNS = Object.values(COL)
@@ -68,6 +69,7 @@ interface QuestionRow {
   answer_kind: 'mcq'
   options: string[]
   correct_answer: string
+  explanation: string
   source_row: number
 }
 
@@ -115,6 +117,7 @@ function readSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
         answer_kind: 'mcq',
         options,
         correct_answer: correctColumn ? cell(correctColumn) : '',
+        explanation: cell(COL.explanation),
         source_row: sourceRow,
       }
     })

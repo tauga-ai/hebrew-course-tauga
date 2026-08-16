@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const db = createServiceClient()
   const { data: question } = await db
     .from('naale_questions')
-    .select('id, topic, difficulty, answer_kind, correct_answer')
+    .select('id, topic, difficulty, answer_kind, correct_answer, explanation')
     .eq('id', question_id)
     .maybeSingle()
 
@@ -64,5 +64,5 @@ export async function POST(req: NextRequest) {
     .update({ answered_count: owned.session.answered_count + 1 })
     .eq('id', session_id)
 
-  return NextResponse.json({ is_correct: isCorrect, correct_answer: question.correct_answer })
+  return NextResponse.json({ is_correct: isCorrect, correct_answer: question.correct_answer, explanation: question.explanation })
 }
