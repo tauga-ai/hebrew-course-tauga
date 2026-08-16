@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining } from '@/lib/naale/session'
-import { debugMode } from '@/lib/dev-i18n'
-import { DEV_SESSION_MINUTES_COOKIE } from '@/lib/naale/dev-fast-session'
+import { SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride } from '@/lib/naale/session'
 
 /**
  * Starts (or resumes) the authenticated student's 30-minute session.
@@ -50,10 +47,17 @@ export async function POST() {
     }
   }
 
+  // Dev-only QA convenience (DevPanel's "Session length override" field): a
+  // client cookie can ask for any length, and only takes effect when debugMode
+  // is true, server-side — NEXT_PUBLIC_DEBUG_MODE is baked in at build time,
+  // so this cookie has zero effect against a build where it's off, regardless
+  // of what a client sends.
+  const overrideMinutes = await readDevSessionMinutesOverride()
+
   // Resume a still-live session rather than starting a second one.
   const { data: live } = await db
     .from('naale_sessions')
-    .select('id, kind, deadline_at, answered_count')
+    .select('id, kind, deadline_at, answered_count, started_at')
     .eq('student_id', session.student.id)
     .is('ended_at', null)
     .order('started_at', { ascending: false })
@@ -61,11 +65,26 @@ export async function POST() {
 
   const existing = live?.[0]
   if (existing && !isExpired(existing.deadline_at)) {
+    // Dev-only: if the QA override changed since this session was created
+    // (or was set for the first time after it), make the resumed session
+    // reflect it instead of always keeping whatever deadline was computed at
+    // creation time — recomputed from started_at, so this can shorten OR
+    // extend the deadline without resetting the clock or touching
+    // answered_count.
+    let deadline_at = existing.deadline_at
+    if (overrideMinutes !== null) {
+      const recomputed = new Date(new Date(existing.started_at).getTime() + overrideMinutes * 60 * 1000).toISOString()
+      if (recomputed !== existing.deadline_at) {
+        await db.from('naale_sessions').update({ deadline_at: recomputed }).eq('id', existing.id)
+        deadline_at = recomputed
+      }
+    }
+
     return NextResponse.json({
       session_id: existing.id,
       kind: existing.kind,
-      deadline_at: existing.deadline_at,
-      seconds_remaining: secondsRemaining(existing.deadline_at),
+      deadline_at,
+      seconds_remaining: secondsRemaining(deadline_at),
       answered_count: existing.answered_count,
       resumed: true,
     })
@@ -81,16 +100,7 @@ export async function POST() {
 
   const kind = (levelCount ?? 0) === 0 ? 'placement' : 'practice'
 
-  // Dev-only QA convenience (DevPanel's "Custom session length" field): a
-  // client cookie can ask for any length, and only takes effect when debugMode
-  // is true here, server-side — NEXT_PUBLIC_DEBUG_MODE is baked in at build
-  // time, so this cookie has zero effect against a build where it's off,
-  // regardless of what a client sends. Anything non-numeric or <= 0 falls
-  // back to the real SESSION_MINUTES rather than producing a degenerate
-  // deadline.
-  const overrideRaw = debugMode ? (await cookies()).get(DEV_SESSION_MINUTES_COOKIE)?.value : undefined
-  const override = overrideRaw ? Number(overrideRaw) : NaN
-  const minutes = Number.isFinite(override) && override > 0 ? override : SESSION_MINUTES
+  const minutes = overrideMinutes ?? SESSION_MINUTES
   const deadline = new Date(Date.now() + minutes * 60 * 1000).toISOString()
 
   const { data: created, error } = await db

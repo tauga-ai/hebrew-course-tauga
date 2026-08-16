@@ -15,6 +15,14 @@ import { MIN_LEVEL, MAX_LEVEL } from '@/lib/naale/leveling'
  * internally-consistent baseline for a forced level too. Leaving a stale
  * streak in place risks an immediate, confusing level change on the very
  * next real answer.
+ *
+ * Also clears this topic's naale_answers: /session/next's "unseen question"
+ * check is lifetime-scoped across ALL of this student's answers, not
+ * session-scoped, so a QA account that already exhausted lower difficulties
+ * in earlier testing would have every level below 5 look already-answered —
+ * silently keeping /next stuck serving level-5 questions no matter what
+ * level this route just wrote. Clearing the topic's answer history is what
+ * makes the forced level actually observable in what gets served next.
  */
 export async function POST(req: NextRequest) {
   if (!debugMode) return NextResponse.json({ error: 'not found' }, { status: 404 })
@@ -39,11 +47,20 @@ export async function POST(req: NextRequest) {
       level,
       correct_streak: 0,
       wrong_streak: 0,
+      answered_count: 0,
     },
     { onConflict: 'student_id,topic' }
   )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { error: clearError } = await db
+    .from('naale_answers')
+    .delete()
+    .eq('student_id', session.student.id)
+    .eq('topic', topic)
+
+  if (clearError) return NextResponse.json({ error: clearError.message }, { status: 500 })
 
   return NextResponse.json({ topic, level })
 }

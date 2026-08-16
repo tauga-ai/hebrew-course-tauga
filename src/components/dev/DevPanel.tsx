@@ -4,6 +4,12 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { getDevLang, setDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { getShowHint, setShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import {
+  DEV_QUESTION_BADGE_COOKIE,
+  getShowQuestionBadge,
+  setShowQuestionBadge,
+  subscribeShowQuestionBadge,
+} from '@/lib/dev-question-badge'
+import {
   DEV_SESSION_MINUTES_COOKIE,
   getSessionMinutesOverride,
   setSessionMinutesOverride,
@@ -39,6 +45,11 @@ interface ActiveSession {
 export function DevPanel() {
   const lang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
+  const showQuestionBadge = useSyncExternalStore(
+    subscribeShowQuestionBadge,
+    getShowQuestionBadge,
+    getShowQuestionBadge
+  )
   const sessionMinutesOverride = useSyncExternalStore(
     subscribeSessionMinutesOverride,
     getSessionMinutesOverride,
@@ -59,6 +70,8 @@ export function DevPanel() {
   useEffect(() => {
     const hintMatch = document.cookie.match(/(?:^|; )dev-hint=(0|1)/)
     if (hintMatch) setShowHint(hintMatch[1] === '1')
+    const badgeMatch = document.cookie.match(new RegExp(`(?:^|; )${DEV_QUESTION_BADGE_COOKIE}=(0|1)`))
+    if (badgeMatch) setShowQuestionBadge(badgeMatch[1] === '1')
     const minutesMatch = document.cookie.match(new RegExp(`(?:^|; )${DEV_SESSION_MINUTES_COOKIE}=([0-9]+)`))
     if (minutesMatch) setSessionMinutesOverride(Number(minutesMatch[1]))
   }, [])
@@ -129,7 +142,7 @@ export function DevPanel() {
     }
     if (label === 'force-expire') return 'Session deadline set to now'
     if (label === 'auto-complete') return 'Session marked completed'
-    if (label === 'set-level') return `${data.topic}: level set to ${data.level}`
+    if (label === 'set-level') return `${data.topic}: level set to ${data.level} (answer history for this topic cleared)`
     if (label === 'seed-review') return `Seeded a review question for "${data.topic}"`
     return 'Done'
   }
@@ -189,21 +202,48 @@ export function DevPanel() {
 
             <div className="flex items-center justify-between py-3 border-t border-card-border">
               <div>
-                <div className="text-sm text-fg">Session length override</div>
-                <div className="text-xs text-fg/50">minutes — next session you start; blank = real 30</div>
+                <div className="text-sm text-fg">Show topic/difficulty badge</div>
+                <div className="text-xs text-fg/50">Naale practice questions only</div>
               </div>
-              <input
-                type="number"
-                min={1}
-                placeholder="30"
-                value={sessionMinutesOverride ?? ''}
-                onChange={e => {
-                  const raw = e.target.value
-                  const n = raw === '' ? NaN : Number(raw)
-                  setSessionMinutesOverride(Number.isFinite(n) && n > 0 ? n : null)
-                }}
-                className="w-16 text-xs font-medium px-2 py-1.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg text-center"
-              />
+              <button
+                type="button"
+                onClick={() => setShowQuestionBadge(!showQuestionBadge)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full ${
+                  showQuestionBadge ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-white/10 text-fg/70'
+                }`}
+              >
+                {showQuestionBadge ? 'On' : 'Off'}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between py-3 border-t border-card-border">
+              <div>
+                <div className="text-sm text-fg">Session length override</div>
+                <div className="text-xs text-fg/50">
+                  minutes — applies next time the session page loads; blank = real 30
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSessionMinutesOverride(1)}
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 hover:bg-gray-300 dark:hover:bg-white/20"
+                >
+                  1 min
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="30"
+                  value={sessionMinutesOverride ?? ''}
+                  onChange={e => {
+                    const raw = e.target.value
+                    const n = raw === '' ? NaN : Number(raw)
+                    setSessionMinutesOverride(Number.isFinite(n) && n > 0 ? n : null)
+                  }}
+                  className="w-16 text-xs font-medium px-2 py-1.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg text-center"
+                />
+              </div>
             </div>
 
             <div className="pt-3 border-t border-card-border">
