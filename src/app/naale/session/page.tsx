@@ -42,6 +42,7 @@ interface AnswerResult {
 interface EndSummary {
   answered_count: number
   completed: boolean
+  reached_timer: boolean
   min_answers: number
   xp_earned: number
   coins_earned: number
@@ -432,9 +433,15 @@ function SessionRunner() {
                   finishing a fixed set, so there's no denominator to show. */}
               {summary && (
                 <p className={`text-sm mb-4 ${summary.completed ? 'text-green-700 dark:text-green-400' : 'text-fg/60'}`}>
-                  {summary.completed
-                    ? t('התרגול נחשב כהושלם')
-                    : `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`}
+                  {summary.completed ? (
+                    t('התרגול נחשב כהושלם')
+                  ) : !summary.reached_timer && summary.answered_count < summary.min_answers ? (
+                    `${t('התרגול לא נחשב כהושלם - לא הגעתם לסוף הזמן ולפחות')} ${summary.min_answers} ${t('תשובות')}`
+                  ) : !summary.reached_timer ? (
+                    t('התרגול לא נחשב כהושלם - הסבב הסתיים רגע לפני תום הזמן, נסו שוב')
+                  ) : (
+                    `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`
+                  )}
                 </p>
               )}
               {summary && (
@@ -443,6 +450,11 @@ function SessionRunner() {
                   <span>🪙 <LtrIsolate>{summary.coins_earned}</LtrIsolate></span>
                   <span>🔥 <LtrIsolate>{summary.streak}</LtrIsolate> {t('שבועות ברצף')}</span>
                 </div>
+              )}
+              {summary && summary.completed && summary.streak === 0 && (
+                <p className="text-xs text-fg/50 mb-2">
+                  {t('השלימו תרגול נוסף השבוע כדי להתחיל רצף')}
+                </p>
               )}
             </>
           )}
