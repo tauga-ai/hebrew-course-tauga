@@ -423,6 +423,27 @@ function SessionRunner() {
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
 
+  // Warn before leaving mid-session — the timer keeps running either way (no
+  // pause exists), this is purely so an accidental tab-close/refresh doesn't
+  // silently cost the student minutes they didn't mean to give up.
+  useEffect(() => {
+    if (phase !== 'question' && phase !== 'feedback') return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [phase])
+
+  // beforeunload doesn't fire for in-app router navigation, so the "back to
+  // home" link needs its own confirm — same warning, different trigger.
+  function handleBackClick() {
+    if (window.confirm(t('אם תעזוב/י עכשיו יתכן שתאבד/י התקדמות בתרגול. לצאת בכל זאת?'))) {
+      router.push('/naale')
+    }
+  }
+
   let content: ReactNode
 
   if (loadError) {
@@ -507,7 +528,7 @@ function SessionRunner() {
     content = (
       <>
         <PageHeader
-          backHref="/naale"
+          onBack={handleBackClick}
           title={t('תרגול')}
           right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
         />
