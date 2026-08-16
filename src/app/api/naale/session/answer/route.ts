@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   // Independent of each other — run together rather than one after another
   // to cut round-trips off this route's latency against the remote DB.
   const [{ data: question }, { data: answeredThisSession }, { data: answeredEver }, reviewQueue] = await Promise.all([
-    db.from('naale_questions').select('id, topic, difficulty, answer_kind, correct_answer').eq('id', question_id).maybeSingle(),
+    db.from('naale_questions').select('id, topic, difficulty, answer_kind, correct_answer, explanation').eq('id', question_id).maybeSingle(),
     // Hard-blocked always, review or not: answering the same question twice
     // inside one session would double-count regardless.
     db.from('naale_answers').select('id').eq('session_id', session_id).eq('question_id', question_id).maybeSingle(),
@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
     is_correct: isCorrect,
     // Safe to return now — the answer has been submitted and recorded.
     correct_answer: question.correct_answer,
+    explanation: question.explanation,
     level: after.level,
     level_changed: after.level !== before.level,
     answered_count: isSanctionedReview ? owned.session.answered_count : owned.session.answered_count + 1,
