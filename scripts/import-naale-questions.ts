@@ -70,6 +70,24 @@ const SENTENCE_CORRECTION_LETTER_TO_COLUMN = {
   D: SENTENCE_CORRECTION_COL.answerD,
 } as const
 
+const READING_COMPREHENSION_COL = {
+  passage: 'טקסט קצר',
+  question: 'שאלה',
+  answerA: 'תשובה A',
+  answerB: 'תשובה B',
+  answerC: 'תשובה C',
+  answerD: 'תשובה D',
+  correctLetter: 'תשובה נכונה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const READING_COMPREHENSION_REQUIRED = Object.values(READING_COMPREHENSION_COL)
+const READING_COMPREHENSION_LETTER_TO_COLUMN = {
+  A: READING_COMPREHENSION_COL.answerA,
+  B: READING_COMPREHENSION_COL.answerB,
+  C: READING_COMPREHENSION_COL.answerC,
+  D: READING_COMPREHENSION_COL.answerD,
+} as const
+
 const MIN_LEVEL = 1
 const MAX_LEVEL = 5
 
@@ -175,6 +193,46 @@ function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
     })
 }
 
+/** Passage + question already reads as a complete, self-explanatory prompt
+ *  once shown as two lines (passage, blank line, question) — unlike sentence
+ *  correction, no instruction text needs to be synthesized here. */
+function readReadingComprehensionSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, READING_COMPREHENSION_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[READING_COMPREHENSION_COL.question]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+
+      const difficulty = parseInt(cell(READING_COMPREHENSION_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be ${MIN_LEVEL}-${MAX_LEVEL}, got ${JSON.stringify(cell(READING_COMPREHENSION_COL.difficulty))}`)
+      }
+
+      const options = (['A', 'B', 'C', 'D'] as const)
+        .map(l => cell(READING_COMPREHENSION_LETTER_TO_COLUMN[l]))
+        .filter(Boolean)
+      const letter = cell(READING_COMPREHENSION_COL.correctLetter).toUpperCase()
+      const correctColumn = READING_COMPREHENSION_LETTER_TO_COLUMN[letter as keyof typeof READING_COMPREHENSION_LETTER_TO_COLUMN]
+
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: `${cell(READING_COMPREHENSION_COL.passage)}\n\n${cell(READING_COMPREHENSION_COL.question)}`,
+        answer_kind: 'mcq',
+        options,
+        correct_answer: correctColumn ? cell(correctColumn) : '',
+        explanation: '',
+        source_row: sourceRow,
+      }
+    })
+}
+
 /** Every real-content sheet registered for import, keyed by its exact sheet
  *  name (which is also the topic key every session query matches on). Add a
  *  new entry here once a topic has real content, pairing it with a reader
@@ -182,6 +240,7 @@ function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
 const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => QuestionRow[]> = {
   'השלמת משפטים': readSentenceCompletionSheet,
   'תיקון משפטים': readSentenceCorrectionSheet,
+  'הבנת הנקרא': readReadingComprehensionSheet,
 }
 
 function validate(topic: string, questions: QuestionRow[], anomalies: string[]) {
