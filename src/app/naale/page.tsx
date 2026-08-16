@@ -7,6 +7,7 @@ import { CardGrid } from '@/components/ui/CardGrid'
 import { Card } from '@/components/ui/Card'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { LevelSteps } from '@/components/naale/LevelSteps'
 import { createClient } from '@/lib/supabase/client'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
@@ -30,20 +31,6 @@ interface MyStatsTotals {
 // with zero rows simply never appears there), and this list is real content
 // from the source spreadsheet, not invented placeholder text.
 const LOCKED_TOPICS = ['נרדפות והופכיות', 'הבנת הנקרא', 'תיקון משפטים', 'סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר']
-
-/** Small filled/unfilled dot row — level N out of 5, or all-unfilled when locked. */
-function LevelSteps({ level, locked }: { level: number; locked?: boolean }) {
-  return (
-    <span className="flex items-center gap-0.5" aria-hidden>
-      {Array.from({ length: 5 }, (_, i) => (
-        <span
-          key={i}
-          className={`w-2.5 h-2.5 rounded-full ${!locked && i < level ? 'bg-accent-naale' : 'bg-gray-200 dark:bg-white/10'}`}
-        />
-      ))}
-    </span>
-  )
-}
 
 /**
  * The Naale student home — now a desktop-aware shell (NaaleSidebar +
