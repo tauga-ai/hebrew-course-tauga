@@ -14,6 +14,15 @@ test('isSessionCompleted: needs BOTH the timer and the answer minimum', () => {
   assert.equal(isSessionCompleted(iso(60_000), 50, NOW), false)
 })
 
+test('isSessionCompleted: small clock drift within the grace window still completes', () => {
+  // Deadline technically 900ms in the future (ordinary client/server
+  // drift, matching the 904ms gap observed in production) → still
+  // completed, unlike a naive "deadline <= now" check.
+  assert.equal(isSessionCompleted(iso(900), 28, NOW), true)
+  // Comfortably outside the grace window → still correctly NOT completed.
+  assert.equal(isSessionCompleted(iso(3000), 28, NOW), false)
+})
+
 test('isExpired: true only once the deadline has passed', () => {
   assert.equal(isExpired(iso(1), NOW), false)
   assert.equal(isExpired(iso(0), NOW), true)

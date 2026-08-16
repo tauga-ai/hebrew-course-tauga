@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isSessionCompleted, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
+import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
 import { computeRewards, computeStreak } from '@/lib/naale/rewards'
 
 /**
@@ -40,12 +40,20 @@ export async function POST(req: NextRequest) {
 
   let completed: boolean
   let alreadyEnded: boolean
+  let reachedTimer: boolean
 
   if (s.ended_at) {
     completed = s.completed
     alreadyEnded = true
+    // Recompute against the moment the session actually closed, not "now" —
+    // by the time this runs again (e.g. a page reload), real time has long
+    // since passed the deadline either way, which would always say "yes"
+    // and hide which half of the rule actually failed at close time.
+    reachedTimer = hasReachedTimer(s.deadline_at, new Date(s.ended_at).getTime())
   } else {
-    completed = isSessionCompleted(s.deadline_at, s.answered_count)
+    const now = Date.now()
+    reachedTimer = hasReachedTimer(s.deadline_at, now)
+    completed = isSessionCompleted(s.deadline_at, s.answered_count, now)
     alreadyEnded = false
     const { error } = await db
       .from('naale_sessions')
@@ -75,6 +83,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     answered_count: s.answered_count,
     completed,
+    reached_timer: reachedTimer,
     min_answers: MIN_ANSWERS_FOR_COMPLETION,
     already_ended: alreadyEnded,
     xp_earned,

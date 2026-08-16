@@ -8,6 +8,20 @@ export const SESSION_MINUTES = 30
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3
 
+/** Absorbs ordinary client/server clock drift at the exact deadline
+ *  boundary. The session close-out is triggered by the STUDENT'S device
+ *  clock reaching what it believes is the deadline; hasReachedTimer
+ *  independently re-verifies against the SERVER's own clock. Without slack
+ *  here, ordinary drift (observed in production: ~900ms) can flip a session
+ *  that visibly ran its full clock into "not completed." Small enough to
+ *  stay well below any genuinely-early finish — see the 60s-remaining case
+ *  in tests/naale-session.test.ts, which stays unaffected. */
+const TIMER_GRACE_MS = 2000
+
+export function hasReachedTimer(deadlineAt: string, now = Date.now()): boolean {
+  return new Date(deadlineAt).getTime() - TIMER_GRACE_MS <= now
+}
+
 /**
  * The spec's completion rule: reaching the end of the timer, PLUS a minimum of
  * 3 questions answered. Reaching 30 minutes with fewer than 3 answered does
@@ -16,10 +30,13 @@ export const MIN_ANSWERS_FOR_COMPLETION = 3
  * Pure so it's unit-testable; callers pass the stored deadline and count.
  */
 export function isSessionCompleted(deadlineAt: string, answeredCount: number, now = Date.now()): boolean {
-  const reachedTimer = new Date(deadlineAt).getTime() <= now
-  return reachedTimer && answeredCount >= MIN_ANSWERS_FOR_COMPLETION
+  return hasReachedTimer(deadlineAt, now) && answeredCount >= MIN_ANSWERS_FOR_COMPLETION
 }
 
+/** Deliberately NOT given the same grace window — this gates whether an
+ *  answer submission is accepted at all, a different concern from session
+ *  completion. See naale-session-completion-clock-race/task.md §1 for why
+ *  this stays untouched. */
 export function isExpired(deadlineAt: string, now = Date.now()): boolean {
   return new Date(deadlineAt).getTime() <= now
 }
