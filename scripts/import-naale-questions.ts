@@ -88,6 +88,24 @@ const READING_COMPREHENSION_LETTER_TO_COLUMN = {
   D: READING_COMPREHENSION_COL.answerD,
 } as const
 
+const SYNONYMS_ANTONYMS_COL = {
+  word: 'מילה',
+  context: 'משפט הקשר',
+  answerA: 'תשובה A',
+  answerB: 'תשובה B',
+  answerC: 'תשובה C',
+  answerD: 'תשובה D',
+  correctLetter: 'תשובה נכונה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const SYNONYMS_ANTONYMS_REQUIRED = Object.values(SYNONYMS_ANTONYMS_COL)
+const SYNONYMS_ANTONYMS_LETTER_TO_COLUMN = {
+  A: SYNONYMS_ANTONYMS_COL.answerA,
+  B: SYNONYMS_ANTONYMS_COL.answerB,
+  C: SYNONYMS_ANTONYMS_COL.answerC,
+  D: SYNONYMS_ANTONYMS_COL.answerD,
+} as const
+
 const MIN_LEVEL = 1
 const MAX_LEVEL = 5
 
@@ -233,6 +251,50 @@ function readReadingComprehensionSheet(wb: XLSX.WorkBook, sheetName: string): Qu
     })
 }
 
+/** Each option is a (synonym, antonym) pair for `word`, not a single word —
+ *  the workbook has no instructional sentence of its own, so one is
+ *  synthesized here combining the word and its context sentence. Exact
+ *  wording is a placeholder; confirm with Yuval (see task.md §1). */
+function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, SYNONYMS_ANTONYMS_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[SYNONYMS_ANTONYMS_COL.word]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+
+      const difficulty = parseInt(cell(SYNONYMS_ANTONYMS_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be ${MIN_LEVEL}-${MAX_LEVEL}, got ${JSON.stringify(cell(SYNONYMS_ANTONYMS_COL.difficulty))}`)
+      }
+
+      const options = (['A', 'B', 'C', 'D'] as const)
+        .map(l => cell(SYNONYMS_ANTONYMS_LETTER_TO_COLUMN[l]))
+        .filter(Boolean)
+      const letter = cell(SYNONYMS_ANTONYMS_COL.correctLetter).toUpperCase()
+      const correctColumn = SYNONYMS_ANTONYMS_LETTER_TO_COLUMN[letter as keyof typeof SYNONYMS_ANTONYMS_LETTER_TO_COLUMN]
+
+      const word = cell(SYNONYMS_ANTONYMS_COL.word)
+      const context = cell(SYNONYMS_ANTONYMS_COL.context)
+
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: `בחר את הזוג הנכון (מילה נרדפת, מילה הפכית) למילה "${word}" במשפט:\n"${context}"`,
+        answer_kind: 'mcq',
+        options,
+        correct_answer: correctColumn ? cell(correctColumn) : '',
+        explanation: '',
+        source_row: sourceRow,
+      }
+    })
+}
+
 /** Every real-content sheet registered for import, keyed by its exact sheet
  *  name (which is also the topic key every session query matches on). Add a
  *  new entry here once a topic has real content, pairing it with a reader
@@ -241,6 +303,7 @@ const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => Qu
   'השלמת משפטים': readSentenceCompletionSheet,
   'תיקון משפטים': readSentenceCorrectionSheet,
   'הבנת הנקרא': readReadingComprehensionSheet,
+  'נרדפות והופכיות': readSynonymsAntonymsSheet,
 }
 
 function validate(topic: string, questions: QuestionRow[], anomalies: string[]) {
