@@ -15,7 +15,25 @@ export async function GET() {
 
   const db = createServiceClient()
   const { data } = await db.from('naale_admins').select('email, created_at').order('created_at', { ascending: true })
-  return NextResponse.json({ admins: data ?? [] })
+  const admins = data ?? []
+
+  // naale_admins is keyed by email, not auth_user_id (an admin need not have
+  // a students row at all — see requireNaaleAdmin()), so unlike the staff
+  // roster's avatar lookup (getUserById on a known auth_user_id), this has
+  // to search Auth users by email instead. Fine at this scale (a handful of
+  // admins) — same "dozens, not thousands" assumption as the staff route.
+  const { data: authUsers } = await db.auth.admin.listUsers({ perPage: 1000 })
+  const avatarByEmail = new Map(
+    (authUsers?.users ?? []).map(u => {
+      const meta = u.user_metadata
+      const avatarUrl = (meta?.avatar_url as string | undefined) ?? (meta?.picture as string | undefined) ?? null
+      return [u.email?.toLowerCase(), avatarUrl] as const
+    })
+  )
+
+  return NextResponse.json({
+    admins: admins.map(a => ({ ...a, avatar_url: avatarByEmail.get(a.email.toLowerCase()) ?? null })),
+  })
 }
 
 export async function POST(request: Request) {
