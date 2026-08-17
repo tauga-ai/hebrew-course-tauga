@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
-import { Card } from '@/components/ui/Card'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { LevelSteps } from '@/components/naale/LevelSteps'
@@ -33,10 +32,9 @@ interface MyStatsTotals {
 const LOCKED_TOPICS = ['נרדפות והופכיות', 'הבנת הנקרא', 'תיקון משפטים', 'סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר']
 
 /**
- * The Naale student home — now a desktop-aware shell (NaaleSidebar +
- * max-w-5xl content area) instead of a single centered mobile column, per
- * Ticket 17. The two-destination CardGrid is unchanged; the new addition is
- * the "levels by topic" section below it.
+ * The Naale student home — a desktop-aware shell (NaaleSidebar + max-w-5xl
+ * content area) per Ticket 17, with a card-based dashboard layout (stat
+ * tiles, practice/progress action cards, per-topic card grid) below it.
  */
 export default function NaaleHome() {
   const router = useRouter()
@@ -115,7 +113,7 @@ export default function NaaleHome() {
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="mt-4 mb-6 flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-bold text-fg">{t('שלום')}, {me.student.full_name}</h1>
+            <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name}</h1>
             <p className="text-sm text-fg/60">{t('נעלה')}</p>
           </div>
           <button
@@ -128,65 +126,82 @@ export default function NaaleHome() {
         </div>
 
         {rewards && (
-          <div className="flex items-center justify-between gap-2 mb-6 text-sm bg-surface rounded-xl border border-card-border px-4 py-2.5">
-            <span className="flex items-center gap-1 text-fg/70">
-              🔥 <LtrIsolate>{rewards.streak}</LtrIsolate> {t('שבועות ברצף')}
-            </span>
-            <span className="flex items-center gap-3 text-fg/70">
-              <span>⭐ <LtrIsolate>{rewards.xp}</LtrIsolate></span>
-              <span>🪙 <LtrIsolate>{rewards.coins}</LtrIsolate></span>
-            </span>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-center">
+              <div className="text-2xl">🔥</div>
+              <div className="text-2xl font-bold text-fg mt-1"><LtrIsolate>{String(rewards.streak)}</LtrIsolate></div>
+              <div className="text-xs text-fg/50 mt-0.5">{t('שבועות ברצף')}</div>
+            </div>
+            <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-center">
+              <div className="text-2xl">⭐</div>
+              <div className="text-2xl font-bold text-accent-naale mt-1"><LtrIsolate>{String(rewards.xp)}</LtrIsolate></div>
+              <div className="text-xs text-fg/50 mt-0.5">{t('נקודות XP')}</div>
+            </div>
+            <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-center">
+              <div className="text-2xl">🪙</div>
+              <div className="text-2xl font-bold text-fg mt-1"><LtrIsolate>{String(rewards.coins)}</LtrIsolate></div>
+              <div className="text-xs text-fg/50 mt-0.5">{t('מטבעות')}</div>
+            </div>
           </div>
         )}
 
-        <CardGrid>
-          <Card
-            icon="▶️"
-            title={t('תרגול')}
-            subtitle={t('30 דקות')}
-            accentColor="naale"
+        <div className="grid grid-cols-1 @[480px]:grid-cols-2 gap-3 mb-6">
+          <button
+            type="button"
             onClick={handleStart}
             disabled={starting}
-          />
-          <Card
-            icon="📊"
-            title={t('ההתקדמות שלי')}
-            accentColor="naale"
-            href="/naale/stats"
+            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale disabled:cursor-default"
+          >
+            <span className="shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-2xl border border-accent-naale/30 bg-accent-naale/10 text-accent-naale">▶️</span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-extrabold text-fg text-xl">{t('תרגול')}</span>
+              <span className="block text-xs text-accent-naale mt-0.5">{t('30 דקות')}</span>
+            </span>
+            <span className="text-fg/30 shrink-0">←</span>
+          </button>
+          <button
+            type="button"
             onClick={() => router.push('/naale/stats')}
-          />
-        </CardGrid>
+            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale"
+          >
+            <span className="shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-2xl border border-accent-naale/30 bg-accent-naale/10 text-accent-naale">📊</span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-extrabold text-fg text-xl">{t('ההתקדמות שלי')}</span>
+            </span>
+            <span className="text-fg/30 shrink-0">←</span>
+          </button>
+        </div>
 
         <h2 className="text-sm font-semibold text-fg/70 mt-6 mb-2">{t('רמות לפי נושא')}</h2>
-        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 space-y-3">
+        <CardGrid>
           {topics?.map(topic => (
-            <div key={topic.topic} className="flex items-center justify-between gap-3">
-              <span className="text-sm text-fg/80 flex-1 min-w-0 truncate">{topic.topic}</span>
+            <div key={topic.topic} className="bg-surface rounded-2xl shadow-sm border border-card-border p-4">
+              <div className="text-sm text-fg/80 truncate mb-2">{topic.topic}</div>
               {topic.started ? (
-                <span className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <LevelSteps level={topic.level ?? 1} />
                   <span className="text-xs text-fg/50">
                     {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
                   </span>
-                  <LevelSteps level={topic.level ?? 1} />
-                </span>
+                </div>
               ) : (
-                <span className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
+                <div className="flex items-center gap-2">
                   <LevelSteps level={0} />
-                </span>
+                  <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
+                </div>
               )}
             </div>
           ))}
           {LOCKED_TOPICS.map(name => (
-            <div key={name} className="flex items-center justify-between gap-3 opacity-50">
-              <span className="text-sm text-fg/80 flex-1 min-w-0 truncate">{name}</span>
-              <span className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-fg/40">🔒 {t('בקרוב...')}</span>
+            <div key={name} className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 opacity-50">
+              <div className="text-sm text-fg/80 truncate mb-2">{name}</div>
+              <div className="flex items-center gap-2">
                 <LevelSteps level={0} locked />
-              </span>
+                <span className="text-xs text-fg/40">🔒 {t('בקרוב...')}</span>
+              </div>
             </div>
           ))}
-        </div>
+        </CardGrid>
 
         {error && <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>}
       </div>
