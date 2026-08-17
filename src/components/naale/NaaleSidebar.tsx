@@ -9,7 +9,11 @@ import { createClient } from '@/lib/supabase/client'
 import { t } from '@/lib/dev-i18n'
 
 export interface NaaleSidebarProps {
-  role: 'student' | 'staff'
+  role: 'student' | 'staff' | 'admin'
+  /** Shown as an extra nav item for a student/staff account that's ALSO a
+   *  Naale admin — separate from role='admin', which is for someone who
+   *  visits /naale/admin directly and may have no roster row at all. */
+  showAdminLink?: boolean
 }
 
 interface NavItem {
@@ -23,6 +27,7 @@ const STUDENT_ITEMS: NavItem[] = [
   { href: '/naale/stats', icon: '📊', label: 'ההתקדמות שלי' },
 ]
 const STAFF_ITEMS: NavItem[] = [{ href: '/naale/staff', icon: '👥', label: 'תלמידים' }]
+const ADMIN_ITEMS: NavItem[] = [{ href: '/naale/admin', icon: '🛠️', label: 'ניהול' }]
 
 function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   useEffect(() => {
@@ -78,11 +83,12 @@ function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
  * theme/logout block — logout lives here and only here now; naale/page.tsx
  * and naale/staff/page.tsx no longer have their own.
  */
-export function NaaleSidebar({ role }: NaaleSidebarProps) {
+export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
-  const items = role === 'staff' ? STAFF_ITEMS : STUDENT_ITEMS
+  const baseItems = role === 'staff' ? STAFF_ITEMS : role === 'admin' ? ADMIN_ITEMS : STUDENT_ITEMS
+  const items = showAdminLink && role !== 'admin' ? [...baseItems, ...ADMIN_ITEMS] : baseItems
 
   const [collapsed, setCollapsed] = useState(
     () => typeof document !== 'undefined' && document.cookie.includes('naale_sidebar_collapsed=1')
@@ -94,14 +100,18 @@ export function NaaleSidebar({ role }: NaaleSidebarProps) {
 
   useEffect(() => {
     let cancelled = false
-    // Best-effort — a failed fetch just leaves the profile row showing
-    // nothing (past the skeleton) rather than erroring the whole shell.
-    fetch('/api/naale/me')
+    // role='admin' means this account may have no roster/students row at
+    // all, so /api/naale/me (roster-gated) would 403 it — use the
+    // admin-only profile endpoint instead. Best-effort either way: a failed
+    // fetch just leaves the profile row showing nothing (past the skeleton)
+    // rather than erroring the whole shell.
+    const url = role === 'admin' ? '/api/naale/admin/me' : '/api/naale/me'
+    fetch(url)
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (cancelled) return
         if (data) {
-          setFullName(data.student.full_name)
+          setFullName(role === 'admin' ? data.full_name : data.student.full_name)
           setAvatarUrl(data.avatar_url)
         }
         setProfileLoading(false)
@@ -112,7 +122,7 @@ export function NaaleSidebar({ role }: NaaleSidebarProps) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [role])
 
   async function confirmLogout() {
     const supabase = createClient()
@@ -170,7 +180,7 @@ export function NaaleSidebar({ role }: NaaleSidebarProps) {
               <Avatar name={fullName} avatarUrl={avatarUrl} />
               <div className="min-w-0">
                 <div className="text-sm font-medium text-fg truncate">{fullName}</div>
-                <div className="text-xs text-fg/50">{t(role === 'staff' ? 'צוות' : 'תלמיד')}</div>
+                <div className="text-xs text-fg/50">{t(role === 'admin' ? 'מנהל' : role === 'staff' ? 'צוות' : 'תלמיד')}</div>
               </div>
             </div>
           )

@@ -176,6 +176,9 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
 export default function NaaleStaffPage() {
   const router = useRouter()
   const { data, loading, error } = useResource<StaffStudents>('/api/naale/staff/students')
+  // Only for the sidebar's admin nav item — staff themselves are gated by
+  // requireNaaleStaff() above via /api/naale/staff/students, not this call.
+  const { data: me } = useResource<{ is_admin: boolean }>('/api/naale/me')
   const [selected, setSelected] = useState<StaffStudent | null>(null)
   const [search, setSearch] = useState('')
   const [starting, setStarting] = useState(false)
@@ -224,7 +227,7 @@ export default function NaaleStaffPage() {
 
   return (
     <div className="min-h-screen md:flex">
-      <NaaleSidebar role="staff" />
+      <NaaleSidebar role="staff" showAdminLink={me?.is_admin ?? false} />
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>

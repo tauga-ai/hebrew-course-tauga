@@ -138,3 +138,32 @@ export async function requireNaaleStaff(): Promise<NaaleStaffResult> {
   if (session.role !== 'staff') return { status: 'forbidden' }
   return { status: 'ok', user: session.user, student: session.student }
 }
+
+export type NaaleAdminResult =
+  | { status: 'unauthenticated' }
+  | { status: 'forbidden' }
+  | { status: 'ok'; user: User }
+
+/**
+ * Admin-only gate for the Naale track — independent of getNaaleSession().
+ * An admin need not be a roster member or have a students row at all (e.g.
+ * a content manager who never takes the practice track themselves), so this
+ * checks naale_admins directly rather than layering on the roster check.
+ */
+export async function requireNaaleAdmin(): Promise<NaaleAdminResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user?.email) return { status: 'unauthenticated' }
+
+  const db = createServiceClient()
+
+  // Case-insensitive for the same reason as the naale_roster lookup above.
+  const { data: adminRow } = await db
+    .from('naale_admins')
+    .select('email')
+    .ilike('email', user.email)
+    .maybeSingle()
+
+  if (!adminRow) return { status: 'forbidden' }
+  return { status: 'ok', user }
+}
