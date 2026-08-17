@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { LevelSteps } from '@/components/naale/LevelSteps'
 import { useResource } from '@/lib/hooks/use-resource'
 import { createClient } from '@/lib/supabase/client'
 import { scoreColor } from '@/lib/score-color'
@@ -15,11 +16,158 @@ interface StaffStudent {
   student_id: string
   full_name: string
   topics: NaaleTopicStat[]
-  totals: { answered: number; correct: number; sessions: number; completed_sessions: number }
+  totals: { answered: number; correct: number; sessions: number; completed_sessions: number; xp: number; coins: number }
 }
 
 interface StaffStudents {
   students: StaffStudent[]
+}
+
+// Not a spec number — the "bad" threshold scoreColor() already uses everywhere else
+// in the app. Retune here if 50% turns out to be the wrong cutoff for this cohort.
+const NEEDS_ATTENTION_THRESHOLD = 50
+
+function overallAccuracy(totals: StaffStudent['totals']): number | null {
+  return totals.answered > 0 ? Math.round((totals.correct / totals.answered) * 100) : null
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.trim().slice(0, 2).toUpperCase()
+}
+
+const BAR_PALETTE = { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' }
+
+function statusLabel(acc: number | null): string {
+  if (acc === null) return 'לא התחיל'
+  if (acc >= 70) return 'מצוין'
+  if (acc >= 50) return 'סביר'
+  return 'דורש תשומת לב'
+}
+
+// Hoisted to module scope (not declared inside NaaleStaffPage) — a component
+// redeclared every render loses its identity and remounts on every parent
+// re-render, which is what react-hooks/static-components catches.
+
+function StudentBadge({ name }: { name: string }) {
+  return (
+    <span className="shrink-0 w-8 h-8 rounded-full bg-accent-naale/15 text-accent-naale text-xs font-bold flex items-center justify-center">
+      {initials(name)}
+    </span>
+  )
+}
+
+function AccuracyBar({ totals }: { totals: StaffStudent['totals'] }) {
+  const acc = overallAccuracy(totals)
+  if (acc === null) return <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
+  return (
+    <div className="flex items-center gap-2 min-w-[120px]">
+      <div className="flex-1 bg-gray-200 dark:bg-white/10 rounded-full h-2">
+        <div
+          className={`h-2 rounded-full ${scoreColor(acc, { palette: BAR_PALETTE })}`}
+          style={{ width: `${acc}%` }}
+        />
+      </div>
+      <span className={`text-xs font-semibold shrink-0 ${scoreColor(acc)}`}>
+        <LtrIsolate>{`${acc}%`}</LtrIsolate>
+      </span>
+    </div>
+  )
+}
+
+function StudentRow({ s, critical, onSelect }: { s: StaffStudent; critical?: boolean; onSelect: (s: StaffStudent) => void }) {
+  const acc = overallAccuracy(s.totals)
+  return (
+    <tr
+      onClick={() => onSelect(s)}
+      className={`cursor-pointer transition ${critical
+          ? 'bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20'
+          : 'hover:bg-black/5 dark:hover:bg-white/5'
+        }`}
+    >
+      <td className="p-3 border-b border-card-border">
+        <div className="flex items-center gap-3">
+          <StudentBadge name={s.full_name} />
+          <div className="min-w-0">
+            <div className="font-medium text-fg truncate">{s.full_name}</div>
+            <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
+          </div>
+        </div>
+      </td>
+      <td className="p-3 border-b border-card-border">
+        <AccuracyBar totals={s.totals} />
+      </td>
+      <td className="p-3 text-center border-b border-card-border text-fg/70">
+        <LtrIsolate>{s.totals.completed_sessions}</LtrIsolate>
+      </td>
+      <td className="p-3 text-center border-b border-card-border">
+        <span className="text-xs font-medium text-primary-600 dark:text-primary-400 border border-card-border rounded-lg px-2 py-1 whitespace-nowrap">
+          {t('הצג')}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
+function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void }) {
+  const acc = overallAccuracy(s.totals)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <StudentBadge name={s.full_name} />
+            <div className="min-w-0">
+              <div className="font-bold text-fg truncate">{s.full_name}</div>
+              <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="text-fg/40 hover:text-fg/70 text-xl leading-none shrink-0">
+            ×
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
+            <div className="text-lg">⭐</div>
+            <div className="font-bold text-accent-naale mt-0.5"><LtrIsolate>{s.totals.xp}</LtrIsolate></div>
+            <div className="text-[10px] text-fg/50 mt-0.5">{t('נקודות XP')}</div>
+          </div>
+          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
+            <div className="text-lg">🪙</div>
+            <div className="font-bold text-fg mt-0.5"><LtrIsolate>{s.totals.coins}</LtrIsolate></div>
+            <div className="text-[10px] text-fg/50 mt-0.5">{t('מטבעות')}</div>
+          </div>
+          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
+            <div className="text-lg">✅</div>
+            <div className="font-bold text-fg mt-0.5"><LtrIsolate>{s.totals.completed_sessions}</LtrIsolate></div>
+            <div className="text-[10px] text-fg/50 mt-0.5">{t('תרגולים שהושלמו')}</div>
+          </div>
+        </div>
+
+        <h3 className="text-sm font-semibold text-fg/70 mb-2">{t('מיומנויות')}</h3>
+        <div className="space-y-2">
+          {s.topics.map(topic => (
+            <div key={topic.topic} className="flex justify-between items-center text-sm">
+              <span className="text-fg/70 flex-1 min-w-0 truncate">{topic.topic}</span>
+              {topic.started ? (
+                <span className="flex items-center gap-3 shrink-0">
+                  <LevelSteps level={topic.level ?? 1} />
+                  <span className={`font-semibold ${scoreColor(topic.accuracy_pct)}`}>
+                    <LtrIsolate>{`${topic.correct}/${topic.answered}`}</LtrIsolate>
+                  </span>
+                </span>
+              ) : (
+                <span className="text-fg/30 text-xs shrink-0">{t('לא התחיל')}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -31,13 +179,41 @@ interface StaffStudents {
  * /session/start -> /naale/session flow students use unchanged — staff have
  * students rows too (so they can practice), but /api/naale/staff/students
  * filters them out via naale_role so they never show up in this list.
+ *
+ * Redesigned from a flat expandable list into a searchable roster table with
+ * a "needs attention" section (accuracy below NEEDS_ATTENTION_THRESHOLD,
+ * excluding students who haven't answered anything yet — a brand-new cohort
+ * would otherwise flag everyone on day one). Table styling mirrors
+ * teacher/(protected)/students/page.tsx, the closest existing precedent for
+ * a staff-facing roster table in this app. Per-student detail opens in a
+ * dialog rather than an inline expand — the topic list can grow to 7 rows as
+ * more content ships, which would otherwise push every row below it down the
+ * page.
  */
 export default function NaaleStaffPage() {
   const router = useRouter()
   const { data, loading, error } = useResource<StaffStudents>('/api/naale/staff/students')
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [selected, setSelected] = useState<StaffStudent | null>(null)
+  const [search, setSearch] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
+
+  const students = useMemo(() => data?.students ?? [], [data])
+
+  const needsAttention = useMemo(
+    () =>
+      students.filter(s => {
+        const acc = overallAccuracy(s.totals)
+        return acc !== null && acc < NEEDS_ATTENTION_THRESHOLD
+      }),
+    [students]
+  )
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return students
+    return students.filter(s => s.full_name.toLowerCase().includes(q))
+  }, [students, search])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -60,73 +236,93 @@ export default function NaaleStaffPage() {
     }
   }
 
+  useEffect(() => {
+    if (!selected) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setSelected(null)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [selected])
+
   return (
     <div className="min-h-screen md:flex">
       <NaaleSidebar role="staff" />
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-        <div className="flex justify-between items-center mt-4 mb-6">
-          <h1 className="font-bold text-primary-700 dark:text-primary-400">{t('תלמידים')}</h1>
-          <button type="button" onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
-            {t('יציאה')}
-          </button>
+        <div className="flex justify-between items-center mt-4 mb-6 gap-3">
+          <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePractice}
+              disabled={starting}
+              className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+            >
+              {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
+            </button>
+            <button type="button" onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
+              {t('יציאה')}
+            </button>
+          </div>
         </div>
-
-        <button
-          onClick={handlePractice}
-          disabled={starting}
-          className="w-full py-3 mb-4 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
-        >
-          {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
-        </button>
         {startError && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>}
 
         {loading && <LoadingSpinner />}
-
         {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
         {data && (
-          <div className="bg-surface rounded-2xl shadow-sm border border-card-border divide-y divide-card-border">
-            {data.students.length === 0 && (
-              <p className="text-fg/50 text-sm text-center p-6">{t('אין עדיין תלמידים')}</p>
-            )}
-            {data.students.map(s => (
-              <div key={s.student_id}>
-                <button
-                  onClick={() => setExpanded(expanded === s.student_id ? null : s.student_id)}
-                  className="w-full flex justify-between items-center text-sm p-4 hover:bg-black/5 dark:hover:bg-white/5 transition text-right"
-                >
-                  <span className="text-fg font-medium">{s.full_name}</span>
-                  <span className="text-fg/60 flex items-center gap-2 shrink-0">
-                    <LtrIsolate>{`${s.totals.correct}/${s.totals.answered}`}</LtrIsolate>
-                    <span className="text-fg/30">{expanded === s.student_id ? '▲' : '▼'}</span>
-                  </span>
-                </button>
-                {expanded === s.student_id && (
-                  <div className="px-4 pb-4 space-y-2">
-                    {s.topics.map(topic => (
-                      <div key={topic.topic} className="flex justify-between items-center text-sm">
-                        <span className="text-fg/70 flex-1 min-w-0 truncate">{topic.topic}</span>
-                        {topic.started ? (
-                          <span className="flex items-center gap-3 shrink-0">
-                            <span className="text-fg/50 text-xs">
-                              {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
-                            </span>
-                            <span className={`font-semibold ${scoreColor(topic.accuracy_pct)}`}>
-                              <LtrIsolate>{`${topic.correct}/${topic.answered}`}</LtrIsolate>
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="text-fg/30 text-xs shrink-0">{t('לא התחיל')}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <>
+            {needsAttention.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
+                  {t('דורש תשומת לב')} ({needsAttention.length})
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full bg-surface rounded-xl border border-red-200 dark:border-red-500/30 text-sm">
+                    <tbody>
+                      {needsAttention.map(s => (
+                        <StudentRow key={s.student_id} s={s} critical onSelect={setSelected} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t('חיפוש תלמיד...')}
+              className="w-full mb-4 border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+
+            {filtered.length === 0 ? (
+              <p className="text-fg/50 text-sm text-center p-6">
+                {students.length === 0 ? t('אין עדיין תלמידים') : t('לא נמצאו תלמידים')}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
+                  <thead>
+                    <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
+                      <th className="text-right p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
+                      <th className="text-right p-3 font-semibold text-fg/80">{t('דיוק כולל')}</th>
+                      <th className="p-3 font-semibold text-fg/80 text-center">{t('תרגולים שהושלמו')}</th>
+                      <th className="p-3 w-16" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(s => (
+                      <StudentRow key={s.student_id} s={s} onSelect={setSelected} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
+      {selected && <StudentDialog s={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }

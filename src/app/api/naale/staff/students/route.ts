@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleStaff } from '@/lib/naale/auth'
 import { buildTopicStats } from '@/lib/naale/stats'
+import { computeRewards } from '@/lib/naale/rewards'
 
 /**
  * All Naale students with their per-topic levels and counts, for staff.
@@ -55,8 +56,8 @@ export async function GET() {
   const studentIds = (students ?? []).map(s => s.id)
   const [{ data: levels }, { data: answers }, { data: sessions }] = await Promise.all([
     db.from('naale_topic_levels').select('student_id, topic, level').in('student_id', studentIds),
-    db.from('naale_answers').select('student_id, topic, is_correct, is_review').in('student_id', studentIds),
-    db.from('naale_sessions').select('student_id, completed').in('student_id', studentIds),
+    db.from('naale_answers').select('student_id, topic, is_correct, is_review, session_id').in('student_id', studentIds),
+    db.from('naale_sessions').select('id, student_id, kind, completed').in('student_id', studentIds),
   ])
 
   // Review answers (ticket 15) excluded — same working decision as
@@ -68,6 +69,14 @@ export async function GET() {
     const myLevels = (levels ?? []).filter(l => l.student_id === s.id)
     const myAnswers = nonReviewAnswers.filter(a => a.student_id === s.id)
     const mySessions = (sessions ?? []).filter(x => x.student_id === s.id)
+
+    // XP/coins: same derivation as /api/naale/my-stats — placement answers
+    // excluded (calibration, not practice), so a student's own view and
+    // staff's view of them never disagree.
+    const practiceSessionIds = new Set(mySessions.filter(x => x.kind === 'practice').map(x => x.id))
+    const practiceAnswers = myAnswers.filter(a => practiceSessionIds.has(a.session_id))
+    const { xp, coins } = computeRewards(practiceAnswers, mySessions)
+
     return {
       student_id: s.id,
       full_name: s.full_name,
@@ -77,6 +86,8 @@ export async function GET() {
         correct: myAnswers.filter(a => a.is_correct).length,
         sessions: mySessions.length,
         completed_sessions: mySessions.filter(x => x.completed).length,
+        xp,
+        coins,
       },
     }
   })
