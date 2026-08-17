@@ -27,6 +27,20 @@ export async function getStudentFromSession(): Promise<StudentSessionResult> {
     .maybeSingle()
 
   if (!student) return { status: 'no_profile', user }
+
+  // A students row on the Naale track must never be usable here — main-course
+  // routes have no concept of Naale data, and getNaaleSession() is the only
+  // valid entry point for that track. Treated as no_profile rather than a new
+  // status: every call site already collapses non-'ok' results the same way,
+  // and a Naale account genuinely has no main-course profile.
+  const { data: studentClass } = await db
+    .from('classes')
+    .select('track')
+    .eq('id', student.class_id)
+    .single()
+
+  if (studentClass?.track === 'naale') return { status: 'no_profile', user }
+
   return { status: 'ok', user, student }
 }
 
