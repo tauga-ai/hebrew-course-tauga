@@ -6,8 +6,8 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { LevelSteps } from '@/components/naale/LevelSteps'
+import { Avatar } from '@/components/naale/Avatar'
 import { useResource } from '@/lib/hooks/use-resource'
-import { createClient } from '@/lib/supabase/client'
 import { scoreColor } from '@/lib/score-color'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
@@ -15,6 +15,7 @@ import { t } from '@/lib/dev-i18n'
 interface StaffStudent {
   student_id: string
   full_name: string
+  avatar_url: string | null
   topics: NaaleTopicStat[]
   totals: { answered: number; correct: number; sessions: number; completed_sessions: number; xp: number; coins: number }
 }
@@ -31,12 +32,6 @@ function overallAccuracy(totals: StaffStudent['totals']): number | null {
   return totals.answered > 0 ? Math.round((totals.correct / totals.answered) * 100) : null
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.trim().slice(0, 2).toUpperCase()
-}
-
 const BAR_PALETTE = { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' }
 
 function statusLabel(acc: number | null): string {
@@ -44,18 +39,6 @@ function statusLabel(acc: number | null): string {
   if (acc >= 70) return 'מצוין'
   if (acc >= 50) return 'סביר'
   return 'דורש תשומת לב'
-}
-
-// Hoisted to module scope (not declared inside NaaleStaffPage) — a component
-// redeclared every render loses its identity and remounts on every parent
-// re-render, which is what react-hooks/static-components catches.
-
-function StudentBadge({ name }: { name: string }) {
-  return (
-    <span className="shrink-0 w-8 h-8 rounded-full bg-accent-naale/15 text-accent-naale text-xs font-bold flex items-center justify-center">
-      {initials(name)}
-    </span>
-  )
 }
 
 function AccuracyBar({ totals }: { totals: StaffStudent['totals'] }) {
@@ -88,7 +71,7 @@ function StudentRow({ s, critical, onSelect }: { s: StaffStudent; critical?: boo
     >
       <td className="p-3 border-b border-card-border">
         <div className="flex items-center gap-3">
-          <StudentBadge name={s.full_name} />
+          <Avatar name={s.full_name} avatarUrl={s.avatar_url} />
           <div className="min-w-0">
             <div className="font-medium text-fg truncate">{s.full_name}</div>
             <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
@@ -118,7 +101,7 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
       <div className="relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3 min-w-0">
-            <StudentBadge name={s.full_name} />
+            <Avatar name={s.full_name} avatarUrl={s.avatar_url} sizeClass="w-10 h-10 text-sm" />
             <div className="min-w-0">
               <div className="font-bold text-fg truncate">{s.full_name}</div>
               <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
@@ -215,12 +198,6 @@ export default function NaaleStaffPage() {
     return students.filter(s => s.full_name.toLowerCase().includes(q))
   }, [students, search])
 
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.replace('/naale/login')
-  }
-
   async function handlePractice() {
     setStarting(true)
     setStartError('')
@@ -251,18 +228,13 @@ export default function NaaleStaffPage() {
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handlePractice}
-              disabled={starting}
-              className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
-            >
-              {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
-            </button>
-            <button type="button" onClick={handleLogout} className="text-sm text-fg/40 hover:text-fg/70">
-              {t('יציאה')}
-            </button>
-          </div>
+          <button
+            onClick={handlePractice}
+            disabled={starting}
+            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+          >
+            {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
+          </button>
         </div>
         {startError && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>}
 

@@ -7,7 +7,6 @@ import { CardGrid } from '@/components/ui/CardGrid'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { LevelSteps } from '@/components/naale/LevelSteps'
-import { createClient } from '@/lib/supabase/client'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
 
@@ -88,12 +87,6 @@ export default function NaaleHome() {
     }
   }
 
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.replace('/naale/login')
-  }
-
   if (error && !me) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4 text-center">
@@ -116,13 +109,6 @@ export default function NaaleHome() {
             <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name}</h1>
             <p className="text-sm text-fg/60">{t('נעלה')}</p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-sm text-fg/40 hover:text-fg/70"
-          >
-            {t('יציאה')}
-          </button>
         </div>
 
         {rewards && (

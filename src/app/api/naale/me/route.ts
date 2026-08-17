@@ -17,8 +17,18 @@ export async function GET() {
     return NextResponse.json({ error: 'not_on_roster' }, { status: 403 })
   }
 
+  // Google's profile photo, when Supabase's OAuth metadata has one. Naale
+  // has no upload-your-own-photo feature, so this is display-only, never
+  // stored — a stale/missing URL just falls back to an initials badge
+  // client-side, same as any other Google account without a photo set.
+  const avatarUrl =
+    (session.user.user_metadata?.avatar_url as string | undefined) ??
+    (session.user.user_metadata?.picture as string | undefined) ??
+    null
+
   return NextResponse.json({
     role: session.role,
     student: { id: session.student.id, full_name: session.student.full_name },
+    avatar_url: avatarUrl,
   })
 }

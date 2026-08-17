@@ -46,7 +46,7 @@ export async function GET() {
 
   const { data: students } = await db
     .from('students')
-    .select('id, full_name, created_at')
+    .select('id, full_name, created_at, auth_user_id')
     .eq('class_id', naaleClass.id)
     .eq('naale_role', 'student')
 
@@ -65,6 +65,21 @@ export async function GET() {
   // never disagree.
   const nonReviewAnswers = (answers ?? []).filter(a => !a.is_review)
 
+  // Google's profile photo per student, same display-only relay as
+  // /api/naale/me — never stored, a missing/failed one just falls back to
+  // an initials badge client-side. One admin lookup per student is fine at
+  // this cohort's scale (dozens, not thousands).
+  const avatarByAuthId = new Map(
+    await Promise.all(
+      (students ?? []).map(async s => {
+        const { data } = await db.auth.admin.getUserById(s.auth_user_id)
+        const meta = data?.user?.user_metadata
+        const avatarUrl = (meta?.avatar_url as string | undefined) ?? (meta?.picture as string | undefined) ?? null
+        return [s.auth_user_id, avatarUrl] as const
+      })
+    )
+  )
+
   const rows = (students ?? []).map(s => {
     const myLevels = (levels ?? []).filter(l => l.student_id === s.id)
     const myAnswers = nonReviewAnswers.filter(a => a.student_id === s.id)
@@ -80,6 +95,7 @@ export async function GET() {
     return {
       student_id: s.id,
       full_name: s.full_name,
+      avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
       topics: buildTopicStats(allTopics, myLevels, myAnswers),
       totals: {
         answered: myAnswers.length,
