@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // Pages reachable with no session at all.
 const PUBLIC_PATHS = new Set([
@@ -58,6 +59,27 @@ export async function proxy(request: NextRequest) {
         ? '/naale/login'
         : '/student'
     return NextResponse.redirect(new URL(target, request.url))
+  }
+
+  // A Naale session must never land on a main-course page — not just be denied
+  // its data. Scoped to skip /naale itself (nothing to redirect away from) and
+  // /teacher (a separate, non-track role system) so this only runs for the
+  // paths where it matters.
+  if (
+    user &&
+    !isApiRoute &&
+    !isAuthExchange &&
+    !pathname.startsWith('/naale') &&
+    !pathname.startsWith('/teacher')
+  ) {
+    const db = createServiceClient()
+    const [{ data: student }, { data: naaleClass }] = await Promise.all([
+      db.from('students').select('class_id').eq('auth_user_id', user.id).maybeSingle(),
+      db.from('classes').select('id').eq('track', 'naale').maybeSingle(),
+    ])
+    if (student && naaleClass && student.class_id === naaleClass.id) {
+      return NextResponse.redirect(new URL('/naale', request.url))
+    }
   }
 
   return supabaseResponse
