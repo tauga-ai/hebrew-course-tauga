@@ -65,7 +65,10 @@ test('every service-role API route derives identity from an auth helper', () => 
       // role === 'staff' check, for the handful of routes only staff may
       // call (e.g. reading every student's stats) — same relationship as
       // requireTeacher() to the main app's auth.
-      content.includes('requireNaaleStaff')
+      content.includes('requireNaaleStaff') ||
+      // requireNaaleAdmin() checks naale_admins directly — a real identity
+      // check, not an exemption, same relationship as requireNaaleStaff().
+      content.includes('requireNaaleAdmin')
 
     if (!hasAuthHelper && !PUBLIC_ROUTES.has(relPath)) {
       violations.push(relPath)

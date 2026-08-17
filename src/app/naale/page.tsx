@@ -13,6 +13,7 @@ import { t } from '@/lib/dev-i18n'
 interface NaaleMe {
   role: 'student' | 'staff'
   student: { id: string; full_name: string }
+  is_admin: boolean
 }
 
 interface MyStatsTotals {
@@ -49,7 +50,18 @@ export default function NaaleHome() {
       const res = await fetch('/api/naale/me')
       if (cancelled) return
       if (res.status === 401) { router.replace('/naale/login'); return }
-      if (res.status === 403) { router.replace('/naale/not-authorized'); return }
+      if (res.status === 403) {
+        // Not on the roster — but login always lands here regardless of
+        // role, so a Naale admin with no roster/students row (an account
+        // that manages content but never takes the practice track) would
+        // otherwise have no way to reach /naale/admin after signing in.
+        // Check admin status as a fallback before giving up.
+        const adminRes = await fetch('/api/naale/admin/me')
+        if (cancelled) return
+        if (adminRes.ok) { router.replace('/naale/admin'); return }
+        router.replace('/naale/not-authorized')
+        return
+      }
       if (!res.ok) { setError('שגיאה בטעינת הפרופיל. בדוק חיבור לאינטרנט ונסה שוב.'); return }
       const data: NaaleMe = await res.json()
       if (cancelled) return
@@ -102,7 +114,7 @@ export default function NaaleHome() {
 
   return (
     <div className="min-h-screen md:flex">
-      <NaaleSidebar role="student" />
+      <NaaleSidebar role="student" showAdminLink={me.is_admin} />
       <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
         <div className="mt-4 mb-6 flex items-start justify-between">
           <div>
