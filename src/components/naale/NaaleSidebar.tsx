@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { ThemeToggle } from '@/components/theme/ThemeToggle'
-import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
+import { usePathname, useRouter } from 'next/navigation'
+import { useTheme } from '@/components/theme/ThemeProvider'
+import { Avatar } from '@/components/naale/Avatar'
+import { createClient } from '@/lib/supabase/client'
 import { t } from '@/lib/dev-i18n'
 
 export interface NaaleSidebarProps {
@@ -23,10 +24,39 @@ const STUDENT_ITEMS: NavItem[] = [
 ]
 const STAFF_ITEMS: NavItem[] = [{ href: '/naale/staff', icon: '👥', label: 'תלמידים' }]
 
-interface MyStatsTotals {
-  xp: number
-  coins: number
-  streak: number
+function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [onCancel])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative w-full max-w-xs bg-surface rounded-2xl shadow-xl p-5 text-center">
+        <p className="text-sm text-fg mb-5">{t('האם את/ה בטוח/ה שברצונך להתנתק?')}</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+          >
+            {t('ביטול')}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:opacity-90 transition"
+          >
+            {t('יציאה')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -43,30 +73,52 @@ interface MyStatsTotals {
  * A distinct cookie (naale_sidebar_collapsed, not StudentSidebar's
  * sidebar_collapsed) so the two components' collapse preferences don't
  * collide for a hypothetical future account that sees both.
+ *
+ * Grouped into "Account" (profile only), "Menu" (nav), and a bottom-pinned
+ * theme/logout block — logout lives here and only here now; naale/page.tsx
+ * and naale/staff/page.tsx no longer have their own.
  */
 export function NaaleSidebar({ role }: NaaleSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { theme, toggleTheme } = useTheme()
   const items = role === 'staff' ? STAFF_ITEMS : STUDENT_ITEMS
 
   const [collapsed, setCollapsed] = useState(
     () => typeof document !== 'undefined' && document.cookie.includes('naale_sidebar_collapsed=1')
   )
-  const [stats, setStats] = useState<MyStatsTotals | null>(null)
+  const [fullName, setFullName] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    // Best-effort, same pattern as NaaleHome's rewards fetch: a failed fetch
-    // just hides this block rather than erroring the whole shell.
-    fetch('/api/naale/my-stats')
+    // Best-effort — a failed fetch just leaves the profile row showing
+    // nothing (past the skeleton) rather than erroring the whole shell.
+    fetch('/api/naale/me')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
-        if (!cancelled && data) setStats(data.totals)
+        if (cancelled) return
+        if (data) {
+          setFullName(data.student.full_name)
+          setAvatarUrl(data.avatar_url)
+        }
+        setProfileLoading(false)
       })
-      .catch(() => { })
+      .catch(() => {
+        if (!cancelled) setProfileLoading(false)
+      })
     return () => {
       cancelled = true
     }
   }, [])
+
+  async function confirmLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.replace('/naale/login')
+  }
 
   function toggleCollapsed() {
     const next = !collapsed
@@ -91,50 +143,100 @@ export function NaaleSidebar({ role }: NaaleSidebarProps) {
     >
       <div className="flex items-center justify-between shrink-0">
         <span className={`font-bold text-fg whitespace-nowrap ${hideOnCollapse}`}>{t('נעלה')}</span>
-        <div className="flex items-center gap-1">
-          <span className={hideOnCollapse}>
-            <ThemeToggle />
-          </span>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={t(collapsed ? 'הרחב סרגל' : 'כווץ סרגל')}
-            className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-fg/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-fg/80 transition shrink-0"
-          >
-            {collapsed ? '▶' : '◀'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={t(collapsed ? 'הרחב סרגל' : 'כווץ סרגל')}
+          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-fg/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-fg/80 transition shrink-0"
+        >
+          ☰
+        </button>
       </div>
 
-      <nav className="flex flex-row md:flex-col gap-1 shrink-0">
-        {items.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={t(item.label)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap md:whitespace-normal transition ${isActive(item.href) ? 'bg-highlight/10 text-highlight' : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-          >
-            <span>{item.icon}</span>
-            <span className={hideOnCollapse}>{t(item.label)}</span>
-          </Link>
-        ))}
-      </nav>
+      <div className={`flex flex-col gap-2 shrink-0 ${hideOnCollapse}`}>
+        <span className="text-[10px] font-semibold tracking-wide text-fg/40 uppercase px-3">{t('חשבון')}</span>
 
-      {stats && (
-        <div
-          className={`flex flex-row items-center justify-center gap-3 text-xs text-fg/70 shrink-0 md:mt-auto md:pt-3 md:border-t md:border-card-border ${hideOnCollapse}`}
+        {profileLoading ? (
+          <div className="flex items-center gap-2 px-3 py-2 animate-pulse">
+            <span className="shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="h-3 w-24 rounded bg-gray-200 dark:bg-white/10" />
+              <div className="h-2.5 w-12 rounded bg-gray-200 dark:bg-white/10" />
+            </div>
+          </div>
+        ) : (
+          fullName && (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <Avatar name={fullName} avatarUrl={avatarUrl} />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-fg truncate">{fullName}</div>
+                <div className="text-xs text-fg/50">{t(role === 'staff' ? 'צוות' : 'תלמיד')}</div>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className={`flex flex-col gap-1 shrink-0 ${hideOnCollapse}`}>
+        <span className="text-[10px] font-semibold tracking-wide text-fg/40 uppercase px-3">{t('תפריט')}</span>
+        <nav className="flex flex-row md:flex-col gap-1">
+          {items.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={t(item.label)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${isActive(item.href) ? 'bg-highlight/10 text-highlight' : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+            >
+              <span>{item.icon}</span>
+              <span>{t(item.label)}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      {/* Collapsed rail still needs the nav icons visible even though the
+          labeled section above is hidden — a bare icon-only copy. */}
+      {collapsed && (
+        <nav className="hidden md:flex md:flex-col gap-1 shrink-0">
+          {items.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={t(item.label)}
+              className={`flex items-center justify-center px-3 py-2 rounded-lg text-sm transition ${isActive(item.href) ? 'bg-highlight/10 text-highlight' : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+            >
+              {item.icon}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      <div className="flex flex-col gap-1 shrink-0 md:mt-auto">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}
+          className="flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
         >
-          <span className="flex items-center gap-1">
-            🔥 <LtrIsolate>{stats.streak}</LtrIsolate>
-          </span>
-          <span className="flex items-center gap-1">
-            ⭐ <LtrIsolate>{stats.xp}</LtrIsolate>
-          </span>
-          <span className="flex items-center gap-1">
-            🪙 <LtrIsolate>{stats.coins}</LtrIsolate>
-          </span>
-        </div>
+          <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <span className={hideOnCollapse}>{t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowLogoutDialog(true)}
+          title={t('יציאה')}
+          className="flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+        >
+          <span>🚪</span>
+          <span className={hideOnCollapse}>{t('יציאה')}</span>
+        </button>
+      </div>
+
+      {showLogoutDialog && (
+        <LogoutDialog onConfirm={confirmLogout} onCancel={() => setShowLogoutDialog(false)} />
       )}
     </aside>
   )
