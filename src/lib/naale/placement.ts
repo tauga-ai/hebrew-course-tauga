@@ -18,15 +18,22 @@ import { createServiceClient } from '@/lib/supabase/service'
  */
 export async function getPlacementQuestions() {
   const db = createServiceClient()
-  const { data } = await db
-    .from('naale_questions')
-    .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
-    .order('difficulty', { ascending: true })
-    .order('id', { ascending: true }) // deterministic tie-break
+  const [{ data: mcq }, { data: open }] = await Promise.all([
+    db.from('naale_questions')
+      .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+      .order('difficulty', { ascending: true })
+      .order('id', { ascending: true }), // deterministic tie-break
+    db.from('naale_open_questions')
+      .select('id, topic, difficulty, prompt, fields')
+      .order('difficulty', { ascending: true })
+      .order('id', { ascending: true }),
+  ])
 
-  const byTopic = new Map<string, NonNullable<typeof data>[number]>()
-  for (const q of data ?? []) {
-    if (!byTopic.has(q.topic)) byTopic.set(q.topic, q)
-  }
+  // A topic name only ever exists in one of the two tables (see the infra
+  // ticket's task.md), so tagging `kind` per source and merging by topic
+  // can't collide two different question kinds under one key.
+  const byTopic = new Map<string, { id: string; topic: string; difficulty: number; kind: 'mcq' | 'open' } & Record<string, unknown>>()
+  for (const q of mcq ?? []) if (!byTopic.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'mcq' })
+  for (const q of open ?? []) if (!byTopic.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'open' })
   return [...byTopic.values()]
 }

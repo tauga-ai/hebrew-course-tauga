@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession } from '@/lib/naale/session'
 import { getPlacementQuestions } from '@/lib/naale/placement'
+import { publicFields } from '@/lib/naale/open-grading'
 
 // Dev-only QA hint, same gate as the practice /next route — DevPanel lets a
 // tester toggle whether to actually display it, but the field itself is only
@@ -35,11 +36,11 @@ export async function GET(req: NextRequest) {
   if (questions.length === 0) return NextResponse.json({ done: true, reason: 'no_topics' })
 
   const db = createServiceClient()
-  const { data: answered } = await db
-    .from('naale_answers')
-    .select('question_id')
-    .eq('session_id', sessionId)
-  const answeredIds = new Set((answered ?? []).map(a => a.question_id))
+  const [{ data: answered }, { data: openAnswered }] = await Promise.all([
+    db.from('naale_answers').select('question_id').eq('session_id', sessionId),
+    db.from('naale_open_answers').select('question_id').eq('session_id', sessionId),
+  ])
+  const answeredIds = new Set([...(answered ?? []), ...(openAnswered ?? [])].map(a => a.question_id))
 
   const index = questions.findIndex(q => !answeredIds.has(q.id))
   if (index === -1) return NextResponse.json({ done: true })
@@ -47,7 +48,13 @@ export async function GET(req: NextRequest) {
   const picked = questions[index]
   // Stripped in production: JSON.stringify omits an explicit `undefined`
   // value, so the key is genuinely absent from the response, not just empty.
-  const served = debugMode ? picked : { ...picked, correct_answer: undefined }
+  // For an 'open' question, the same concern applies to grading-only fields
+  // — publicFields() is the allowlist, same as correct_answer for 'mcq'.
+  const served = debugMode
+    ? picked
+    : picked.kind === 'mcq'
+      ? { ...picked, correct_answer: undefined }
+      : { ...picked, fields: publicFields(picked.topic as string, picked.fields as Record<string, string>) }
 
   return NextResponse.json({
     question: served,

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { applyAnswer, placementLevel, difficultyLadder, pickNextTopic, type TopicState } from '../src/lib/naale/leveling'
+import { applyAnswer, applyGradedAnswer, placementLevel, difficultyLadder, pickNextTopic, type TopicState } from '../src/lib/naale/leveling'
 
 const fresh = (level = 3): TopicState => ({ level, correct_streak: 0, wrong_streak: 0 })
 
@@ -83,4 +83,30 @@ test('pickNextTopic: never returns the previous topic when alternatives exist', 
 test('pickNextTopic: falls back to the only topic rather than deadlocking', () => {
   assert.equal(pickNextTopic(['a'], 'a'), 'a')
   assert.equal(pickNextTopic([], null), null)
+})
+
+test('applyGradedAnswer: a score of 4 or 5 behaves exactly like a correct MCQ answer', () => {
+  assert.deepEqual(applyGradedAnswer(fresh(), 4), applyAnswer(fresh(), true))
+  assert.deepEqual(applyGradedAnswer(fresh(), 5), applyAnswer(fresh(), true))
+  // 2 in a row (score 4/5 in any combination) still levels up.
+  const after = applyGradedAnswer(applyGradedAnswer(fresh(), 4), 5)
+  assert.equal(after.level, 4)
+  assert.equal(after.correct_streak, 0)
+})
+
+test('applyGradedAnswer: a score of 1 or 2 behaves exactly like a wrong MCQ answer', () => {
+  assert.deepEqual(applyGradedAnswer(fresh(), 1), applyAnswer(fresh(), false))
+  assert.deepEqual(applyGradedAnswer(fresh(), 2), applyAnswer(fresh(), false))
+  // 3 in a row (score 1/2 in any combination) still levels down.
+  let s = fresh()
+  s = applyGradedAnswer(s, 1)
+  s = applyGradedAnswer(s, 2)
+  s = applyGradedAnswer(s, 1)
+  assert.equal(s.level, 2)
+})
+
+test('applyGradedAnswer: a score of 3 is neutral — level and both streaks untouched', () => {
+  const midStreak = applyAnswer(fresh(), true) // correct_streak: 1
+  const after = applyGradedAnswer(midStreak, 3)
+  assert.deepEqual(after, midStreak, 'a neutral score must not reset an in-progress streak either')
 })

@@ -48,6 +48,43 @@ export function computeRewards(
   }
 }
 
+/** Noam's confirmed schedule for AI-graded (1-5) exercises — a flat amount
+ *  per correct answer doesn't apply here, since a 4 and a 5 aren't equally
+ *  good. Separate from XP_PER_CORRECT, which stays unchanged for MCQ topics. */
+export const XP_BY_SCORE: Record<number, number> = { 1: 0, 2: 1, 3: 4, 4: 7, 5: 10 }
+/** A score at or above this also earns a coin — confirmed by Noam
+ *  (2026-08-18) to match COINS_PER_CORRECT's existing "correct answer"
+ *  threshold, since the 4 documents never specced coins themselves. */
+export const COIN_SCORE_THRESHOLD = 4
+
+/** Same derived-not-stored reasoning as computeRewards() — see that
+ *  function's comment. Callers pass already-filtered (non-review) answers. */
+export function computeGradedRewards(answers: { score: number }[]): { xp: number; coins: number } {
+  const xp = answers.reduce((sum, a) => sum + (XP_BY_SCORE[a.score] ?? 0), 0)
+  const coins = answers.filter(a => a.score >= COIN_SCORE_THRESHOLD).length * COINS_PER_CORRECT
+  return { xp, coins }
+}
+
+/**
+ * How many of the student's most recent graded answers, in a row, scored 4
+ * or 5 — for the "celebrate at 3/5/10 in a row" milestone. Deliberately
+ * global across all graded exercise topics combined, not per-topic: a
+ * student alternating between Story Continuation and WhatsApp should still
+ * feel one continuous streak, matching how a student would actually
+ * experience "doing well lately," not a per-exercise-type technicality.
+ * `answersDescByTime` must already be sorted newest-first.
+ */
+export function consecutiveGoodScoreStreak(answersDescByTime: { score: number }[]): number {
+  let streak = 0
+  for (const a of answersDescByTime) {
+    if (a.score < 4) break
+    streak++
+  }
+  return streak
+}
+
+export const STREAK_MILESTONES = [3, 5, 10] as const
+
 /**
  * The week a timestamp belongs to, as a comparable string key — the Sunday
  * (Israel calendar date) that starts its week, in Israel local time.

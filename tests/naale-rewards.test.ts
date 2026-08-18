@@ -4,9 +4,13 @@ import {
   computeRewards,
   weekKey,
   computeStreak,
+  computeGradedRewards,
+  consecutiveGoodScoreStreak,
   XP_PER_CORRECT,
   XP_PER_COMPLETED_SESSION,
   COINS_PER_CORRECT,
+  XP_BY_SCORE,
+  COIN_SCORE_THRESHOLD,
 } from '../src/lib/naale/rewards'
 
 test('computeRewards: XP and coins from correct answers plus completed sessions', () => {
@@ -73,4 +77,26 @@ test('computeStreak: three consecutive qualifying weeks builds a streak of 3', (
   ]
   const now = new Date('2026-08-30T12:00:00Z') // week 08-30, still open, 0 sessions
   assert.equal(computeStreak(completed, now), 3)
+})
+
+test('computeGradedRewards: XP follows the fixed schedule, coins only at the threshold', () => {
+  const answers = [{ score: 1 }, { score: 2 }, { score: 3 }, { score: 4 }, { score: 5 }]
+  const { xp, coins } = computeGradedRewards(answers)
+  assert.equal(xp, XP_BY_SCORE[1] + XP_BY_SCORE[2] + XP_BY_SCORE[3] + XP_BY_SCORE[4] + XP_BY_SCORE[5])
+  // Only the score-4 and score-5 answers clear COIN_SCORE_THRESHOLD.
+  assert.equal(coins, 2 * COINS_PER_CORRECT)
+  assert.equal(COIN_SCORE_THRESHOLD, 4)
+})
+
+test('computeGradedRewards: no answers means no XP and no coins', () => {
+  const { xp, coins } = computeGradedRewards([])
+  assert.equal(xp, 0)
+  assert.equal(coins, 0)
+})
+
+test('consecutiveGoodScoreStreak: counts a leading run of scores >= 4, stops at the first below', () => {
+  assert.equal(consecutiveGoodScoreStreak([{ score: 5 }, { score: 4 }, { score: 3 }, { score: 5 }]), 2)
+  assert.equal(consecutiveGoodScoreStreak([{ score: 5 }, { score: 5 }, { score: 5 }]), 3)
+  assert.equal(consecutiveGoodScoreStreak([{ score: 2 }, { score: 5 }, { score: 5 }]), 0)
+  assert.equal(consecutiveGoodScoreStreak([]), 0)
 })
