@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleAdmin } from '@/lib/naale/auth'
 import { runQuestionImport } from '@/lib/naale/question-import'
+import { runOpenQuestionImport } from '@/lib/naale/open-question-import'
 
 /**
  * mode: 'preview' (default) parses and validates without writing; 'commit'
@@ -32,8 +33,13 @@ export async function POST(request: Request) {
 
   const db = createServiceClient()
   try {
-    const report = await runQuestionImport(wb, db, { dryRun: mode !== 'commit' })
-    return NextResponse.json(report)
+    // Both content kinds live in the same workbook — one upload covers both,
+    // rather than asking the admin to upload the same file twice.
+    const [mcqReport, openReport] = await Promise.all([
+      runQuestionImport(wb, db, { dryRun: mode !== 'commit' }),
+      runOpenQuestionImport(wb, db, { dryRun: mode !== 'commit' }),
+    ])
+    return NextResponse.json({ mcq: mcqReport, open: openReport })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'import_failed' }, { status: 500 })
   }

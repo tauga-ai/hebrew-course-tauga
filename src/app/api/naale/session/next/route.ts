@@ -3,17 +3,28 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { pickNextTopic, difficultyLadder, MIN_LEVEL } from '@/lib/naale/leveling'
+import { publicFields } from '@/lib/naale/open-grading'
 
 type PublicQuestion = {
   id: string
   topic: string
   difficulty: number
+  // Which content table this came from — naale_questions (mcq) or
+  // naale_open_questions (open, AI-graded free text). A topic name only
+  // ever exists in one of the two tables, so this never conflicts within
+  // one topic's own question pool.
+  kind: 'mcq' | 'open'
   prompt: string
-  answer_kind: string
-  options: string[] | null
+  // 'mcq' only:
+  answer_kind?: string
+  options?: string[] | null
   // Present in the DB row always, but deliberately stripped from `served`
   // below unless debugMode — see that assignment for why.
   correct_answer?: string
+  // 'open' only — already stripped of grading-only keys before being sent
+  // to the client (see the `served` assignment below), same concern as
+  // correct_answer above.
+  fields?: Record<string, string>
 }
 
 // Dev-only QA hint (src/components/dev/DevPanel.tsx lets a tester toggle
@@ -65,20 +76,29 @@ export async function GET(req: NextRequest) {
   // per-level-query version could take 3+ seconds for a single /next call.
   // These three queries are independent of each other, so they run in
   // parallel too.
-  const [{ data: levels }, { data: bank }, { data: answered }] = await Promise.all([
+  const [{ data: levels }, { data: mcqBank }, { data: openBank }, { data: answered }, { data: openAnswered }] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
     db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer'),
+    db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields'),
     // Every question this student has ever answered, in any session —
     // "unseen" is lifetime-scoped, not session-scoped.
     db.from('naale_answers').select('question_id, topic, answered_at').eq('student_id', session.student.id).order('answered_at', { ascending: false }),
+    db.from('naale_open_answers').select('question_id, topic, answered_at').eq('student_id', session.student.id).order('answered_at', { ascending: false }),
   ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
 
+  // A topic name only ever exists in naale_questions OR naale_open_questions,
+  // never both — so merging by topic here can't collide two different
+  // question kinds under one key.
   const bankByTopic = new Map<string, PublicQuestion[]>()
-  for (const row of bank ?? []) {
+  for (const row of mcqBank ?? []) {
     if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
-    bankByTopic.get(row.topic)!.push(row)
+    bankByTopic.get(row.topic)!.push({ ...row, kind: 'mcq' })
+  }
+  for (const row of openBank ?? []) {
+    if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
+    bankByTopic.get(row.topic)!.push({ id: row.id, topic: row.topic, difficulty: row.difficulty, kind: 'open', prompt: row.prompt, fields: row.fields as Record<string, string> })
   }
   const allTopics = [...bankByTopic.keys()]
 
@@ -89,8 +109,14 @@ export async function GET(req: NextRequest) {
     if (!levelByTopic.has(topic)) levelByTopic.set(topic, MIN_LEVEL)
   }
 
-  const seenIds = new Set((answered ?? []).map(a => a.question_id))
-  const prevTopic = answered?.[0]?.topic ?? null
+  const seenIds = new Set([...(answered ?? []).map(a => a.question_id), ...(openAnswered ?? []).map(a => a.question_id)])
+  // Whichever answer (mcq or open) is most recent overall decides prevTopic
+  // — rotation shouldn't repeat the same topic regardless of which kind the
+  // student's last answer happened to be.
+  const allAnswered = [...(answered ?? []), ...(openAnswered ?? [])].sort(
+    (a, b) => new Date(b.answered_at).getTime() - new Date(a.answered_at).getTime()
+  )
+  const prevTopic = allAnswered[0]?.topic ?? null
 
   // Candidate pool starts as every topic in the bank. Topics are removed as
   // they're found exhausted, and exclusion happens BEFORE rotation picks —
@@ -113,7 +139,14 @@ export async function GET(req: NextRequest) {
         // Stripped in production: JSON.stringify omits an explicit `undefined`
         // value, so the key is genuinely absent from the response, not just
         // empty. debugMode is a build-time env-var check, never client-controlled.
-        served = debugMode ? picked : { ...picked, correct_answer: undefined }
+        // For 'open' questions, the same concern applies to grading-only
+        // fields (a model answer, anchors) — publicFields() is the allowlist
+        // that keeps those server-side, same as correct_answer for 'mcq'.
+        served = debugMode
+          ? picked
+          : picked.kind === 'mcq'
+            ? { ...picked, correct_answer: undefined }
+            : { ...picked, fields: publicFields(picked.topic, picked.fields!) }
         break
       }
     }

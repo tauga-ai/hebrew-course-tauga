@@ -49,6 +49,20 @@ export function placementLevel(isCorrect: boolean): number {
 }
 
 /**
+ * Graded-answer version of applyAnswer(), for AI-scored (1-5) exercises.
+ * 4-5 counts as correct (same CORRECT_TO_LEVEL_UP path); 1-2 counts as wrong
+ * (same WRONG_TO_LEVEL_DOWN path); 3 is neutral — level AND both streaks are
+ * left untouched, unlike a wrong MCQ answer, which always breaks the streak.
+ * Reuses applyAnswer() rather than re-implementing its thresholds, so the
+ * two leveling rules can't silently drift apart.
+ */
+export function applyGradedAnswer(state: TopicState, score: number): TopicState {
+  if (score >= 4) return applyAnswer(state, true)
+  if (score <= 2) return applyAnswer(state, false)
+  return state
+}
+
+/**
  * Random topic, never the same as the previous question's topic. Falls back to
  * the full list when there is only one topic (or none) to choose from, so a
  * thin question bank can't deadlock a session.

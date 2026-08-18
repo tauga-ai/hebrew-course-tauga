@@ -100,7 +100,9 @@ interface QuestionRow {
 
 /** Maps each required column name to its index in this sheet's own header
  *  row (not assumed to share a fixed position with any other sheet). */
-function buildColumnMap(headerRow: string[], requiredColumns: string[], sheetName: string): Record<string, number> {
+/** Exported for reuse by open-question-import.ts's sheet readers — every
+ *  open-response sheet needs this exact header-to-column-index mapping too. */
+export function buildColumnMap(headerRow: string[], requiredColumns: string[], sheetName: string): Record<string, number> {
   const map: Record<string, number> = {}
   headerRow.forEach((name, i) => { map[name.trim()] = i })
   for (const col of requiredColumns) {
