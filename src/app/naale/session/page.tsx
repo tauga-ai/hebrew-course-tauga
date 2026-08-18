@@ -13,6 +13,7 @@ import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
 import { getSessionMinutesOverride, subscribeSessionMinutesOverride } from '@/lib/naale/dev-fast-session'
+import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 
 interface ServedQuestion {
   id: string
@@ -79,6 +80,7 @@ function qaLog(label: string, data?: unknown) {
 function SessionRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
+  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId)
 
   const [deadlineMs, setDeadlineMs] = useState<number | null>(null)
   // Ticket 15: only practice sessions review; placement never does. Read
@@ -539,7 +541,11 @@ function SessionRunner() {
         {/* key={q.id} forces a remount (and replays the enter animation)
             every time the question changes — including auto-advance and
             Continue, not just the very first question. */}
-        <div key={q.id} className="flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+        {/* Card wrapper (bg-surface/border-card-border/shadow-sm), matching
+            the same card style already used on placement's intro/done
+            screens — a redesign, requested directly, of what used to be
+            bare content straight on the page background. */}
+        <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
           <div>
             {/* Count, not a percentage bar — there is no total to divide by;
                 the session ends on the clock, not on exhausting a fixed set. */}
@@ -548,6 +554,10 @@ function SessionRunner() {
               {debugMode && showQuestionBadge && (
                 <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
                   {q.topic} · L{q.difficulty}
+                  {/* QA-only: the 30/session translate cap is never shown to
+                      real students (Yuval's explicit "no visible countdown"
+                      call) — this piggybacks on the same dev-only badge. */}
+                  {debugTranslations && ` · 🔤${debugTranslations.used}/${debugTranslations.cap}`}
                 </span>
               )}
             </p>
@@ -563,7 +573,14 @@ function SessionRunner() {
               </p>
             )}
 
-            <p className="text-fg font-medium mb-4 text-right whitespace-pre-line">{q.prompt}</p>
+            {hintElement}
+
+            {/* Eyebrow: the question's own topic (e.g. "השלמת משפטים") — real
+                content, not a hardcoded label, so this reads correctly once
+                more than one topic has real questions in it. */}
+            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
+
+            <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
 
             {/* A confetti burst plus the reward note on a correct answer —
                 relative positioning here is what anchors ConfettiBurst's
@@ -628,11 +645,14 @@ function SessionRunner() {
                       // Auto-submits on click — no separate submit button for
                       // MCQ (Quizlet-style). `!submitting` guards the brief
                       // in-flight window, same as the `disabled` prop below.
-                      onClick={() => !result && !submitting && selectAndSubmit(option)}
+                      onClick={() => {
+                        if (consumeJustTranslated()) return
+                        if (!result && !submitting) selectAndSubmit(option)
+                      }}
                       disabled={!!result || submitting}
                       className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
                     >
-                      <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                      <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{renderText(option)}</span>
                       {result && isTheCorrectOne && (
                         <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
                       )}
@@ -721,6 +741,7 @@ function SessionRunner() {
     <div className="min-h-screen md:flex">
       <NaaleSidebar role="student" />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">{content}</div>
+      {popoverElement}
     </div>
   )
 }

@@ -101,6 +101,8 @@ export interface NaaleSession {
   ended_at: string | null
   answered_count: number
   completed: boolean
+  translations_used: number
+  translated_words: string[]
 }
 
 export interface NaaleAnswer {
