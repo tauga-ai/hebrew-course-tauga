@@ -32,6 +32,12 @@ interface AnswerResult {
 // Derived, not stored — same rationale as ticket 10's session page.
 type Phase = 'intro' | 'loading' | 'question' | 'feedback' | 'done'
 
+// Upper bound on how long a correct answer's auto-advance will wait on a
+// slow prefetch before giving up and advancing anyway — matches
+// session/page.tsx's SAFETY_CAP_MS (same reasoning, not a measured value,
+// just comfortably above ordinary network variance).
+const SAFETY_CAP_MS = 5000
+
 function PlacementRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
@@ -53,6 +59,11 @@ function PlacementRunner() {
   // rather than state so loadNext()'s identity doesn't churn every question.
   const prefetchedQuestion = useRef<{ question: ServedQuestion; question_number: number; total: number } | null>(null)
   const prefetchedDone = useRef(false)
+  // Resolves once the prefetch below has landed in one of the two refs above
+  // — lets the correct-answer auto-advance effect wait for the prefetch
+  // instead of firing on a blind timer, matching session/page.tsx's fix
+  // (commit c73d74c) for the same loading-spinner flash this page still had.
+  const prefetchPromise = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     if (!sessionId) router.replace('/naale')
@@ -102,6 +113,7 @@ function PlacementRunner() {
       const { question, question_number, total } = prefetchedQuestion.current
       prefetchedQuestion.current = null
       prefetchedDone.current = false
+      prefetchPromise.current = null
       setQuestion(question)
       setQuestionNumber(question_number)
       setTotal(total)
@@ -110,6 +122,7 @@ function PlacementRunner() {
     }
     if (prefetchedDone.current) {
       prefetchedDone.current = false
+      prefetchPromise.current = null
       finishPlacement()
       return
     }
@@ -133,15 +146,24 @@ function PlacementRunner() {
   useEffect(() => {
     if (phase !== 'feedback') return
     let cancelled = false
-    const id = setTimeout(() => {
-      fetchNextQuestion().then(outcome => {
-        if (cancelled) return
-        if ('question' in outcome) prefetchedQuestion.current = outcome
-        else if ('done' in outcome) prefetchedDone.current = true
-        // 'error' outcome: left unset — loadNext()'s fallback fetch retries for real.
-      })
-    }, 0)
-    return () => { cancelled = true; clearTimeout(id) }
+    let timeoutId: ReturnType<typeof setTimeout>
+    // Assigned here, synchronously, so the auto-advance effect below always
+    // reads a live promise off the ref rather than racing to see it before
+    // this effect has run — only the fetchNextQuestion() call itself is
+    // deferred (same react-hooks/set-state-in-effect reason as before).
+    prefetchPromise.current = new Promise<void>(resolve => {
+      timeoutId = setTimeout(() => {
+        fetchNextQuestion().then(outcome => {
+          if (!cancelled) {
+            if ('question' in outcome) prefetchedQuestion.current = outcome
+            else if ('done' in outcome) prefetchedDone.current = true
+            // 'error' outcome: left unset — loadNext()'s fallback fetch retries for real.
+          }
+          resolve()
+        })
+      }, 0)
+    })
+    return () => { cancelled = true; clearTimeout(timeoutId) }
   }, [phase, fetchNextQuestion])
 
   // Takes the answer explicitly rather than reading `selected` internally —
@@ -177,11 +199,25 @@ function PlacementRunner() {
   // Correct answers auto-advance after a beat; wrong answers wait for the
   // Continue button so there's time to read the correct answer. 700ms is a
   // feel judgment, matching session/page.tsx's — tune live, not exact here.
+  //
+  // Waits for the prefetch too, not just the 700ms flash — same fix as
+  // session/page.tsx (commit c73d74c): advancing on a blind timer meant
+  // that whenever the prefetch hadn't resolved yet, loadNext() fell into
+  // its loading-spinner fallback right after the correct-answer flash. This
+  // page had the same gap since it was built before that fix and never
+  // got it ported over.
   useEffect(() => {
-    if (phase === 'feedback' && result?.is_correct) {
-      const id = setTimeout(() => { loadNext() }, 700)
-      return () => clearTimeout(id)
-    }
+    if (!(phase === 'feedback' && result?.is_correct)) return
+    let cancelled = false
+    let minDelayId: ReturnType<typeof setTimeout>
+    let safetyId: ReturnType<typeof setTimeout>
+    const minDelay = new Promise<void>(resolve => { minDelayId = setTimeout(resolve, 700) })
+    const safetyCap = new Promise<void>(resolve => { safetyId = setTimeout(resolve, SAFETY_CAP_MS) })
+    const prefetchReady = prefetchPromise.current ?? Promise.resolve()
+    Promise.race([Promise.all([minDelay, prefetchReady]), safetyCap]).then(() => {
+      if (!cancelled) loadNext()
+    })
+    return () => { cancelled = true; clearTimeout(minDelayId); clearTimeout(safetyId) }
   }, [phase, result, loadNext])
 
   // Warn before leaving mid-placement — same rationale as the practice
