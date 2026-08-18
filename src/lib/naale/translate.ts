@@ -28,7 +28,14 @@ export async function translateWord(db: SupabaseClient, word: string): Promise<s
       body: JSON.stringify({ q: word, source: 'he', target: TARGET_LANG, format: 'text' }),
     }
   )
-  if (!res.ok) throw new Error(`translate API failed: ${res.status}`)
+  if (!res.ok) {
+    // Google's actual error body (e.g. "API key not valid", a referrer/IP
+    // restriction, or the API not being enabled) is far more useful than the
+    // bare status code for telling these apart — surfaced here so
+    // console.error in the route logs the real reason, not just "400".
+    const body = await res.text().catch(() => '')
+    throw new Error(`translate API failed: ${res.status} ${body}`)
+  }
   const json = await res.json()
   const translation = json?.data?.translations?.[0]?.translatedText as string | undefined
   if (!translation) throw new Error('translate API returned no result')
