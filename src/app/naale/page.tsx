@@ -123,7 +123,7 @@ export default function NaaleHome() {
           </div>
         </div>
 
-        {rewards && (
+        {rewards ? (
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-center">
               <div className="text-2xl">🔥</div>
@@ -140,6 +140,20 @@ export default function NaaleHome() {
               <div className="text-2xl font-bold text-fg mt-1"><LtrIsolate>{String(rewards.coins)}</LtrIsolate></div>
               <div className="text-xs text-fg/50 mt-0.5">{t('מטבעות')}</div>
             </div>
+          </div>
+        ) : (
+          // Matches NaaleSidebar's profile-row skeleton (same animate-pulse +
+          // bg-gray-200/white-10 placeholder convention) — /api/naale/my-stats
+          // is fetched only after /api/naale/me resolves, so without this the
+          // row was simply absent for a beat, then popped in abruptly.
+          <div className="grid grid-cols-3 gap-3 mb-6 animate-pulse">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-center">
+                <div className="h-6 w-6 mx-auto rounded-full bg-gray-200 dark:bg-white/10" />
+                <div className="h-6 w-10 mx-auto rounded bg-gray-200 dark:bg-white/10 mt-2" />
+                <div className="h-2.5 w-16 mx-auto rounded bg-gray-200 dark:bg-white/10 mt-2" />
+              </div>
+            ))}
           </div>
         )}
 
