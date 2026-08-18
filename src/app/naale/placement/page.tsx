@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
+import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 
 interface ServedQuestion {
   id: string
@@ -34,6 +35,7 @@ type Phase = 'intro' | 'loading' | 'question' | 'feedback' | 'done'
 function PlacementRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
+  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId)
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
@@ -269,15 +271,31 @@ function PlacementRunner() {
           prompt text. */}
       {/* key={q.id} forces a remount (and replays the enter animation)
           every time the question changes. */}
-      <div key={q.id} className="flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+      {/* Card wrapper, matching this same page's intro/done screens' card
+          style — a redesign, requested directly, of what used to be bare
+          content straight on the page background. */}
+      <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
         <div>
           {/* Unlike practice (ticket 10), placement has a real denominator —
               one question per topic, fixed — so n of total is meaningful here. */}
           <p className="text-xs text-fg/60 mb-4">
             {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
+            {/* QA-only: the 30/session translate cap is never shown to real
+                students (Yuval's explicit "no visible countdown" call). */}
+            {debugMode && debugTranslations && (
+              <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
+                🔤{debugTranslations.used}/{debugTranslations.cap}
+              </span>
+            )}
           </p>
 
-          <p className="text-fg font-medium mb-4 text-right whitespace-pre-line">{q.prompt}</p>
+          {hintElement}
+
+          {/* Eyebrow: the question's own topic — same treatment as
+              session/page.tsx. */}
+          <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
+
+          <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
 
           {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
@@ -317,11 +335,14 @@ function PlacementRunner() {
                     key={option}
                     // Auto-submits on click — no separate submit button for
                     // MCQ (Quizlet-style).
-                    onClick={() => !result && !submitting && selectAndSubmit(option)}
+                    onClick={() => {
+                      if (consumeJustTranslated()) return
+                      if (!result && !submitting) selectAndSubmit(option)
+                    }}
                     disabled={!!result || submitting}
                     className={`w-full text-right rounded-xl border-2 p-4 transition flex items-center gap-3 disabled:cursor-default ${stateClass}`}
                   >
-                    <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{option}</span>
+                    <span className={`flex-1 ${isHintedCorrect ? 'text-green-600 dark:text-green-400' : ''}`}>{renderText(option)}</span>
                     {result && isTheCorrectOne && (
                       <span className="text-green-700 dark:text-green-400 font-bold flex-shrink-0">✓<span className="sr-only">{t(' תשובה נכונה')}</span></span>
                     )}
@@ -393,6 +414,7 @@ function PlacementRunner() {
           )}
         </div>
       </div>
+      {popoverElement}
     </div>
   )
 }
