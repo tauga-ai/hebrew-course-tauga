@@ -63,6 +63,7 @@ interface OpenAnswerResult {
 
 interface EndSummary {
   answered_count: number
+  correct_count: number
   completed: boolean
   reached_timer: boolean
   min_answers: number
@@ -352,6 +353,7 @@ function SessionRunner() {
       if (cancelled) return
       qaLog('/status on boot', data)
       setAnsweredCount(data.answered_count)
+      setCorrectCount(data.correct_count)
       setDeadlineMs(new Date(data.deadline_at).getTime())
       setKind(data.kind)
       if (data.ended || data.expired) { finishSession('time_up'); return }
@@ -554,6 +556,7 @@ function SessionRunner() {
     content = <LoadingSpinner />
   } else if (phase === 'done') {
     const shownAnswered = summary?.answered_count ?? answeredCount
+    const shownCorrect = summary?.correct_count ?? correctCount
 
     content = (
       <>
@@ -573,7 +576,7 @@ function SessionRunner() {
                 {doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום') : t('הזמן נגמר!')}
               </h2>
               <p className="text-fg/70 mb-2">
-                {t('ענית על')} <LtrIsolate>{shownAnswered}</LtrIsolate> {t('תרגילים')}, <LtrIsolate>{correctCount}</LtrIsolate> {t('נכונות')}
+                {t('ענית על')} <LtrIsolate>{shownAnswered}</LtrIsolate> {t('תרגילים')}, <LtrIsolate>{shownCorrect}</LtrIsolate> {t('נכונות')}
               </p>
               {/* No total/percentage — the session ends on a clock, not on
                   finishing a fixed set, so there's no denominator to show. */}

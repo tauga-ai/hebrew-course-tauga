@@ -26,6 +26,22 @@ export async function GET(req: NextRequest) {
   if (!owned.ok) return NextResponse.json({ error: 'תרגול לא נמצא' }, { status: 404 })
 
   const s = owned.session
+  const db = createServiceClient()
+
+  // Same combined mcq + open-response "correct" count as /session/end —
+  // correctCount on the client is a plain incrementing counter with nothing
+  // resetting it between sessions, so without this the boot flow (which
+  // already resyncs answered_count below) leaves a stale count from a
+  // previous session on screen until this session's own /end call replaces
+  // it. Skipped for placement, same as everywhere else that computes rewards.
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }] = s.kind === 'placement'
+    ? [{ data: [] as { is_correct: boolean }[] }, { data: [] as { score: number }[] }]
+    : await Promise.all([
+        db.from('naale_answers').select('is_correct').eq('session_id', s.id).eq('is_review', false),
+        db.from('naale_open_answers').select('score').eq('session_id', s.id).eq('is_review', false),
+      ])
+  const correct_count = (sessionAnswers ?? []).filter(a => a.is_correct).length
+    + (sessionOpenAnswers ?? []).filter(a => a.score >= 4).length
 
   let deadline_at = s.deadline_at
   if (!s.ended_at) {
@@ -33,7 +49,6 @@ export async function GET(req: NextRequest) {
     if (overrideMinutes !== null) {
       const recomputed = new Date(new Date(s.started_at).getTime() + overrideMinutes * 60 * 1000).toISOString()
       if (recomputed !== s.deadline_at) {
-        const db = createServiceClient()
         await db.from('naale_sessions').update({ deadline_at: recomputed }).eq('id', s.id)
         deadline_at = recomputed
       }
@@ -46,6 +61,7 @@ export async function GET(req: NextRequest) {
     deadline_at,
     seconds_remaining: secondsRemaining(deadline_at),
     answered_count: s.answered_count,
+    correct_count,
     ended: s.ended_at !== null,
     expired: isExpired(deadline_at),
     completed: s.completed,
