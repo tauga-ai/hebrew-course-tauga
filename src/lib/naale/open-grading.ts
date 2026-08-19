@@ -46,6 +46,38 @@ OPEN_GRADING_BUILDERS['סיפור בהמשכים'] = {
 { "score": <number between 1-5>, "feedback": "<short constructive feedback in simple Hebrew>"}`,
 }
 
+// `expected_phrasing` is NOT public — it's a model answer, only ever used
+// inside the grading prompt (and, per the prompt's own instruction, echoed
+// back inside the AI's feedback text when the score is 3 or below — the app
+// doesn't need to handle that specially, it's already baked into the prompt).
+OPEN_GRADING_BUILDERS['ווטסאפ והודעות'] = {
+  publicFieldKeys: ['recipient'],
+  buildPrompt: (prompt, fields, userText) => `תפקיד ומשימה:
+אתה מעריך פדגוגי חכם המסייע לעולים חדשים ללמוד עברית בהבעה בכתב. המשתמש מתבקש לכתוב הודעת טקסט (כמו ווטסאפ) בהתבסס על משימה ונמען. מגבלת האורך למשתמש היא עד 20 מילים.
+הקלט שיועבר אליך:
+1. הנמען (למי ההודעה נשלחת): "${fields.recipient}"
+2. המשימה (מה צריך לכתוב): "${prompt}"
+3. ניסוח מצופה (רפרנס לכוונת המשורר): "${fields.expected_phrasing}"
+4. הטקסט שהמשתמש כתב: "${userText}"
+תהליך ההערכה (flow) שעליך לבצע ברקע:
+שלב 1 - העברת המסר: האם המשתמש ביצע את המשימה והעביר את המידע הנדרש. אל תחפש התאמה של מילה-במילה לניסוח המצופה, אלא ודא שהרעיון המרכזי עבר.
+שלב 2 - התאמת משלב לשוני (טון): האם סגנון הדיבור מתאים לנמען (למשל, שפה מכבדת למורה/בוס, לעומת סלנג או שפה יומיומית לחבר).
+שלב 3 - ניתוח דקדוקי: בדיקת תקינות תחבירית, זכר/נקבה, ואיות.
+סולם הניקוד המוחלט (מ-1 עד 5):
+1 - רמה שגויה לחלוטין: הודעה לא קשורה, ג'יבריש, או שתיקה.
+2 - רמה נמוכה: קיימת בעיה כפולה - גם שגיאות דקדוקיות קשות וגם משלב לשוני (טון) שגוי לחלוטין בהתייחס לנמען, מה שפוגע משמעותית בתקשורת.
+3 - רמה בינונית: המסר עבר והובן, אך יש אחת משתי הבעיות - או שגיאות דקדוקיות בולטות מאוד, או שהדקדוק תקין לחלוטין אך המשלב הלשוני (הטון) שגוי לחלוטין בהתייחס לנמען (למשל: כתיבת סלנג פמיליארי לבוס/מורה).
+4 - רמה טובה: תשובה טובה מאוד אך עם פגם אחד קטן - או שיש שגיאות כתיב/דקדוק קלות, או אי התאמה קלה מאוד בטון (חוסר נימוס קל במקום שדורש זאת).
+5 - רמה מצוינת: תשובה מושלמת. המסר עבר, הדקדוק נכון, והמשלב הלשוני מתאים בדיוק לנמען.
+פורמט הפלט המבוקש (חובה):
+עליך להחזיר את התוצאה בפורמט JSON טהור ותקני בלבד, ללא טקסט מקדים. הערה חשובה: אם הציון שניתן הוא 3 או מטה, עליך לכלול בתוך הפידבק את ה"ניסוח מצופה" (${fields.expected_phrasing}) כדוגמה לתשובה נכונה, כדי שהמשתמש ילמד ממנה איך היה כדאי לנסח.
+מבנה ה-JSON חייב להיות:
+{
+"score": <number between 1-5>,
+"feedback": "<short constructive feedback in simple Hebrew>"
+}`,
+}
+
 export function publicFields(topic: string, fields: Record<string, string>): Record<string, string> {
   const builder = OPEN_GRADING_BUILDERS[topic]
   if (!builder) return {}
@@ -71,9 +103,23 @@ export async function gradeOpenAnswer(topic: string, prompt: string, fields: Rec
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  const parsed = JSON.parse(result.response.text().trim())
-  if (typeof parsed.score !== 'number' || parsed.score < 1 || parsed.score > 5 || typeof parsed.feedback !== 'string') {
+  // Per the content-update spec docs' §7 ("if JSON parsing fails, log the raw
+  // response"): the raw text is captured up front so it's logged either way a
+  // malformed reply can happen below — otherwise a caller only ever sees a
+  // generic "Malformed grading response"/SyntaxError with no way to tell
+  // whether Gemini truncated, refused, wrapped in a code fence, etc.
+  const rawText = result.response.text().trim()
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawText)
+  } catch {
+    console.error(`[open-grading] non-JSON response for topic "${topic}":`, rawText)
     throw new Error('Malformed grading response')
   }
-  return { score: parsed.score, feedback: parsed.feedback }
+  const graded = parsed as { score?: unknown; feedback?: unknown }
+  if (typeof graded.score !== 'number' || graded.score < 1 || graded.score > 5 || typeof graded.feedback !== 'string') {
+    console.error(`[open-grading] wrong-shape response for topic "${topic}":`, rawText)
+    throw new Error('Malformed grading response')
+  }
+  return { score: graded.score, feedback: graded.feedback }
 }

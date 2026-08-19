@@ -9,7 +9,7 @@ import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
-import { t, debugMode } from '@/lib/dev-i18n'
+import { t, debugMode, getDevLang } from '@/lib/dev-i18n'
 import { scoreColor } from '@/lib/score-color'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
@@ -627,7 +627,13 @@ function SessionRunner() {
             {/* Count, not a percentage bar — there is no total to divide by;
                 the session ends on the clock, not on exhausting a fixed set. */}
             <p className="text-xs text-fg/60 mb-4">
-              {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+              {/* Explicit dir — same reasoning as placement/page.tsx's question
+                  counter: a translated word next to an isolated number needs
+                  an unambiguous base direction, or the pair can reorder in
+                  English/LTR debug mode. */}
+              <span dir={debugMode && getDevLang() === 'en' ? 'ltr' : 'rtl'}>
+                {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+              </span>
               {debugMode && showQuestionBadge && (
                 <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
                   {q.topic} · L{q.difficulty}
@@ -652,16 +658,18 @@ function SessionRunner() {
 
             {hintElement}
 
-            {/* Eyebrow: the question's own topic (e.g. "השלמת משפטים") — real
-                content, not a hardcoded label, so this reads correctly once
-                more than one topic has real questions in it. */}
-            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
+            {/* Eyebrow: the question's own topic (e.g. "השלמת משפטים"). Wrapped
+                in t() for debug-mode English QA only — the underlying q.topic
+                value passed to OPEN_EXERCISE_DISPLAY/OPEN_GRADING_BUILDERS
+                lookups below is untouched, so this is purely a display-layer
+                translation, not a change to real content. */}
+            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{t(q.topic)}</p>
 
             {q.kind === 'open' ? (
               <>
                 {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
                   <div key={block.label} className="mb-3 text-right">
-                    <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
+                    <p className="text-xs font-semibold text-fg/50 mb-1">{t(block.label)}</p>
                     <p className="text-fg whitespace-pre-line">{renderText(block.text)}</p>
                   </div>
                 ))}
