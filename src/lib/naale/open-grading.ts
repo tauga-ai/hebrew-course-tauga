@@ -46,6 +46,34 @@ OPEN_GRADING_BUILDERS['סיפור בהמשכים'] = {
 { "score": <number between 1-5>, "feedback": "<short constructive feedback in simple Hebrew>"}`,
 }
 
+// `expected_summary` is NOT public — same reasoning as Story Continuation's
+// `mandatory_word`-is-public case in reverse: this is a model answer, only
+// ever used inside the grading prompt (and echoed into feedback at a low
+// score, per the prompt's own instruction).
+OPEN_GRADING_BUILDERS['סיכום טקסט קצר'] = {
+  publicFieldKeys: ['student_task'],
+  buildPrompt: (prompt, fields, userText) => `תפקיד ומשימה:אתה מעריך פדגוגי חכם המסייע לעולים חדשים ללמוד עברית בהבעה בכתב. המשתמש מתבקש לקרוא פסקה קצרה ולסכם אותה במשפט אחד. מגבלת האורך למשתמש היא עד 25 מילים.
+הקלט שיועבר אליך:
+1. הפסקה המקורית: "${prompt}"
+2. המשימה (מה צריך לעשות): "${fields.student_task}"
+3. סיכום מצופה (רפרנס לכוונת המשורר ולעיקר המסר): "${fields.expected_summary}"
+4. הסיכום שהמשתמש כתב: "${userText}"
+תהליך ההערכה (flow) שעליך לבצע ברקע:
+שלב 1 - בדיקת תוכן והבחנה בין עיקר לטפל: האם המשתמש הצליח לזהות את הרעיון המרכזי של הפסקה בהתבסס על ה"סיכום המצופה"? האם הוא נמנע מלכלול פרטים שוליים או דוגמאות ספציפיות?
+שלב 2 - מידת העיבוד ("העתקה"): אם המשתמש העתיק משפט שלם במדויק מתוך הפסקה המקורית (Copy-Paste) ללא שום עיבוד משלו, יש להוריד נקודות. עם זאת, אין לפסול את התשובה לחלוטין אם המשפט שהועתק אכן מכיל את הרעיון המרכזי.
+שלב 3 - ניתוח דקדוקי: בדיקת תקינות תחבירית, זכר/נקבה, ואיות.
+סולם הניקוד המוחלט (מ-1 עד 5):
+1 - רמה שגויה לחלוטין: הסיכום לא קשור כלל, ג'יבריש, או שהמשתמש התמקד באופן מוחלט בפרט שולי/דוגמה והתעלם מהרעיון המרכזי.
+2 - רמה נמוכה: הסיכום מכיל טעויות בהבנת הנקרא, או שיש שגיאות דקדוקיות קשות מאוד שמונעות את הבנת המשפט.
+3 - רמה בינונית: המשתמש הבין את הרעיון הכללי, אך ישנה בעיה בולטת: או שגיאות דקדוקיות משמעותיות שמפריעות לקריאה, או שהסיכום מכיל פרטים טפלים ודוגמאות שהיו אמורות להיות מושמטות.
+4 - רמה טובה: הסיכום מעביר את הרעיון המרכזי היטב, אך עם פגם אחד: או שיש שגיאות דקדוק קלות, או שהמשתמש העתיק משפט מהמקור כמעט מילה-במילה ללא ניסיון לעבד ולנסח במילותיו שלו.
+5 - רמה מצוינת: תשובה מושלמת. הרעיון המרכזי מדויק, השמטת הטפל נעשתה כראוי, ניסוח מקורי (מעובד) ללא העתקה עיוורת, ודקדוק נקי משגיאות.
+פורמט הפלט המבוקש (חובה):
+עליך להחזיר את התוצאה בפורמט JSON טהור ותקני בלבד, ללא טקסט מקדים. הערה חשובה: אם הציון שניתן הוא 3 או מטה, עליך לכלול בתוך הפידבק את ה"סיכום מצופה" (${fields.expected_summary}) כדוגמה לתשובה נכונה, כדי שהמשתמש ילמד ממנה.
+מבנה ה-JSON חייב להיות:
+{ "score": <number between 1-5>, "feedback": "<short constructive feedback in simple Hebrew>"}`,
+}
+
 export function publicFields(topic: string, fields: Record<string, string>): Record<string, string> {
   const builder = OPEN_GRADING_BUILDERS[topic]
   if (!builder) return {}
@@ -71,9 +99,23 @@ export async function gradeOpenAnswer(topic: string, prompt: string, fields: Rec
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  const parsed = JSON.parse(result.response.text().trim())
-  if (typeof parsed.score !== 'number' || parsed.score < 1 || parsed.score > 5 || typeof parsed.feedback !== 'string') {
+  // Per the content-update spec docs' §7 ("if JSON parsing fails, log the raw
+  // response"): the raw text is captured up front so it's logged either way a
+  // malformed reply can happen below — otherwise a caller only ever sees a
+  // generic "Malformed grading response"/SyntaxError with no way to tell
+  // whether Gemini truncated, refused, wrapped in a code fence, etc.
+  const rawText = result.response.text().trim()
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawText)
+  } catch {
+    console.error(`[open-grading] non-JSON response for topic "${topic}":`, rawText)
     throw new Error('Malformed grading response')
   }
-  return { score: parsed.score, feedback: parsed.feedback }
+  const graded = parsed as { score?: unknown; feedback?: unknown }
+  if (typeof graded.score !== 'number' || graded.score < 1 || graded.score > 5 || typeof graded.feedback !== 'string') {
+    console.error(`[open-grading] wrong-shape response for topic "${topic}":`, rawText)
+    throw new Error('Malformed grading response')
+  }
+  return { score: graded.score, feedback: graded.feedback }
 }
