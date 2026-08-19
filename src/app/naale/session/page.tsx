@@ -10,23 +10,34 @@ import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
 import { t, debugMode } from '@/lib/dev-i18n'
+import { scoreColor } from '@/lib/score-color'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
 import { getSessionMinutesOverride, subscribeSessionMinutesOverride } from '@/lib/naale/dev-fast-session'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
+import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
+import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
 interface ServedQuestion {
   id: string
   topic: string
   difficulty: number
+  // Which content table this came from — naale_questions (mcq) or
+  // naale_open_questions (open, AI-graded free text), matching /next's own
+  // PublicQuestion discriminant.
+  kind: 'mcq' | 'open'
   prompt: string
-  answer_kind: 'mcq' | 'text'
-  options: string[] | null
+  // 'mcq' only:
+  answer_kind?: 'mcq' | 'text'
+  options?: string[] | null
   // Dev-only: present only when NEXT_PUBLIC_DEBUG_MODE is true at build
   // time (see the /next route). Used purely to render the optional QA hint
   // below — never used for grading, which always happens server-side via
   // /answer regardless.
   correct_answer?: string
+  // 'open' only — already stripped of grading-only keys by the server (see
+  // open-grading.ts's publicFields()).
+  fields?: Record<string, string>
   // Ticket 15: true when this question came from /review-next rather than
   // /next — 2-3 hard exercises from the student's previous practice session,
   // re-served before new material. Purely a UI hint; the server independently
@@ -40,6 +51,14 @@ interface AnswerResult {
   explanation?: string
   level: number
   level_changed: boolean
+}
+
+interface OpenAnswerResult {
+  score: number
+  feedback: string
+  level: number
+  level_changed: boolean
+  milestone: number | null
 }
 
 interface EndSummary {
@@ -93,6 +112,26 @@ function SessionRunner() {
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
   const [selected, setSelected] = useState<string>('')
   const [result, setResult] = useState<AnswerResult | null>(null)
+  // 'open' (AI-graded) questions use their own text/result state rather than
+  // selected/result — a free-text continuation isn't a single selectable
+  // value, and its result is a 1-5 score, not a boolean is_correct.
+  const [openAnswerText, setOpenAnswerText] = useState('')
+  const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
+  const [openValidationError, setOpenValidationError] = useState('')
+  // Same score-card pattern as sentence practice's THRESHOLDS/scoreLabel
+  // (src/app/sentence/[setId]/page.tsx) — 4-5 is "advance", 3 is "neutral"
+  // per the AI-graded leveling rule (naale-story-continuation/task.md).
+  const OPEN_SCORE_THRESHOLDS = { good: 4, ok: 3 }
+  const openScoreTextColor = (s: number) => scoreColor(s, { thresholds: OPEN_SCORE_THRESHOLDS })
+  const openScoreBg = (s: number) => scoreColor(s, {
+    thresholds: OPEN_SCORE_THRESHOLDS,
+    palette: {
+      good: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
+      ok: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+      bad: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
+    },
+  })
+  const openScoreLabel = (s: number) => s >= 5 ? t('מצוין!') : s >= 4 ? t('טוב מאוד') : s >= 3 ? t('סביר') : t('צריך שיפור')
   const [doneReason, setDoneReason] = useState<DoneReason | null>(null)
   const [summary, setSummary] = useState<EndSummary | null>(null)
   const [answeredCount, setAnsweredCount] = useState(0)
@@ -216,6 +255,9 @@ function SessionRunner() {
     if (!sessionId) return
     setResult(null)
     setSelected('')
+    setOpenAnswerText('')
+    setOpenResult(null)
+    setOpenValidationError('')
 
     if (prefetchedQuestion.current) {
       setQuestion(prefetchedQuestion.current)
@@ -379,6 +421,41 @@ function SessionRunner() {
       setResult(data)
       setAnsweredCount(c => c + 1)
       if (data.is_correct) setCorrectCount(c => c + 1)
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Parallel to submitAnswer() above, for 'open' (AI-graded) questions —
+  // posts to /open-answer instead of /answer and stores the result
+  // separately (openResult, not result), since a 1-5 score isn't the same
+  // shape as MCQ's boolean is_correct.
+  async function submitOpenAnswer(userText: string) {
+    if (!question || submitting || !userText.trim()) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/naale/session/open-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, user_text: userText }),
+      })
+      const data = await res.json()
+      if (res.status === 409) {
+        if (data.code === 'expired') {
+          qaLog('/open-answer: 409 expired, ending session')
+          finishSession('time_up')
+          return
+        }
+        qaLog('/open-answer: 409 duplicate_answer, continuing to next question')
+        loadNext()
+        return
+      }
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      qaLog('/open-answer: result', data)
+      setOpenResult(data)
+      setAnsweredCount(c => c + 1)
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
     } finally {
@@ -580,7 +657,23 @@ function SessionRunner() {
                 more than one topic has real questions in it. */}
             <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
 
-            <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
+            {q.kind === 'open' ? (
+              <>
+                {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
+                  <div key={block.label} className="mb-3 text-right">
+                    <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
+                    <p className="text-fg whitespace-pre-line">{renderText(block.text)}</p>
+                  </div>
+                ))}
+                {OPEN_EXERCISE_DISPLAY[q.topic]?.highlightField?.(q.fields ?? {}) && (
+                  <div className="inline-block rounded-full bg-accent-naale/10 text-accent-naale text-sm font-semibold px-3 py-1 mb-4">
+                    {renderText(OPEN_EXERCISE_DISPLAY[q.topic]!.highlightField!(q.fields ?? {})!.text)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
+            )}
 
             {/* A confetti burst plus the reward note on a correct answer —
                 relative positioning here is what anchors ConfettiBurst's
@@ -605,7 +698,75 @@ function SessionRunner() {
           </div>
 
           <div>
-            {q.answer_kind === 'mcq' && q.options ? (
+            {q.kind === 'open' ? (
+              <>
+                {!openResult ? (
+                  <>
+                    <OpenAnswerInput
+                      value={openAnswerText}
+                      onChange={text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') }}
+                      onSubmit={() => {
+                        if (!openAnswerText.trim()) {
+                          setOpenValidationError(OPEN_EXERCISE_DISPLAY[q.topic]?.emptyErrorMessage ?? '')
+                          return
+                        }
+                        submitOpenAnswer(openAnswerText)
+                      }}
+                      wordLimit={OPEN_EXERCISE_DISPLAY[q.topic]?.wordLimit ?? 30}
+                      loading={submitting}
+                    />
+                    {openValidationError && (
+                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-right">{openValidationError}</p>
+                    )}
+                    {/* QA-only: same visibility rule as the MCQ answer hint
+                        (debugMode && showHint) — lets someone testing
+                        without reading Hebrew fill in a plausible answer
+                        instead of composing one. Never shown to a real
+                        student. */}
+                    {debugMode && showHint && OPEN_EXERCISE_DISPLAY[q.topic]?.devSampleAnswers && (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.good(q.fields ?? {})); setOpenValidationError('') }}
+                          className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                        >
+                          💡 QA: fill good answer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.weak(q.fields ?? {})); setOpenValidationError('') }}
+                          className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                        >
+                          💡 QA: fill weak answer
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-3">
+                    <div className={`rounded-2xl border p-5 text-center mb-3 ${openScoreBg(openResult.score)}`}>
+                      <div className={`text-6xl font-bold ${openScoreTextColor(openResult.score)}`}>
+                        <LtrIsolate>{openResult.score}</LtrIsolate>
+                      </div>
+                      <div className="text-fg/60 text-sm">{t('מתוך 5')}</div>
+                      <div className={`text-lg font-semibold mt-1 ${openScoreTextColor(openResult.score)}`}>
+                        {openScoreLabel(openResult.score)}
+                      </div>
+                    </div>
+                    <p className="text-sm text-fg/80 mt-1">{openResult.feedback}</p>
+                    {/* No auto-advance for graded answers — unlike MCQ's binary
+                        correct/wrong, a 1-5 score plus written feedback
+                        deserves a moment to actually read before moving on. */}
+                    <button
+                      onClick={() => loadNext()}
+                      className="w-full mt-4 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+                    >
+                      {t('המשך')}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : q.answer_kind === 'mcq' && q.options ? (
               // Always a single stacked column — never a 2-up grid, even on
               // wide screens (explicit request, reverses ticket 17's
               // responsive grid).
@@ -709,8 +870,9 @@ function SessionRunner() {
             )}
 
             {/* Free-text is the only branch that still needs an explicit
-                submit — MCQ auto-submits on click above. */}
-            {!result && q.answer_kind !== 'mcq' && (
+                submit — MCQ auto-submits on click above, and 'open' has its
+                own submit button inside OpenAnswerInput. */}
+            {!result && q.kind !== 'open' && q.answer_kind !== 'mcq' && (
               <button
                 onClick={() => submitAnswer(selected)}
                 disabled={submitting || selected === ''}

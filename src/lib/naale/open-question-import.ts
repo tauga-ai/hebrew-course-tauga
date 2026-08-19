@@ -7,6 +7,7 @@
  */
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { buildColumnMap } from './question-import'
 
 // Each content ticket's sheet reader imports buildColumnMap directly from
 // ./question-import (exported there for exactly this reuse) — not
@@ -24,6 +25,48 @@ export interface OpenQuestionRow {
 /** Populated by each content ticket — empty until naale-story-continuation /
  *  naale-whatsapp-messages / naale-text-summary register their own reader. */
 export const OPEN_SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => OpenQuestionRow[]> = {}
+
+// Sheet columns confirmed directly against Noam's workbook. The opening line
+// (`פתיחת AI`) is this topic's natural upsert key — mirrors how
+// question-import.ts's MCQ readers each pick their own "main text" column.
+const STORY_CONTINUATION_COL = {
+  opening: 'פתיחת AI',
+  task: 'משימת התלמיד',
+  mandatoryWord: 'מילת/מילות החובה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const STORY_CONTINUATION_REQUIRED = Object.values(STORY_CONTINUATION_COL)
+
+function readStoryContinuationSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, STORY_CONTINUATION_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[STORY_CONTINUATION_COL.opening]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const difficulty = parseInt(cell(STORY_CONTINUATION_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(STORY_CONTINUATION_COL.difficulty))}`)
+      }
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: cell(STORY_CONTINUATION_COL.opening),
+        fields: {
+          student_task: cell(STORY_CONTINUATION_COL.task),
+          mandatory_word: cell(STORY_CONTINUATION_COL.mandatoryWord),
+        },
+        source_row: sourceRow,
+      }
+    })
+}
+
+OPEN_SHEET_READERS['סיפור בהמשכים'] = readStoryContinuationSheet
 
 export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]

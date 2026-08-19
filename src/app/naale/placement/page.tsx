@@ -8,25 +8,40 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
+import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
+import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
 interface ServedQuestion {
   id: string
   topic: string
   difficulty: number
+  // Which content table this came from — naale_questions (mcq) or
+  // naale_open_questions (open, AI-graded free text), matching
+  // /placement/next's own PublicQuestion discriminant.
+  kind: 'mcq' | 'open'
   prompt: string
-  answer_kind: 'mcq' | 'text'
-  options: string[] | null
+  // 'mcq' only:
+  answer_kind?: 'mcq' | 'text'
+  options?: string[] | null
   // Dev-only: present only when NEXT_PUBLIC_DEBUG_MODE is true at build
   // time (see the /next route). Used purely to render the optional QA hint
   // below — never used for grading, which always happens server-side via
   // /answer regardless.
   correct_answer?: string
+  // 'open' only — already stripped of grading-only keys by the server (see
+  // open-grading.ts's publicFields()).
+  fields?: Record<string, string>
 }
 
 interface AnswerResult {
   is_correct: boolean
   correct_answer: string
   explanation?: string
+}
+
+interface OpenAnswerResult {
+  score: number
+  feedback: string
 }
 
 // Derived, not stored — same rationale as ticket 10's session page.
@@ -49,6 +64,11 @@ function PlacementRunner() {
   const [total, setTotal] = useState(0)
   const [selected, setSelected] = useState('')
   const [result, setResult] = useState<AnswerResult | null>(null)
+  // 'open' (AI-graded) questions use their own text/result state — see
+  // session/page.tsx's matching state for why.
+  const [openAnswerText, setOpenAnswerText] = useState('')
+  const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
+  const [openValidationError, setOpenValidationError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
@@ -108,6 +128,9 @@ function PlacementRunner() {
     if (!sessionId) return
     setResult(null)
     setSelected('')
+    setOpenAnswerText('')
+    setOpenResult(null)
+    setOpenValidationError('')
 
     if (prefetchedQuestion.current) {
       const { question, question_number, total } = prefetchedQuestion.current
@@ -181,6 +204,31 @@ function PlacementRunner() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
       setResult(data)
+      setPhase('feedback')
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Parallel to submitAnswer() above, for 'open' (AI-graded) questions —
+  // posts to /placement/open-answer instead of /placement/answer. No
+  // level/milestone handling here, matching how placement's existing MCQ
+  // path is already simpler than the practice session's (placement levels
+  // are all set once by /placement/finish).
+  async function submitOpenAnswer(userText: string) {
+    if (!question || submitting || !userText.trim()) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/naale/placement/open-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, user_text: userText }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      setOpenResult(data)
       setPhase('feedback')
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
@@ -331,7 +379,23 @@ function PlacementRunner() {
               session/page.tsx. */}
           <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
 
-          <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
+          {q.kind === 'open' ? (
+            <>
+              {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
+                <div key={block.label} className="mb-3 text-right">
+                  <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
+                  <p className="text-fg whitespace-pre-line">{renderText(block.text)}</p>
+                </div>
+              ))}
+              {OPEN_EXERCISE_DISPLAY[q.topic]?.highlightField?.(q.fields ?? {}) && (
+                <div className="inline-block rounded-full bg-accent-naale/10 text-accent-naale text-sm font-semibold px-3 py-1 mb-4">
+                  {renderText(OPEN_EXERCISE_DISPLAY[q.topic]!.highlightField!(q.fields ?? {})!.text)}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
+          )}
 
           {debugMode && showHint && q.answer_kind !== 'mcq' && q.correct_answer && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mb-4 text-right">
@@ -341,7 +405,72 @@ function PlacementRunner() {
         </div>
 
         <div>
-          {q.answer_kind === 'mcq' && q.options ? (
+          {q.kind === 'open' ? (
+            <>
+              {!openResult ? (
+                <>
+                  <OpenAnswerInput
+                    value={openAnswerText}
+                    onChange={text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') }}
+                    onSubmit={() => {
+                      if (!openAnswerText.trim()) {
+                        setOpenValidationError(OPEN_EXERCISE_DISPLAY[q.topic]?.emptyErrorMessage ?? '')
+                        return
+                      }
+                      submitOpenAnswer(openAnswerText)
+                    }}
+                    wordLimit={OPEN_EXERCISE_DISPLAY[q.topic]?.wordLimit ?? 30}
+                    loading={submitting}
+                  />
+                  {openValidationError && (
+                    <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-right">{openValidationError}</p>
+                  )}
+                  {/* QA-only: same visibility rule as the MCQ answer hint
+                      (debugMode && showHint) — see session/page.tsx's
+                      matching buttons for the full reasoning. */}
+                  {debugMode && showHint && OPEN_EXERCISE_DISPLAY[q.topic]?.devSampleAnswers && (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.good(q.fields ?? {})); setOpenValidationError('') }}
+                        className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                      >
+                        💡 QA: fill good answer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.weak(q.fields ?? {})); setOpenValidationError('') }}
+                        className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                      >
+                        💡 QA: fill weak answer
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="mt-3">
+                  {/* Deliberately neutral, unlike session/page.tsx's colored score card —
+                      placement's own intro copy promises "no grade, no time pressure," so an
+                      alarm-colored "Needs improvement" verdict here would contradict that. Just
+                      the number for context; the constructive feedback text below does the
+                      actual work. */}
+                  <div className="rounded-2xl border border-card-border bg-surface p-5 text-center mb-3">
+                    <div className="text-6xl font-bold text-fg">
+                      <LtrIsolate>{openResult.score}</LtrIsolate>
+                    </div>
+                    <div className="text-fg/60 text-sm">{t('מתוך 5')}</div>
+                  </div>
+                  <p className="text-sm text-fg/80 mt-1">{openResult.feedback}</p>
+                  <button
+                    onClick={() => loadNext()}
+                    className="w-full mt-4 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+                  >
+                    {t('המשך')}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : q.answer_kind === 'mcq' && q.options ? (
             <div className="space-y-3 mb-4">
               {q.options.map(option => {
                 const isSelected = selected === option
@@ -430,7 +559,7 @@ function PlacementRunner() {
             </div>
           )}
 
-          {!result && q.answer_kind !== 'mcq' && (
+          {!result && q.kind !== 'open' && q.answer_kind !== 'mcq' && (
             <button
               onClick={() => submitAnswer(selected)}
               disabled={submitting || selected === ''}

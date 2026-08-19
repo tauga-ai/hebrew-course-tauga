@@ -167,3 +167,50 @@ body {
     transform: translateY(0);
   }
 }
+
+/*
+ * AI-grading loading state for OpenAnswerInput's submit button — a bright
+ * band sweeping across the (fixed white) button text, the same look as
+ * Claude/ChatGPT's own "thinking" indicator. Colors are hardcoded to white
+ * rather than theme tokens since this button is always bg-primary-600/
+ * text-white regardless of light/dark mode.
+ */
+@keyframes shimmer-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.shimmer-text {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.55) 40%,
+    #fff 50%,
+    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer-sweep 3.6s linear infinite;
+}
+
+@keyframes dot-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.dot-bounce {
+  animation: dot-bounce 1.4s ease-in-out infinite;
+}
