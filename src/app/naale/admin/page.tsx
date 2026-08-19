@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { Avatar } from '@/components/naale/Avatar'
 import type { QuestionImportReport } from '@/lib/naale/question-import'
+import type { OpenQuestionImportReport } from '@/lib/naale/open-question-import'
 import type { RosterImportReport } from '@/lib/naale/roster-import'
 import { t } from '@/lib/dev-i18n'
 
@@ -70,7 +71,11 @@ export default function NaaleAdminPage() {
   const [error, setError] = useState('')
 
   const [file, setFile] = useState<File | null>(null)
-  const [report, setReport] = useState<QuestionImportReport | null>(null)
+  // The import route covers both content kinds from one workbook upload
+  // (naale-story-continuation, 3.1) — mcq and open are parsed/validated
+  // independently, so each keeps its own report rather than one shape
+  // papering over two different sheet registries.
+  const [report, setReport] = useState<{ mcq: QuestionImportReport; open: OpenQuestionImportReport } | null>(null)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
   const [dragActive, setDragActive] = useState(false)
@@ -199,6 +204,22 @@ export default function NaaleAdminPage() {
     if (result.written) loadRoster()
   }
 
+  // A single merged view over both reports for display — the two underlying
+  // sheet registries (MCQ topics vs. AI-graded open topics) are independent,
+  // but the admin only uploads one workbook and wants one table. A sheet is
+  // genuinely "skipped" only if NEITHER registry recognizes it — one sheet
+  // reader's skippedSheets always includes every sheet the OTHER kind
+  // legitimately owns, so a plain concat would falsely flag e.g. every MCQ
+  // sheet as skipped from the open reader's point of view.
+  const combined = report && {
+    summary: [...report.mcq.summary, ...report.open.summary],
+    anomalies: [...report.mcq.anomalies, ...report.open.anomalies],
+    skippedSheets: report.mcq.skippedSheets.filter(s => report.open.skippedSheets.includes(s)),
+    orphans: [...report.mcq.orphans, ...report.open.orphans],
+    totalRows: report.mcq.totalRows + report.open.totalRows,
+    written: report.mcq.written || report.open.written,
+  }
+
   if (!ready) return <LoadingSpinner />
 
   return (
@@ -311,7 +332,7 @@ export default function NaaleAdminPage() {
             >
               {importing ? t('טוען...') : t('תצוגה מקדימה')}
             </button>
-            {report && report.anomalies.length === 0 && !report.written && (
+            {combined && combined.anomalies.length === 0 && !combined.written && (
               <button
                 type="button"
                 disabled={importing}
@@ -325,15 +346,15 @@ export default function NaaleAdminPage() {
 
           {importError && <p className="text-red-500 dark:text-red-400 text-sm mb-2">{importError}</p>}
 
-          {report && (
+          {combined && (
             <div className="border-t border-card-border pt-3 space-y-3">
-              {report.written ? (
+              {combined.written ? (
                 <div className="rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 px-3 py-2 text-green-700 dark:text-green-400 text-sm font-medium">
-                  {t('הייבוא הושלם בהצלחה')} · {report.totalRows} {t('שאלות')}
+                  {t('הייבוא הושלם בהצלחה')} · {combined.totalRows} {t('שאלות')}
                 </div>
               ) : (
                 <p className="text-xs text-fg/50">
-                  {t('תצוגה מקדימה')} — {t('שום דבר לא נשמר עדיין')}. {report.totalRows} {t('שאלות סה"כ')}, {report.summary.length} {t('נושאים')}.
+                  {t('תצוגה מקדימה')} — {t('שום דבר לא נשמר עדיין')}. {combined.totalRows} {t('שאלות סה"כ')}, {combined.summary.length} {t('נושאים')}.
                 </p>
               )}
 
@@ -349,7 +370,7 @@ export default function NaaleAdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.summary.map(s => (
+                    {combined.summary.map(s => (
                       <tr key={s.topic} className="border-t border-card-border">
                         <td className="py-2 pe-2 text-fg">{s.topic}</td>
                         <td className="py-2 px-1 text-center font-semibold text-fg">{s.count}</td>
@@ -368,26 +389,26 @@ export default function NaaleAdminPage() {
               </div>
               <p className="text-xs text-fg/40">{t('עמודות אדומות מציינות רמה ללא שאלות בכלל')}</p>
 
-              {report.skippedSheets.length > 0 && (
+              {combined.skippedSheets.length > 0 && (
                 <div className="text-xs text-fg/40">
-                  {t('גיליונות שלא יובאו')}: {report.skippedSheets.join(', ')}
+                  {t('גיליונות שלא יובאו')}: {combined.skippedSheets.join(', ')}
                 </div>
               )}
 
-              {report.anomalies.length > 0 && (
+              {combined.anomalies.length > 0 && (
                 <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-3">
                   <div className="text-red-600 dark:text-red-400 text-xs font-semibold mb-1.5">
-                    {report.anomalies.length} {t('בעיות שנמצאו')}
+                    {combined.anomalies.length} {t('בעיות שנמצאו')}
                   </div>
                   <ul className="text-red-600 dark:text-red-400 text-xs space-y-1 list-disc ps-4">
-                    {report.anomalies.map((a, i) => <li key={i}>{a}</li>)}
+                    {combined.anomalies.map((a, i) => <li key={i}>{a}</li>)}
                   </ul>
                 </div>
               )}
 
-              {report.orphans.length > 0 && (
+              {combined.orphans.length > 0 && (
                 <p className="text-xs text-fg/40">
-                  {report.orphans.length} {t('שאלות קיימות שלא נמצאות בקובץ זה (לא נמחקו)')}
+                  {combined.orphans.length} {t('שאלות קיימות שלא נמצאות בקובץ זה (לא נמחקו)')}
                 </p>
               )}
             </div>
