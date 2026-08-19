@@ -326,8 +326,23 @@ function SessionRunner() {
   }, [result, fetchNextQuestion])
 
   // Resume from the server's deadline — never a fresh 30 minutes on reload.
+  //
+  // bootedSessionId guards against a real re-fire, not just a defensive one:
+  // loadNext's identity depends on fetchNextQuestion, which depends on
+  // `kind`/`reviewExhausted` — and this very effect sets `kind` (null → a
+  // real value) via setKind() below, and can flip `reviewExhausted` a moment
+  // later inside the loadNext() call. Either change gives loadNext a new
+  // identity, which re-triggers this effect (it's in the dependency array)
+  // even though sessionId never changed — without the guard, boot() (and
+  // therefore loadNext()) ran a second and sometimes third time for the same
+  // session on every load, each call independently fetching and rendering a
+  // freshly-randomized question: visible as one question card flashing in
+  // and being replaced by another right after starting a session.
+  const bootedSessionId = useRef<string | null>(null)
   useEffect(() => {
     if (!sessionId) { router.replace('/naale'); return }
+    if (bootedSessionId.current === sessionId) return
+    bootedSessionId.current = sessionId
     let cancelled = false
     async function boot() {
       const res = await fetch(`/api/naale/session/status?session_id=${sessionId}`)
@@ -344,8 +359,6 @@ function SessionRunner() {
     }
     boot()
     return () => { cancelled = true }
-    // finishSession is stable (only depends on sessionId, same as loadNext),
-    // so this effect still only re-fires when sessionId itself changes.
   }, [sessionId, router, loadNext, finishSession])
 
   // Dev-only: DevPanel's session-length override notifies subscribers only
