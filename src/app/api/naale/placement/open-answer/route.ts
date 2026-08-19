@@ -44,6 +44,22 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
 
+  // Same duplicate-submit guard as session/open-answer/route.ts — a fast
+  // double-click here previously fell all the way through to the unique
+  // constraint below and surfaced as a raw 500 instead of a clean 409 (the
+  // exact bug the naale-whatsapp-messages QA pass caught and diagnosed).
+  // Checked before the Gemini call so a double-click doesn't also burn a
+  // second grading request.
+  const { data: answeredThisSession } = await db
+    .from('naale_open_answers')
+    .select('id')
+    .eq('session_id', session_id)
+    .eq('question_id', question_id)
+    .maybeSingle()
+  if (answeredThisSession) {
+    return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
+  }
+
   let graded: { score: number; feedback: string }
   try {
     graded = await gradeOpenAnswer(question.topic, question.prompt, question.fields as Record<string, string>, user_text)
@@ -63,7 +79,15 @@ export async function POST(req: NextRequest) {
     score: graded.score,
     feedback: graded.feedback,
   })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Same DB-level backstop as naale_answers_session_question_unique — see
+    // that migration's comment for the concurrent-request race this catches
+    // on top of the pre-check above.
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await db
     .from('naale_sessions')

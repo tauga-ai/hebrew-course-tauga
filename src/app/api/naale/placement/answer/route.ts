@@ -46,6 +46,19 @@ export async function POST(req: NextRequest) {
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
 
+  // Same duplicate-submit guard as session/answer/route.ts — a fast
+  // double-click here previously fell all the way through to the unique
+  // constraint below and surfaced as a raw 500 instead of a clean 409.
+  const { data: answeredThisSession } = await db
+    .from('naale_answers')
+    .select('id')
+    .eq('session_id', session_id)
+    .eq('question_id', question_id)
+    .maybeSingle()
+  if (answeredThisSession) {
+    return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
+  }
+
   const isCorrect = isAnswerCorrect(String(answer), question.correct_answer, question.answer_kind)
 
   const { error } = await db.from('naale_answers').insert({
@@ -57,7 +70,15 @@ export async function POST(req: NextRequest) {
     level_at_answer: question.difficulty,
     is_correct: isCorrect,
   })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Same DB-level backstop as naale_answers_session_question_unique closes
+    // for the practice route — see that migration's comment for the
+    // concurrent-request race this catches on top of the pre-check above.
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await db
     .from('naale_sessions')
