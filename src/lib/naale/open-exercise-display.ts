@@ -73,4 +73,24 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
       weak: () => 'חתול. שולחן. אתמול היה.',
     },
   },
+  'סיכום טקסט קצר': {
+    wordLimit: 25,
+    blocks: (prompt, fields) => [
+      { label: 'הפסקה', text: prompt },
+      { label: 'המשימה', text: fields.student_task },
+    ],
+    // Same gap as WhatsApp: no exact empty-submission string in Noam's spec
+    // for this exercise. Placeholder, worth a one-line confirmation.
+    emptyErrorMessage: 'אנא כתוב סיכום.',
+    devSampleAnswers: {
+      // expected_summary (grading-only, never shown to the student) IS the
+      // model summary for this exact paragraph, so — same reasoning as
+      // WhatsApp's good template — it's a stronger fit than inventing a
+      // generic one: reliably scores 5/5 regardless of which row this fills.
+      good: fields => fields.expected_summary,
+      // Unrelated to any paragraph — should reliably score 1-2 regardless
+      // of which question this fills.
+      weak: () => 'חתול. שולחן. אתמול היה.',
+    },
+  },
 }

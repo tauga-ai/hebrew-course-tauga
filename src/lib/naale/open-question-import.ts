@@ -111,6 +111,47 @@ function readWhatsappSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRo
 
 OPEN_SHEET_READERS['ווטסאפ והודעות'] = readWhatsappSheet
 
+// The paragraph is this topic's natural upsert key — the longest, most
+// distinguishing text per row (mirrors Story Continuation's opening line).
+const TEXT_SUMMARY_COL = {
+  paragraph: 'פסקה ראשונית',
+  task: 'משימת התלמיד',
+  expectedSummary: 'סיכום לדוגמא',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const TEXT_SUMMARY_REQUIRED = Object.values(TEXT_SUMMARY_COL)
+
+function readTextSummarySheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, TEXT_SUMMARY_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[TEXT_SUMMARY_COL.paragraph]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const difficulty = parseInt(cell(TEXT_SUMMARY_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(TEXT_SUMMARY_COL.difficulty))}`)
+      }
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: cell(TEXT_SUMMARY_COL.paragraph),
+        fields: {
+          student_task: cell(TEXT_SUMMARY_COL.task),
+          expected_summary: cell(TEXT_SUMMARY_COL.expectedSummary),
+        },
+        source_row: sourceRow,
+      }
+    })
+}
+
+OPEN_SHEET_READERS['סיכום טקסט קצר'] = readTextSummarySheet
+
 export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]
