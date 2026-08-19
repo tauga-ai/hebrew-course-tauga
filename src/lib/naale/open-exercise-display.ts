@@ -52,6 +52,27 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
       weak: () => 'חתול. שולחן. אתמול היה.',
     },
   },
+  'ווטסאפ והודעות': {
+    wordLimit: 20,
+    blocks: (prompt, fields) => [
+      { label: 'למי ההודעה', text: fields.recipient },
+      { label: 'המשימה', text: prompt },
+    ],
+    // No exact empty-submission string in Noam's spec for this exercise
+    // (unlike Story Continuation) — reusing the same phrasing pattern rather
+    // than inventing new wording from scratch.
+    emptyErrorMessage: 'אנא כתוב הודעה.',
+    devSampleAnswers: {
+      // `expected_phrasing` (grading-only, never shown to the student) IS
+      // the model answer for this exact recipient/task pair, so it's a
+      // stronger "good" template than Story Continuation's fixed clause —
+      // reliably scores 5/5 regardless of which row this fills.
+      good: fields => fields.expected_phrasing,
+      // Unrelated to any task and wrong for any recipient's tone — should
+      // reliably score 1-2 regardless of which question this fills.
+      weak: () => 'חתול. שולחן. אתמול היה.',
+    },
+  },
   'סיכום טקסט קצר': {
     wordLimit: 25,
     blocks: (prompt, fields) => [
