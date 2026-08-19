@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
-import { computeRewards, computeStreak } from '@/lib/naale/rewards'
+import { computeRewards, computeGradedRewards, computeStreak } from '@/lib/naale/rewards'
 
 /**
  * Ends a session and decides whether it counts as "completed" — reaching the
@@ -66,28 +66,42 @@ export async function POST(req: NextRequest) {
   // route: placement is calibration, not practice. `completed` is already
   // always false for placement (excluding the +50 bonus), but the
   // per-correct-answer XP needs this explicit kind check too.
-  const [{ data: sessionAnswers }, { data: allSessions }] = await Promise.all([
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: allSessions }] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean }[] })
       // Review answers (ticket 15) excluded too — same working decision as
       // my-stats and staff/students, naale-track-first-build/CONTEXT.md §9.
       : db.from('naale_answers').select('is_correct').eq('session_id', s.id).eq('is_review', false),
+    // Was missing entirely until now — this session's AI-graded (open-response)
+    // answers never contributed to its own end-of-session xp_earned/coins_earned
+    // or correct_count, even though my-stats' running total already includes
+    // them correctly. A session containing only open-response answers always
+    // showed "0 XP" on this screen regardless of how well the student did.
+    s.kind === 'placement'
+      ? Promise.resolve({ data: [] as { score: number }[] })
+      : db.from('naale_open_answers').select('score').eq('session_id', s.id).eq('is_review', false),
     db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id),
   ])
 
-  const { xp: xp_earned, coins: coins_earned } = computeRewards(sessionAnswers ?? [], [{ completed }])
+  const { xp: mcqXp, coins: mcqCoins } = computeRewards(sessionAnswers ?? [], [{ completed }])
+  const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(sessionOpenAnswers ?? [])
   const streak = computeStreak(
     (allSessions ?? []).filter(x => x.completed).map(x => new Date(x.started_at))
   )
+  // Same "4-5 counts as correct" read as everywhere else a graded score needs
+  // a pass/fail comparison (my-stats, placementLevel, applyGradedAnswer).
+  const correct_count = (sessionAnswers ?? []).filter(a => a.is_correct).length
+    + (sessionOpenAnswers ?? []).filter(a => a.score >= 4).length
 
   return NextResponse.json({
     answered_count: s.answered_count,
+    correct_count,
     completed,
     reached_timer: reachedTimer,
     min_answers: MIN_ANSWERS_FOR_COMPLETION,
     already_ended: alreadyEnded,
-    xp_earned,
-    coins_earned,
+    xp_earned: mcqXp + gradedXp,
+    coins_earned: mcqCoins + gradedCoins,
     streak,
   })
 }
