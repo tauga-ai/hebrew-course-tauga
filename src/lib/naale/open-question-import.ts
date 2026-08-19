@@ -68,6 +68,49 @@ function readStoryContinuationSheet(wb: XLSX.WorkBook, sheetName: string): OpenQ
 
 OPEN_SHEET_READERS['סיפור בהמשכים'] = readStoryContinuationSheet
 
+// The recipient column repeats across many rows (a handful of recurring
+// recipients — teacher, classmate, class group chat), so unlike Story
+// Continuation's opening line, it isn't a usable upsert key — the task
+// (`משימה`) is this row's unique content and becomes `prompt`.
+const WHATSAPP_COL = {
+  recipient: 'נמען',
+  task: 'משימה',
+  expectedPhrasing: 'ניסוח מצופה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const WHATSAPP_REQUIRED = Object.values(WHATSAPP_COL)
+
+function readWhatsappSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, WHATSAPP_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[WHATSAPP_COL.task]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const difficulty = parseInt(cell(WHATSAPP_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(WHATSAPP_COL.difficulty))}`)
+      }
+      return {
+        topic: sheetName,
+        difficulty,
+        prompt: cell(WHATSAPP_COL.task),
+        fields: {
+          recipient: cell(WHATSAPP_COL.recipient),
+          expected_phrasing: cell(WHATSAPP_COL.expectedPhrasing),
+        },
+        source_row: sourceRow,
+      }
+    })
+}
+
+OPEN_SHEET_READERS['ווטסאפ והודעות'] = readWhatsappSheet
+
 export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]
