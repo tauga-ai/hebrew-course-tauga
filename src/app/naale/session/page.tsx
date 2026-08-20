@@ -831,21 +831,6 @@ function SessionRunner() {
                 💡 QA hint (dev-only, never shown in production): {q.correct_answer}
               </p>
             )}
-
-            {/* N4: "Found a mistake in the question? Report it to us." Bottom of
-                the question container, quiet by default — it must be findable
-                the moment a student doubts a question, without competing with
-                the answer controls for attention. Available while browsing
-                history too: noticing the mistake often happens on the way back,
-                and the report is about the question, not about the session's
-                current position. */}
-            <button
-              type="button"
-              onClick={() => setReportingQuestionId(q.id)}
-              className="mt-2 text-xs text-fg/40 transition-colors hover:text-fg/70 text-right"
-            >
-              🚩 {t('מצאתם טעות בשאלה? דווחו לנו')}
-            </button>
           </div>
 
           <div>
@@ -1122,6 +1107,29 @@ function SessionRunner() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* N4: "Found a mistake in the question? Report it to us."
+            Deliberately OUTSIDE the card, centered under it. Two earlier
+            placements inside the card were worse: at the end of the question
+            block it shared a row with the mandatory-word chip and read as part
+            of the question's own content, and in the card footer it sat among
+            the navigation controls, where a mis-click costs a student their
+            place. Out here it can't collide with anything, and its position
+            says what it is — a note ABOUT this question, not another control
+            for answering it. The space below the card is otherwise empty.
+
+            Rendered for every question, including while browsing history:
+            noticing a mistake often happens on the way back, and the report is
+            about the question, not about where the session currently is. */}
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setReportingQuestionId(q.id)}
+            className="text-xs text-fg/50 transition-colors hover:text-fg/80"
+          >
+            🚩 {t('מצאתם טעות בשאלה? דווחו לנו')}
+          </button>
         </div>
       </>
     )
