@@ -6,7 +6,7 @@ import { applyGradedAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { gradeOpenAnswer } from '@/lib/naale/open-grading'
 import { consecutiveGoodScoreStreak, STREAK_MILESTONES } from '@/lib/naale/rewards'
 import { checkAiRateLimit } from '@/lib/ai-rate-limit'
-import { getOpenReviewQuestionIds } from '@/lib/naale/open-review-queue'
+import { getSessionReviewQueue } from '@/lib/naale/review-queue'
 
 /**
  * Grades one free-text answer (AI-scored 1-5, not exact-match), logs the
@@ -47,14 +47,14 @@ export async function POST(req: NextRequest) {
     db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields').eq('id', question_id).maybeSingle(),
     db.from('naale_open_answers').select('id').eq('session_id', session_id).eq('question_id', question_id).maybeSingle(),
     db.from('naale_open_answers').select('id').eq('student_id', session.student.id).eq('question_id', question_id).maybeSingle(),
-    getOpenReviewQuestionIds(session.student.id, session_id),
+    getSessionReviewQueue(session.student.id, session_id),
   ])
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
   if (answeredThisSession) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
-  const isSanctionedReview = reviewQueue.includes(question_id)
+  const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
   if (answeredEver && !isSanctionedReview) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }

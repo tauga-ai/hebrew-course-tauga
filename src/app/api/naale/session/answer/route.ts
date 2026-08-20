@@ -4,7 +4,7 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { applyAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { isAnswerCorrect } from '@/lib/naale/grading'
-import { getReviewQuestionIds } from '@/lib/naale/review-queue'
+import { getSessionReviewQueue } from '@/lib/naale/review-queue'
 
 /**
  * Grades one answer, logs the attempt, and re-levels the topic — all in this
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     // question (ticket 15) — checked against reviewQueue below, never
     // trusted from the client.
     db.from('naale_answers').select('id').eq('student_id', session.student.id).eq('question_id', question_id).maybeSingle(),
-    getReviewQuestionIds(session.student.id, session_id),
+    getSessionReviewQueue(session.student.id, session_id),
   ])
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
@@ -60,7 +60,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 
-  const isSanctionedReview = reviewQueue.includes(question_id)
+  // Same queue the serving route uses, so a question can only count as a
+  // review answer if it was actually queued as one. Matched on id alone:
+  // ids are unique across both banks, so the kind tag is only needed for
+  // deciding which table to READ from, not for this check.
+  const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
   if (answeredEver && !isSanctionedReview) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }

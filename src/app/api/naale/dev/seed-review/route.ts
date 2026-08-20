@@ -18,6 +18,13 @@ import { MIN_LEVEL } from '@/lib/naale/leveling'
  * That row is indistinguishable from a real historical answer if anyone
  * inspects the raw data later; the Dev Panel copy calling this must say so
  * plainly.
+ *
+ * Seeds a graded (naale_open_answers) row too, since the opener now draws from
+ * both banks (#5 / H2) — an MCQ-only seed would exercise only the half that
+ * already worked. Both land in the same previous session, and both count as
+ * wrong, so the next session's queue should open with one of each kind. The
+ * graded row IS identifiable as synthetic, unlike the MCQ one: a graded answer
+ * carries free text, so it is stamped rather than left to look real.
  */
 export async function POST() {
   if (!debugMode) return NextResponse.json({ error: 'not found' }, { status: 404 })
@@ -104,7 +111,49 @@ export async function POST() {
     is_review: false,
   })
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+  // 23505 means this exact row was already seeded — the session and the
+  // question are both picked deterministically, so a second click lands on the
+  // same pair. Already-seeded is the desired end state, not an error.
+  if (insertError && insertError.code !== '23505') {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
 
-  return NextResponse.json({ topic, question_id: question.id, seeded_into_session: sessionId })
+  // The graded half. Absent from the bank on a project that hasn't imported
+  // the open-response sheets yet, in which case this degrades to the old
+  // MCQ-only seed rather than failing.
+  const { data: openQuestion } = await db
+    .from('naale_open_questions')
+    .select('id, topic, difficulty')
+    .limit(1)
+    .maybeSingle()
+
+  if (openQuestion) {
+    const { error: openError } = await db.from('naale_open_answers').insert({
+      session_id: sessionId,
+      student_id: studentId,
+      question_id: openQuestion.id,
+      topic: openQuestion.topic,
+      difficulty: openQuestion.difficulty,
+      level_at_answer: MIN_LEVEL,
+      user_text: '[dev seed-review]',
+      // 1, not 3: the queue's threshold for review-worthy is now
+      // GRADED_CORRECT_SCORE (see review.ts's toReviewCandidates), and a seed
+      // should sit clearly on one side of it rather than on the boundary the
+      // L3 fix just moved.
+      score: 1,
+      feedback: '[dev seed-review]',
+      is_review: false,
+    })
+    if (openError && openError.code !== '23505') {
+      return NextResponse.json({ error: openError.message }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({
+    topic,
+    question_id: question.id,
+    open_topic: openQuestion?.topic ?? null,
+    open_question_id: openQuestion?.id ?? null,
+    seeded_into_session: sessionId,
+  })
 }

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
-import { getReviewQuestionIds } from '@/lib/naale/review-queue'
+import { getSessionReviewQueue } from '@/lib/naale/review-queue'
+import { publicFields } from '@/lib/naale/open-grading'
 
 // Dev-only QA hint, same gate as /next — see that route's comment.
 const debugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true'
@@ -42,22 +43,59 @@ export async function GET(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const [reviewQueue, { data: answeredThisSession }] = await Promise.all([
-    getReviewQuestionIds(session.student.id, sessionId),
+  // Both answer tables: the queue spans both banks, so "already reviewed this
+  // session" has to as well — otherwise a graded review question would be
+  // re-served on every call until the session ended.
+  const [reviewQueue, { data: answeredMcq }, { data: answeredOpen }] = await Promise.all([
+    getSessionReviewQueue(session.student.id, sessionId),
     db.from('naale_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
+    db.from('naale_open_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
   ])
 
-  const answeredIds = new Set((answeredThisSession ?? []).map(a => a.question_id))
-  const remaining = reviewQueue.filter(id => !answeredIds.has(id))
+  const answeredIds = new Set([
+    ...(answeredMcq ?? []).map(a => a.question_id),
+    ...(answeredOpen ?? []).map(a => a.question_id),
+  ])
+  const remaining = reviewQueue.filter(entry => !answeredIds.has(entry.question_id))
 
   if (remaining.length === 0) {
     return NextResponse.json({ done: true })
   }
 
+  const next = remaining[0]
+
+  if (next.kind === 'open') {
+    const { data: question } = await db
+      .from('naale_open_questions')
+      .select('id, topic, difficulty, prompt, fields')
+      .eq('id', next.question_id)
+      .maybeSingle()
+
+    // Same missing-question handling as the MCQ branch below.
+    if (!question) return NextResponse.json({ done: true })
+
+    // publicFields() strips the grading-only keys (a model answer, anchors)
+    // exactly as /next does — a review question is still an unanswered
+    // question, so the same allowlist applies.
+    return NextResponse.json({
+      question: {
+        id: question.id,
+        topic: question.topic,
+        difficulty: question.difficulty,
+        kind: 'open',
+        prompt: question.prompt,
+        fields: debugMode
+          ? (question.fields as Record<string, string>)
+          : publicFields(question.topic, question.fields as Record<string, string>),
+        is_review: true,
+      },
+    })
+  }
+
   const { data: question } = await db
     .from('naale_questions')
     .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
-    .eq('id', remaining[0])
+    .eq('id', next.question_id)
     .maybeSingle()
 
   // The question was removed from the bank since last session (or the
@@ -68,7 +106,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ done: true })
   }
 
+  // `kind` was previously omitted here entirely. It happened to work — the
+  // client's `q.kind === 'open'` check fell through to the MCQ branch — but
+  // only because every review question was MCQ. Now that it isn't, the
+  // discriminant is explicit on both paths.
   return NextResponse.json({
-    question: debugMode ? { ...question, is_review: true } : { ...question, correct_answer: undefined, is_review: true },
+    question: debugMode
+      ? { ...question, kind: 'mcq', is_review: true }
+      : { ...question, kind: 'mcq', correct_answer: undefined, is_review: true },
   })
 }
