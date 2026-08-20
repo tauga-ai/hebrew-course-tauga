@@ -15,6 +15,7 @@ import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
 import { getSessionMinutesOverride, subscribeSessionMinutesOverride } from '@/lib/naale/dev-fast-session'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
+import { canGoBack, goBack, goForward, isResolved } from '@/lib/naale/session-history'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
@@ -85,6 +86,18 @@ const SAFETY_CAP_MS = 5000
 // an answer's result has come back, 'question' once a question has loaded,
 // and 'loading' otherwise. Avoids a second source of truth alongside the
 // state that already determines each of these.
+/** One already-answered question, kept client-side so the student can look
+ *  back at it. Nothing here is stored server-side: the resolved state is
+ *  already in memory, and a reload legitimately loses the trail (the timer and
+ *  progress survive, because those ARE server-side). */
+interface HistoryEntry {
+  question: ServedQuestion
+  selected: string
+  result: AnswerResult | null
+  openAnswerText: string
+  openResult: OpenAnswerResult | null
+}
+
 type Phase = 'loading' | 'question' | 'feedback' | 'done'
 
 // Dev-only console trace of the session flow — easier to follow along while
@@ -133,6 +146,16 @@ function SessionRunner() {
     },
   })
   const openScoreLabel = (s: number) => s >= 5 ? t('מצוין!') : s >= 4 ? t('טוב מאוד') : s >= 3 ? t('סביר') : t('צריך שיפור')
+  // Answered questions, oldest first. viewIndex === null means "looking at the
+  // live question"; any number is a position in `history`.
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [viewIndex, setViewIndex] = useState<number | null>(null)
+  // Written every render rather than threaded through loadNext's dependencies:
+  // loadNext deliberately does NOT depend on per-answer state (see the ref
+  // comment above it), and adding these would give it a new identity on every
+  // answer — the exact churn that caused the double-boot bug in PR #54.
+  const currentSnapshot = useRef<HistoryEntry | null>(null)
+
   const [doneReason, setDoneReason] = useState<DoneReason | null>(null)
   const [summary, setSummary] = useState<EndSummary | null>(null)
   const [answeredCount, setAnsweredCount] = useState(0)
@@ -254,6 +277,15 @@ function SessionRunner() {
   // than hanging or erroring.
   const loadNext = useCallback(async (kindOverride?: 'placement' | 'practice') => {
     if (!sessionId) return
+
+    // The one place a resolved question is discarded, so the one place it gets
+    // recorded — including the correct-answer auto-advance path, which never
+    // passes through a click handler. Unanswered questions are skipped: there
+    // would be nothing resolved to show.
+    const leaving = currentSnapshot.current
+    if (leaving && isResolved(leaving)) setHistory(h => [...h, leaving])
+    setViewIndex(null)
+
     setResult(null)
     setSelected('')
     setOpenAnswerText('')
@@ -285,6 +317,12 @@ function SessionRunner() {
     if ('done' in outcome) { finishSession(outcome.reason); setQuestion(null); return }
     setQuestion(outcome.question)
   }, [sessionId, fetchNextQuestion, finishSession])
+
+  useEffect(() => {
+    currentSnapshot.current = question
+      ? { question, selected, result, openAnswerText, openResult }
+      : null
+  })
 
   // Kicks off the NEXT question's fetch as soon as THIS answer's result is
   // known — not before (see the prefetchedQuestion/prefetchedDone doc
@@ -345,6 +383,20 @@ function SessionRunner() {
     if (bootedSessionId.current === sessionId) return
     bootedSessionId.current = sessionId
     let cancelled = false
+    // The guard above is claimed BEFORE the boot completes, and the cleanup
+    // below cancels whatever is in flight. Those two together could strand the
+    // page on its loading spinner forever: this effect depends on loadNext,
+    // whose identity changes with `kind`/`reviewExhausted`, so any re-render
+    // during the /status round trip ran the cleanup (cancelling the boot) and
+    // then hit the guard on the re-run (refusing to start another). Nothing
+    // ever called /next. The /status call takes well over a second against the
+    // remote project, which is a wide window to lose that race in — observed
+    // live on a fresh session after placement.
+    //
+    // So a boot that never finished releases its claim, letting the re-run
+    // start a fresh one. Exactly one still completes: the cancelled boot bails
+    // at its own `cancelled` checks.
+    let completed = false
     async function boot() {
       const res = await fetch(`/api/naale/session/status?session_id=${sessionId}`)
       if (cancelled) return
@@ -356,11 +408,15 @@ function SessionRunner() {
       setCorrectCount(data.correct_count)
       setDeadlineMs(new Date(data.deadline_at).getTime())
       setKind(data.kind)
-      if (data.ended || data.expired) { finishSession('time_up'); return }
+      if (data.ended || data.expired) { completed = true; finishSession('time_up'); return }
+      completed = true
       loadNext(data.kind)
     }
     boot()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (!completed) bootedSessionId.current = null
+    }
   }, [sessionId, router, loadNext, finishSession])
 
   // Dev-only: DevPanel's session-length override notifies subscribers only
@@ -503,6 +559,12 @@ function SessionRunner() {
   // deliberate user-initiated pause already, not this fix's target.
   useEffect(() => {
     if (!result?.is_correct) return
+    // Browsing history pauses the advance rather than cancelling it for good:
+    // viewIndex is a dependency, so returning to the live question re-runs
+    // this effect and re-arms the timer. Without that, a student who pressed
+    // back during the reward flash would come back to an answered question
+    // with no Continue button and no auto-advance — a dead end.
+    if (viewIndex !== null) return
     let cancelled = false
     let minDelayId: ReturnType<typeof setTimeout>
     let safetyId: ReturnType<typeof setTimeout>
@@ -513,7 +575,7 @@ function SessionRunner() {
       if (!cancelled) loadNext()
     })
     return () => { cancelled = true; clearTimeout(minDelayId); clearTimeout(safetyId) }
-  }, [result, loadNext])
+  }, [result, loadNext, viewIndex])
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
 
@@ -537,6 +599,20 @@ function SessionRunner() {
       router.push('/naale')
     }
   }
+
+  // Aliased so the question/feedback block below can shadow `result`,
+  // `selected` etc. with history-aware values. Shadowing is deliberate: it
+  // means every existing reference in that block reads the question being
+  // DISPLAYED, so browsing history can't leave one stray site showing the live
+  // answer under an old question.
+  const liveResult = result
+  const liveSelected = selected
+  const liveOpenResult = openResult
+  const liveOpenAnswerText = openAnswerText
+
+  const goToPrevious = () => setViewIndex(i => goBack(i, history.length))
+  const goToNewer = () => setViewIndex(i => goForward(i, history.length))
+  const backAvailable = canGoBack(viewIndex, history.length)
 
   let content: ReactNode
 
@@ -618,7 +694,17 @@ function SessionRunner() {
     )
   } else {
     // phase is 'question' or 'feedback' here — question is guaranteed non-null.
-    const q = question!
+    // Everything below reads the DISPLAYED question, which is an earlier one
+    // while browsing history. The shadowed names are what make that automatic:
+    // the answer buttons, the correct-answer markers, the score card and
+    // renderText() word translation all already work off these values, so
+    // "preserves the resolved state" needs no second renderer.
+    const viewing = viewIndex === null ? null : history[viewIndex] ?? null
+    const q = (viewing?.question ?? question)!
+    const result = viewing ? viewing.result : liveResult
+    const selected = viewing ? viewing.selected : liveSelected
+    const openResult = viewing ? viewing.openResult : liveOpenResult
+    const openAnswerText = viewing ? viewing.openAnswerText : liveOpenAnswerText
 
     content = (
       <>
@@ -648,7 +734,7 @@ function SessionRunner() {
                   an unambiguous base direction, or the pair can reorder in
                   English/LTR debug mode. */}
               <span dir={debugMode && getDevLang() === 'en' ? 'ltr' : 'rtl'}>
-                {t('תרגיל')} <LtrIsolate>{answeredCount + 1}</LtrIsolate>
+                {t('תרגיל')} <LtrIsolate>{viewing ? viewIndex! + 1 : answeredCount + 1}</LtrIsolate>
               </span>
               {debugMode && showQuestionBadge && (
                 <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
@@ -657,6 +743,11 @@ function SessionRunner() {
                       real students (Yuval's explicit "no visible countdown"
                       call) — this piggybacks on the same dev-only badge. */}
                   {debugTranslations && ` · 🔤${debugTranslations.used}/${debugTranslations.cap}`}
+                  {/* QA-only: how many answered questions the back button can
+                      reach. Client-side and per page load, so this reads 0 on a
+                      session that was already open before this code shipped —
+                      which looks identical to a broken back button without it. */}
+                  {` · ⏪${history.length}`}
                 </span>
               )}
             </p>
@@ -672,6 +763,13 @@ function SessionRunner() {
               </p>
             )}
 
+            {viewing && (
+              // "Viewing an earlier question — answers can't be changed"
+              <div className="mb-3 rounded-xl border border-accent-naale/30 bg-accent-naale/5 dark:bg-accent-naale/10 px-3 py-2 text-xs font-medium text-accent-naale text-right">
+                👁️ {t('צפייה בשאלה קודמת — לא ניתן לשנות תשובה')}
+              </div>
+            )}
+
             {hintElement}
 
             {/* Eyebrow: the question's own topic (e.g. "השלמת משפטים"). Wrapped
@@ -679,13 +777,13 @@ function SessionRunner() {
                 value passed to OPEN_EXERCISE_DISPLAY/OPEN_GRADING_BUILDERS
                 lookups below is untouched, so this is purely a display-layer
                 translation, not a change to real content. */}
-            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{t(q.topic)}</p>
+            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
 
             {q.kind === 'open' ? (
               <>
                 {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
                   <div key={block.label} className="mb-3 text-right">
-                    <p className="text-xs font-semibold text-fg/50 mb-1">{t(block.label)}</p>
+                    <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
                     <p className="text-fg whitespace-pre-line">{renderText(block.text)}</p>
                   </div>
                 ))}
@@ -707,7 +805,7 @@ function SessionRunner() {
                 silently close the <p> early). */}
             {result?.is_correct && (
               <div className="relative mb-4">
-                <ConfettiBurst />
+                {!viewing && <ConfettiBurst />}
                 <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 text-right">
                   <LtrIsolate>{`+${XP_PER_CORRECT} XP · +${COINS_PER_CORRECT} 🪙`}</LtrIsolate>
                 </p>
@@ -780,13 +878,18 @@ function SessionRunner() {
                     <p className="text-sm text-fg/80 mt-1">{openResult.feedback}</p>
                     {/* No auto-advance for graded answers — unlike MCQ's binary
                         correct/wrong, a 1-5 score plus written feedback
-                        deserves a moment to actually read before moving on. */}
+                        deserves a moment to actually read before moving on.
+                        Hidden while browsing history: this advances the live
+                        session, which has nothing to do with the old question
+                        being displayed. */}
+                    {!viewing && (
                     <button
                       onClick={() => loadNext()}
                       className="w-full mt-4 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
                     >
                       {t('המשך')}
                     </button>
+                    )}
                   </div>
                 )}
               </>
@@ -909,13 +1012,49 @@ function SessionRunner() {
             {/* Correct answers auto-advance (see the setTimeout effect above)
                 — only a wrong answer gets a button, so there's time to
                 actually read the correct one before it's replaced. */}
-            {result && !result.is_correct && (
+            {result && !result.is_correct && !viewing && (
               <button
                 onClick={() => loadNext()}
                 className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
               >
                 {t('המשך')}
               </button>
+            )}
+
+            {/* Browsing controls. The "back to the current question" jump is
+                not something Noam asked for, but view-only navigation without
+                it strands a student several questions back with no way home —
+                it's the other half of the button he did ask for, not a
+                separate feature. */}
+            {(backAvailable || viewing) && (
+              <div className="mt-4 flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={goToPrevious}
+                  disabled={!backAvailable}
+                  className="px-3 py-2 rounded-xl border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent transition"
+                >
+                  {t('חזרה לשאלה הקודמת')}
+                </button>
+                {viewing && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={goToNewer}
+                      className="px-3 py-2 rounded-xl border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                    >
+                      {t('השאלה הבאה')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewIndex(null)}
+                      className="px-3 py-2 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition"
+                    >
+                      {t('חזרה לשאלה הנוכחית')}
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
