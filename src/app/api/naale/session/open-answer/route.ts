@@ -122,16 +122,41 @@ export async function POST(req: NextRequest) {
   // consecutiveGoodScoreStreak() unable to tell a streak of exactly 10 apart
   // from one of 15, so the "10 in a row" celebration would silently refire
   // on every answer after the 10th instead of firing once.
+  //
+  // Placement answers are excluded here for the same reason XP, coins and
+  // session completion already exclude them (session/end, buildStudentProgress):
+  // placement is calibration, not practice. Without this a student who placed
+  // well would walk into their first real session with the streak already part
+  // -loaded, and be congratulated for "3 in a row" on their first answer.
+  // Filtering AFTER the 15-row fetch is safe specifically because placement
+  // sits at the very start of a student's history — it can only shrink an early
+  // window, never hide a recent answer out of a later one.
   let milestone: number | null = null
   if (!isSanctionedReview) {
     const { data: recent } = await db
       .from('naale_open_answers')
-      .select('score')
+      .select('score, session_id')
       .eq('student_id', session.student.id)
       .eq('is_review', false)
       .order('answered_at', { ascending: false })
       .limit(15)
-    const streak = consecutiveGoodScoreStreak(recent ?? [])
+    const recentAnswers = recent ?? []
+
+    // Which of those came from placement. Looked up by the session ids actually
+    // present above rather than by fetching the student's placement sessions,
+    // so the read is bounded by construction (at most 15 ids) instead of by an
+    // assumption about how many placement sessions a student can accumulate.
+    // Costs one sequential round-trip in a request that already awaited a
+    // multi-second Gemini call.
+    const sessionIds = [...new Set(recentAnswers.map(a => a.session_id))]
+    const { data: recentSessions } = sessionIds.length
+      ? await db.from('naale_sessions').select('id, kind').in('id', sessionIds)
+      : { data: [] }
+    const placementIds = new Set(
+      (recentSessions ?? []).filter(s => s.kind === 'placement').map(s => s.id)
+    )
+
+    const streak = consecutiveGoodScoreStreak(recentAnswers.filter(a => !placementIds.has(a.session_id)))
     milestone = STREAK_MILESTONES.includes(streak as typeof STREAK_MILESTONES[number]) ? streak : null
   }
 

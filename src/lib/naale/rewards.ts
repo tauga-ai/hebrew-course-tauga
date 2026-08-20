@@ -57,12 +57,32 @@ export const XP_BY_SCORE: Record<number, number> = { 1: 0, 2: 1, 3: 4, 4: 7, 5: 
  *  threshold, since the 4 documents never specced coins themselves. */
 export const COIN_SCORE_THRESHOLD = 4
 
+/**
+ * What ONE graded answer is worth — the in-session "+7 XP · +1 🪙" note.
+ *
+ * Split out of computeGradedRewards() rather than duplicated in the UI so the
+ * per-answer note and the end-of-session total can never disagree about what a
+ * given score earns: both read XP_BY_SCORE and COIN_SCORE_THRESHOLD through
+ * here. An unrecognised score earns nothing rather than throwing — the server
+ * already validates 1-5 before this is ever reached, so a surprise value is a
+ * bug to survive, not to crash a student's session over.
+ */
+export function gradedAnswerReward(score: number): { xp: number; coins: number } {
+  return {
+    xp: XP_BY_SCORE[score] ?? 0,
+    coins: score >= COIN_SCORE_THRESHOLD ? COINS_PER_CORRECT : 0,
+  }
+}
+
 /** Same derived-not-stored reasoning as computeRewards() — see that
- *  function's comment. Callers pass already-filtered (non-review) answers. */
+ *  function's comment. Callers pass already-filtered (non-review) answers.
+ *  Sums gradedAnswerReward() rather than re-deriving the schedule, so the
+ *  total is by construction the sum of what each answer showed the student. */
 export function computeGradedRewards(answers: { score: number }[]): { xp: number; coins: number } {
-  const xp = answers.reduce((sum, a) => sum + (XP_BY_SCORE[a.score] ?? 0), 0)
-  const coins = answers.filter(a => a.score >= COIN_SCORE_THRESHOLD).length * COINS_PER_CORRECT
-  return { xp, coins }
+  return answers.reduce((total, a) => {
+    const { xp, coins } = gradedAnswerReward(a.score)
+    return { xp: total.xp + xp, coins: total.coins + coins }
+  }, { xp: 0, coins: 0 })
 }
 
 /**
