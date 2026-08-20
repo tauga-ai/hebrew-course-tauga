@@ -21,6 +21,7 @@ export interface OpenGradingBuilder {
  *  naale_questions.topic. */
 export const OPEN_GRADING_BUILDERS: Record<string, OpenGradingBuilder> = {}
 
+// * STORY CONTINUATION
 // `mandatory_word` is public — the spec is explicit that this word is shown
 // to the student as part of the task, unlike a reference/model answer.
 OPEN_GRADING_BUILDERS['סיפור בהמשכים'] = {
@@ -46,6 +47,7 @@ OPEN_GRADING_BUILDERS['סיפור בהמשכים'] = {
 { "score": <number between 1-5>, "feedback": "<short constructive feedback in simple Hebrew>"}`,
 }
 
+// * WHATSAPP MESSAGES
 // `expected_phrasing` is NOT public — it's a model answer, only ever used
 // inside the grading prompt (and, per the prompt's own instruction, echoed
 // back inside the AI's feedback text when the score is 3 or below — the app
@@ -78,6 +80,7 @@ OPEN_GRADING_BUILDERS['ווטסאפ והודעות'] = {
 }`,
 }
 
+// * SHORT TEXT SUMMARTY
 // `expected_summary` is NOT public — same reasoning as Story Continuation's
 // `mandatory_word`-is-public case in reverse: this is a model answer, only
 // ever used inside the grading prompt (and echoed into feedback at a low

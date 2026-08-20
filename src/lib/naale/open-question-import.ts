@@ -7,7 +7,7 @@
  */
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { buildColumnMap } from './question-import'
+import { buildColumnMap, checkTopicNumber, NUMBER_COL, questionIdFor } from './question-import'
 
 // Each content ticket's sheet reader imports buildColumnMap directly from
 // ./question-import (exported there for exactly this reuse) — not
@@ -16,6 +16,7 @@ export const HEADER_ROW_INDEX = 2
 
 export interface OpenQuestionRow {
   topic: string
+  question_id: string
   difficulty: number
   prompt: string
   fields: Record<string, string>
@@ -30,6 +31,7 @@ export const OPEN_SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: s
 // (`פתיחת AI`) is this topic's natural upsert key — mirrors how
 // question-import.ts's MCQ readers each pick their own "main text" column.
 const STORY_CONTINUATION_COL = {
+  num: NUMBER_COL,
   opening: 'פתיחת AI',
   task: 'משימת התלמיד',
   mandatoryWord: 'מילת/מילות החובה',
@@ -49,12 +51,14 @@ function readStoryContinuationSheet(wb: XLSX.WorkBook, sheetName: string): OpenQ
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(STORY_CONTINUATION_COL.num), sourceRow)
       const difficulty = parseInt(cell(STORY_CONTINUATION_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
         throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(STORY_CONTINUATION_COL.difficulty))}`)
       }
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: cell(STORY_CONTINUATION_COL.opening),
         fields: {
@@ -73,6 +77,7 @@ OPEN_SHEET_READERS['סיפור בהמשכים'] = readStoryContinuationSheet
 // Continuation's opening line, it isn't a usable upsert key — the task
 // (`משימה`) is this row's unique content and becomes `prompt`.
 const WHATSAPP_COL = {
+  num: NUMBER_COL,
   recipient: 'נמען',
   task: 'משימה',
   expectedPhrasing: 'ניסוח מצופה',
@@ -92,12 +97,14 @@ function readWhatsappSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRo
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(WHATSAPP_COL.num), sourceRow)
       const difficulty = parseInt(cell(WHATSAPP_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
         throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(WHATSAPP_COL.difficulty))}`)
       }
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: cell(WHATSAPP_COL.task),
         fields: {
@@ -114,6 +121,7 @@ OPEN_SHEET_READERS['ווטסאפ והודעות'] = readWhatsappSheet
 // The paragraph is this topic's natural upsert key — the longest, most
 // distinguishing text per row (mirrors Story Continuation's opening line).
 const TEXT_SUMMARY_COL = {
+  num: NUMBER_COL,
   paragraph: 'פסקה ראשונית',
   task: 'משימת התלמיד',
   expectedSummary: 'סיכום לדוגמא',
@@ -133,12 +141,14 @@ function readTextSummarySheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestio
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(TEXT_SUMMARY_COL.num), sourceRow)
       const difficulty = parseInt(cell(TEXT_SUMMARY_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
         throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(TEXT_SUMMARY_COL.difficulty))}`)
       }
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: cell(TEXT_SUMMARY_COL.paragraph),
         fields: {
@@ -156,7 +166,7 @@ export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]
   skippedSheets: string[]
-  orphans: { topic: string; prompt: string }[]
+  orphans: { topic: string; question_id: string; prompt: string }[]
   totalRows: number
   written: boolean
 }
@@ -181,6 +191,8 @@ export async function runOpenQuestionImport(
       anomalies.push(`Sheet not found in workbook: ${sheetName}`)
       continue
     }
+    checkTopicNumber(wb, sheetName, anomalies)
+
     // Same reasoning as runQuestionImport(): one sheet's structural problem
     // must not take down the whole import.
     let questions: OpenQuestionRow[]
@@ -203,7 +215,7 @@ export async function runOpenQuestionImport(
 
   let written = false
   if (!opts.dryRun && allRows.length > 0) {
-    const { error } = await db.from('naale_open_questions').upsert(allRows, { onConflict: 'topic,prompt' })
+    const { error } = await db.from('naale_open_questions').upsert(allRows, { onConflict: 'topic,question_id' })
     if (error) throw new Error(`upsert failed — ${error.message}`)
     written = true
   }
@@ -211,12 +223,12 @@ export async function runOpenQuestionImport(
   // Reported, never deleted — same convention as runQuestionImport().
   const { data: existing } = await db
     .from('naale_open_questions')
-    .select('topic, prompt')
+    .select('topic, question_id, prompt')
     .in('topic', expectedSheets)
-  const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.prompt}`))
+  const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
   const orphans = (existing ?? [])
-    .filter(r => !workbookKeys.has(`${r.topic} ${r.prompt}`))
-    .map(r => ({ topic: r.topic, prompt: r.prompt }))
+    .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
+    .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 
   return { summary, anomalies, skippedSheets, orphans, totalRows: allRows.length, written }
 }

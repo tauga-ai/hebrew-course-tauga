@@ -14,7 +14,61 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 // delivered file for every sheet below.
 const HEADER_ROW_INDEX = 2
 
+/** The workbook's own per-question number — the first column of every topic
+ *  sheet, per the workbook's own English guide sheet ("Every topic sheet has a
+ *  "#" column first and a "Difficulty (1-5)" column last"). */
+export const NUMBER_COL = '#'
+
+/** Each topic sheet's number in the workbook — the first half of the spec's
+ *  QUESTION_ID, "<TopicNumber>_<QuestionNumber>" (e.g. `9_13`).
+ *
+ *  Kept here rather than parsed from the sheet title because the titles aren't
+ *  uniformly formatted: most start "9. ...", but `סיכום טקסט קצר` reads
+ *  "... – 11. ..." with the number mid-string. runQuestionImport() still
+ *  cross-checks each title against this map, so a renumbered workbook surfaces
+ *  as an anomaly instead of silently rewriting every id. Numbers cover all 14
+ *  topics, so the 7 in scope are deliberately non-contiguous. */
+export const TOPIC_NUMBERS: Record<string, number> = {
+  'הבנת הנקרא': 4,
+  'נרדפות והופכיות': 6,
+  'השלמת משפטים': 7,
+  'תיקון משפטים': 8,
+  'סיפור בהמשכים': 9,
+  'ווטסאפ והודעות': 10,
+  'סיכום טקסט קצר': 11,
+}
+
+/** "<TopicNumber>_<QuestionNumber>" for one row, e.g. `9_13`.
+ *
+ *  Throws rather than inventing an id: a missing or non-numeric `#` means the
+ *  workbook changed shape, and generating a fallback id would quietly put the
+ *  bank back on text-based identity — the exact failure this column exists to
+ *  end. */
+export function questionIdFor(sheetName: string, rawNumber: string, sourceRow: number): string {
+  const topicNumber = TOPIC_NUMBERS[sheetName]
+  if (topicNumber === undefined) {
+    throw new Error(`${sheetName}: no topic number registered — add it to TOPIC_NUMBERS`)
+  }
+  const n = parseInt(String(rawNumber).trim(), 10)
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`${sheetName} row ${sourceRow}: "${NUMBER_COL}" must be a positive integer, got ${JSON.stringify(rawNumber)}`)
+  }
+  return `${topicNumber}_${n}`
+}
+
+/** Cross-checks a sheet's title row against TOPIC_NUMBERS. A workbook that
+ *  renumbers its topics would otherwise change every question_id silently. */
+export function checkTopicNumber(wb: XLSX.WorkBook, sheetName: string, anomalies: string[]): void {
+  const rows: string[][] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' })
+  const title = String(rows[0]?.[0] ?? '')
+  const expected = TOPIC_NUMBERS[sheetName]
+  if (expected !== undefined && !title.includes(`${expected}.`)) {
+    anomalies.push(`${sheetName}: title row ${JSON.stringify(title.slice(0, 60))} does not contain the registered topic number ${expected} — question ids may be wrong`)
+  }
+}
+
 const SENTENCE_COMPLETION_COL = {
+  num: NUMBER_COL,
   prompt: 'משפט (עם חסר)',
   answerA: 'תשובה A',
   answerB: 'תשובה B',
@@ -31,6 +85,7 @@ const SENTENCE_COMPLETION_LETTER_TO_COLUMN = {
 } as const
 
 const SENTENCE_CORRECTION_COL = {
+  num: NUMBER_COL,
   errorType: 'סוג השגיאה',
   brokenSentence: 'משפט שגוי',
   answerA: 'תשובה A',
@@ -49,6 +104,7 @@ const SENTENCE_CORRECTION_LETTER_TO_COLUMN = {
 } as const
 
 const READING_COMPREHENSION_COL = {
+  num: NUMBER_COL,
   passage: 'טקסט קצר',
   question: 'שאלה',
   answerA: 'תשובה A',
@@ -67,6 +123,7 @@ const READING_COMPREHENSION_LETTER_TO_COLUMN = {
 } as const
 
 const SYNONYMS_ANTONYMS_COL = {
+  num: NUMBER_COL,
   word: 'מילה',
   context: 'משפט הקשר',
   answerA: 'תשובה A',
@@ -89,6 +146,7 @@ const MAX_LEVEL = 5
 
 interface QuestionRow {
   topic: string
+  question_id: string
   difficulty: number
   prompt: string
   answer_kind: 'mcq'
@@ -131,6 +189,7 @@ function readSentenceCompletionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx // 1-based spreadsheet row number
+      const question_id = questionIdFor(sheetName, cell(SENTENCE_COMPLETION_COL.num), sourceRow)
 
       const difficulty = parseInt(cell(SENTENCE_COMPLETION_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
@@ -147,6 +206,7 @@ function readSentenceCompletionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
 
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: cell(SENTENCE_COMPLETION_COL.prompt),
         answer_kind: 'mcq',
@@ -174,6 +234,7 @@ function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(SENTENCE_CORRECTION_COL.num), sourceRow)
 
       const difficulty = parseInt(cell(SENTENCE_CORRECTION_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
@@ -188,6 +249,7 @@ function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
 
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: `תקן את המשפט הבא:\n${cell(SENTENCE_CORRECTION_COL.brokenSentence)}`,
         answer_kind: 'mcq',
@@ -214,6 +276,7 @@ function readReadingComprehensionSheet(wb: XLSX.WorkBook, sheetName: string): Qu
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(READING_COMPREHENSION_COL.num), sourceRow)
 
       const difficulty = parseInt(cell(READING_COMPREHENSION_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
@@ -228,6 +291,7 @@ function readReadingComprehensionSheet(wb: XLSX.WorkBook, sheetName: string): Qu
 
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: `${cell(READING_COMPREHENSION_COL.passage)}\n\n${cell(READING_COMPREHENSION_COL.question)}`,
         answer_kind: 'mcq',
@@ -255,6 +319,7 @@ function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): Questi
     .map((row, idx) => {
       const cell = (name: string) => String(row[col[name]] ?? '').trim()
       const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const question_id = questionIdFor(sheetName, cell(SYNONYMS_ANTONYMS_COL.num), sourceRow)
 
       const difficulty = parseInt(cell(SYNONYMS_ANTONYMS_COL.difficulty), 10)
       if (!Number.isInteger(difficulty) || difficulty < MIN_LEVEL || difficulty > MAX_LEVEL) {
@@ -272,6 +337,7 @@ function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): Questi
 
       return {
         topic: sheetName,
+        question_id,
         difficulty,
         prompt: `בחר את הזוג הנכון (מילה נרדפת, מילה הפכית) למילה "${word}" במשפט:\n"${context}"`,
         answer_kind: 'mcq',
@@ -287,7 +353,7 @@ function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): Questi
  *  name (which is also the topic key every session query matches on). Add a
  *  new entry here once a topic has real content, pairing it with a reader
  *  matching its own column layout. */
-const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => QuestionRow[]> = {
+export const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string) => QuestionRow[]> = {
   'השלמת משפטים': readSentenceCompletionSheet,
   'תיקון משפטים': readSentenceCorrectionSheet,
   'הבנת הנקרא': readReadingComprehensionSheet,
@@ -301,6 +367,7 @@ function validate(topic: string, questions: QuestionRow[], anomalies: string[]) 
   }
 
   const byDifficulty = new Map<number, number>()
+  const seenIds = new Set<string>()
   const seenPrompts = new Set<string>()
 
   for (const q of questions) {
@@ -317,8 +384,14 @@ function validate(topic: string, questions: QuestionRow[], anomalies: string[]) 
     if (/[…]|\.\.\.\s*$/.test(q.prompt)) {
       anomalies.push(`${topic} row ${q.source_row}: question ends with an ellipsis — likely truncated content in the source spreadsheet, not a parsing issue`)
     }
+    if (seenIds.has(q.question_id)) {
+      anomalies.push(`${topic} row ${q.source_row}: duplicate question id ${q.question_id} — the (topic, question_id) upsert key collapses these into one row`)
+    }
+    seenIds.add(q.question_id)
+    // No longer collapses rows now that identity is the id, but two identical
+    // questions in one topic is still a content problem worth surfacing.
     if (seenPrompts.has(q.prompt)) {
-      anomalies.push(`${topic} row ${q.source_row}: duplicate question text — the (topic, prompt) upsert key collapses these into one row`)
+      anomalies.push(`${topic} row ${q.source_row}: duplicate question text (id ${q.question_id}) — same wording as an earlier row in this sheet`)
     }
     seenPrompts.add(q.prompt)
   }
@@ -337,7 +410,7 @@ export interface QuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]
   skippedSheets: string[]
-  orphans: { topic: string; prompt: string }[]
+  orphans: { topic: string; question_id: string; prompt: string }[]
   totalRows: number
   written: boolean
 }
@@ -366,6 +439,8 @@ export async function runQuestionImport(
     // fine, and the CLI's "no anomalies → no partial state" guarantee only
     // holds if a break in one sheet still surfaces as a reported anomaly
     // rather than an uncaught crash that skips reporting on everything else.
+    checkTopicNumber(wb, sheetName, anomalies)
+
     let questions: QuestionRow[]
     try {
       questions = readSheet(wb, sheetName)
@@ -386,7 +461,7 @@ export async function runQuestionImport(
 
   let written = false
   if (!opts.dryRun && allRows.length > 0) {
-    const { error } = await db.from('naale_questions').upsert(allRows, { onConflict: 'topic,prompt' })
+    const { error } = await db.from('naale_questions').upsert(allRows, { onConflict: 'topic,question_id' })
     if (error) throw new Error(`upsert failed — ${error.message}`)
     written = true
   }
@@ -397,12 +472,12 @@ export async function runQuestionImport(
   // information a real run's console output would.
   const { data: existing } = await db
     .from('naale_questions')
-    .select('topic, prompt')
+    .select('topic, question_id, prompt')
     .in('topic', expectedSheets)
-  const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.prompt}`))
+  const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
   const orphans = (existing ?? [])
-    .filter(r => !workbookKeys.has(`${r.topic} ${r.prompt}`))
-    .map(r => ({ topic: r.topic, prompt: r.prompt }))
+    .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
+    .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 
   return { summary, anomalies, skippedSheets, orphans, totalRows: allRows.length, written }
 }

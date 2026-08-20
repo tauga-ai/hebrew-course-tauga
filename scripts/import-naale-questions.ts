@@ -35,7 +35,7 @@ function printReport(label: string, tableName: string, report: QuestionImportRep
 
   if (report.orphans.length > 0) {
     console.log(`${report.orphans.length} questions in the table are NOT in this workbook (left untouched):`)
-    for (const o of report.orphans.slice(0, 20)) console.log(`  - [${o.topic}] ${o.prompt.slice(0, 60)}...`)
+    for (const o of report.orphans.slice(0, 20)) console.log(`  - ${o.question_id} [${o.topic}] ${o.prompt.slice(0, 60)}...`)
     if (report.orphans.length > 20) console.log(`  ... and ${report.orphans.length - 20} more`)
   }
 
