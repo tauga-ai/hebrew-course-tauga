@@ -8,7 +8,7 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
-import { XP_PER_CORRECT, COINS_PER_CORRECT } from '@/lib/naale/rewards'
+import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang } from '@/lib/dev-i18n'
 import { scoreColor } from '@/lib/score-color'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
@@ -52,6 +52,10 @@ interface AnswerResult {
   explanation?: string
   level: number
   level_changed: boolean
+  // The server's word on whether this counted, not the question's UI hint —
+  // a review answer earns no XP or coins (every reward path filters
+  // is_review = false), so the reward note must not claim otherwise.
+  is_review: boolean
 }
 
 interface OpenAnswerResult {
@@ -60,6 +64,8 @@ interface OpenAnswerResult {
   level: number
   level_changed: boolean
   milestone: number | null
+  /** See AnswerResult.is_review — same rule for graded answers. */
+  is_review: boolean
 }
 
 interface EndSummary {
@@ -705,6 +711,9 @@ function SessionRunner() {
     const selected = viewing ? viewing.selected : liveSelected
     const openResult = viewing ? viewing.openResult : liveOpenResult
     const openAnswerText = viewing ? viewing.openAnswerText : liveOpenAnswerText
+    // Derived from the shadowed openResult, so looking back at an earlier
+    // answer shows what THAT answer earned rather than the live one's.
+    const openReward = openResult ? gradedAnswerReward(openResult.score) : null
 
     content = (
       <>
@@ -803,7 +812,7 @@ function SessionRunner() {
                 not <p>, since ConfettiBurst renders a block-level <div> and
                 a <div> inside a <p> is invalid HTML (the browser would
                 silently close the <p> early). */}
-            {result?.is_correct && (
+            {result?.is_correct && !result.is_review && (
               <div className="relative mb-4">
                 {!viewing && <ConfettiBurst />}
                 <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 text-right">
@@ -875,6 +884,42 @@ function SessionRunner() {
                         {openScoreLabel(openResult.score)}
                       </div>
                     </div>
+                    {/* The graded equivalent of MCQ's "+10 XP · +1 🪙" above.
+                        Two differences, both from the 1-5 scale: the amount
+                        varies by score (XP_BY_SCORE), and a coin only comes at
+                        COIN_SCORE_THRESHOLD — so a 3 shows XP with no coin, and
+                        a 1 (worth nothing) shows no note at all rather than a
+                        deflating "+0 XP". Confetti fires only at the coin
+                        threshold, matching what counts as "correct" everywhere
+                        else, and never while browsing history — same rule as
+                        the MCQ burst. */}
+                    {openReward && openReward.xp > 0 && !openResult.is_review && (
+                      <div className="relative mb-3">
+                        {!viewing && openResult.score >= COIN_SCORE_THRESHOLD && <ConfettiBurst />}
+                        <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 text-right">
+                          <LtrIsolate>
+                            {openReward.coins > 0
+                              ? `+${openReward.xp} XP · +${openReward.coins} 🪙`
+                              : `+${openReward.xp} XP`}
+                          </LtrIsolate>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* The 3/5/10 streak milestone the server has been
+                        computing and returning since this route was written,
+                        and which nothing rendered until now. The count is kept
+                        outside t() so the sentence translates as one phrase
+                        instead of being split around the number. */}
+                    {openResult.milestone && (
+                      <div className="mb-3 rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 px-4 py-2.5 text-right">
+                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                          {/* "N good answers in a row!" */}
+                          🔥 <LtrIsolate>{openResult.milestone}</LtrIsolate> {t('תשובות טובות ברצף!')}
+                        </p>
+                      </div>
+                    )}
+
                     <p className="text-sm text-fg/80 mt-1">{openResult.feedback}</p>
                     {/* No auto-advance for graded answers — unlike MCQ's binary
                         correct/wrong, a 1-5 score plus written feedback

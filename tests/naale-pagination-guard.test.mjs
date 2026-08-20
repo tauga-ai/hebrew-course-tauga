@@ -44,7 +44,9 @@ const NARROWING_BOUNDS = {
   naale_topic_levels: [".eq('student_id'"],
   naale_questions: [".eq('id'", ".in('id'"],
   naale_open_questions: [".eq('id'", ".in('id'"],
-  naale_sessions: [".eq('id'"],
+  // `.in('id', ids)` is bounded by the caller's id list exactly as `.eq('id')`
+  // is — same allowance the two question banks already carry.
+  naale_sessions: [".eq('id'", ".in('id'"],
 }
 
 function sourceFiles(dir) {

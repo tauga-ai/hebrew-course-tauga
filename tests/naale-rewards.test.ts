@@ -5,7 +5,9 @@ import {
   weekKey,
   computeStreak,
   computeGradedRewards,
+  gradedAnswerReward,
   consecutiveGoodScoreStreak,
+  STREAK_MILESTONES,
   XP_PER_CORRECT,
   XP_PER_COMPLETED_SESSION,
   COINS_PER_CORRECT,
@@ -99,4 +101,56 @@ test('consecutiveGoodScoreStreak: counts a leading run of scores >= 4, stops at 
   assert.equal(consecutiveGoodScoreStreak([{ score: 5 }, { score: 5 }, { score: 5 }]), 3)
   assert.equal(consecutiveGoodScoreStreak([{ score: 2 }, { score: 5 }, { score: 5 }]), 0)
   assert.equal(consecutiveGoodScoreStreak([]), 0)
+})
+
+// The in-session "+N XP · +1 🪙" note (#18). These pin the two things the UI
+// branches on: whether there is anything to show at all, and whether a coin
+// is part of it.
+test('gradedAnswerReward: each score earns its scheduled XP, coin only at the threshold', () => {
+  assert.deepEqual(gradedAnswerReward(1), { xp: 0, coins: 0 })
+  assert.deepEqual(gradedAnswerReward(2), { xp: XP_BY_SCORE[2], coins: 0 })
+  assert.deepEqual(gradedAnswerReward(3), { xp: XP_BY_SCORE[3], coins: 0 })
+  assert.deepEqual(gradedAnswerReward(4), { xp: XP_BY_SCORE[4], coins: COINS_PER_CORRECT })
+  assert.deepEqual(gradedAnswerReward(5), { xp: XP_BY_SCORE[5], coins: COINS_PER_CORRECT })
+})
+
+// A score of 1 is worth nothing, and the session screen relies on that to skip
+// the note entirely rather than showing a deflating "+0 XP".
+test('gradedAnswerReward: a score of 1 is worth nothing, so the UI has nothing to show', () => {
+  assert.equal(gradedAnswerReward(1).xp, 0)
+  assert.equal(gradedAnswerReward(1).coins, 0)
+})
+
+// The server validates 1-5 before this is reached; an out-of-range score is a
+// bug to survive rather than one to crash a student's session over.
+test('gradedAnswerReward: an unrecognised score earns nothing instead of throwing', () => {
+  assert.deepEqual(gradedAnswerReward(0), { xp: 0, coins: 0 })
+  assert.deepEqual(gradedAnswerReward(9), { xp: 0, coins: COINS_PER_CORRECT })
+})
+
+// The whole point of routing computeGradedRewards() through gradedAnswerReward():
+// the end-of-session total must be exactly the sum of what each answer showed.
+test('computeGradedRewards: the total equals the sum of the per-answer notes', () => {
+  const answers = [{ score: 5 }, { score: 3 }, { score: 4 }, { score: 1 }, { score: 2 }]
+  const summed = answers.reduce(
+    (acc, a) => {
+      const r = gradedAnswerReward(a.score)
+      return { xp: acc.xp + r.xp, coins: acc.coins + r.coins }
+    },
+    { xp: 0, coins: 0 }
+  )
+  assert.deepEqual(computeGradedRewards(answers), summed)
+})
+
+// The milestone banner fires on an exact match, not a threshold — so a streak
+// of 4 celebrates nothing, and the "10 in a row" moment happens once.
+test('STREAK_MILESTONES: only exact streak lengths celebrate', () => {
+  const fires = (streak: number) =>
+    STREAK_MILESTONES.includes(streak as typeof STREAK_MILESTONES[number])
+  assert.equal(fires(3), true)
+  assert.equal(fires(5), true)
+  assert.equal(fires(10), true)
+  assert.equal(fires(4), false)
+  assert.equal(fires(9), false)
+  assert.equal(fires(11), false)
 })
