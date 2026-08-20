@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleStaff } from '@/lib/naale/auth'
-import { buildTopicStats } from '@/lib/naale/stats'
-import { computeRewards } from '@/lib/naale/rewards'
+import { buildStudentProgress } from '@/lib/naale/stats'
+import { loadAllTopics } from '@/lib/naale/topics'
+import { selectAll } from '@/lib/naale/paginate'
 
 /**
  * All Naale students with their per-topic levels and counts, for staff.
@@ -24,6 +25,12 @@ import { computeRewards } from '@/lib/naale/rewards'
  * that all staff on this track see all Naale students. That differs from the
  * existing teacher dashboard (resolveClassAndGroup() scopes by class AND
  * lesson group) — the omission here is intentional, not an oversight.
+ *
+ * This route used to read only naale_questions/naale_answers and derive its
+ * own totals, so all three AI-graded topics were absent from every response —
+ * level, exercise count and accuracy together — while the student's own screen
+ * showed them (audit H1). Topic list and number-crunching are now the same
+ * shared functions /api/naale/my-stats uses, so the two views can't disagree.
  */
 export async function GET() {
   const staff = await requireNaaleStaff()
@@ -50,20 +57,23 @@ export async function GET() {
     .eq('class_id', naaleClass.id)
     .eq('naale_role', 'student')
 
-  const { data: bankTopics } = await db.from('naale_questions').select('topic')
-  const allTopics = [...new Set((bankTopics ?? []).map(r => r.topic))].sort()
+  const allTopics = await loadAllTopics(db)
 
   const studentIds = (students ?? []).map(s => s.id)
-  const [{ data: levels }, { data: answers }, { data: sessions }] = await Promise.all([
-    db.from('naale_topic_levels').select('student_id, topic, level').in('student_id', studentIds),
-    db.from('naale_answers').select('student_id, topic, is_correct, is_review, session_id').in('student_id', studentIds),
-    db.from('naale_sessions').select('id, student_id, kind, completed').in('student_id', studentIds),
+  // Cohort-wide, so these are the first reads to cross max_rows in real use:
+  // ~30 students answering ~25 questions a session passes 1000 answers within
+  // weeks, and a truncated read would put staff's numbers quietly back out of
+  // step with the students' own — the very bug this route just had.
+  const [levels, answers, openAnswers, sessions] = await Promise.all([
+    selectAll<{ student_id: string; topic: string; level: number }>('naale_topic_levels', (from, to) =>
+      db.from('naale_topic_levels').select('student_id, topic, level').in('student_id', studentIds).range(from, to)),
+    selectAll<{ student_id: string; topic: string; is_correct: boolean; is_review: boolean; session_id: string }>('naale_answers', (from, to) =>
+      db.from('naale_answers').select('student_id, topic, is_correct, is_review, session_id').in('student_id', studentIds).range(from, to)),
+    selectAll<{ student_id: string; topic: string; score: number; is_review: boolean; session_id: string }>('naale_open_answers', (from, to) =>
+      db.from('naale_open_answers').select('student_id, topic, score, is_review, session_id').in('student_id', studentIds).range(from, to)),
+    selectAll<{ id: string; student_id: string; kind: string; completed: boolean }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('id, student_id, kind, completed').in('student_id', studentIds).range(from, to)),
   ])
-
-  // Review answers (ticket 15) excluded — same working decision as
-  // /api/naale/my-stats, so a student's own view and staff's view of them
-  // never disagree.
-  const nonReviewAnswers = (answers ?? []).filter(a => !a.is_review)
 
   // Google's profile photo per student, same display-only relay as
   // /api/naale/me — never stored, a missing/failed one just falls back to
@@ -81,30 +91,20 @@ export async function GET() {
   )
 
   const rows = (students ?? []).map(s => {
-    const myLevels = (levels ?? []).filter(l => l.student_id === s.id)
-    const myAnswers = nonReviewAnswers.filter(a => a.student_id === s.id)
-    const mySessions = (sessions ?? []).filter(x => x.student_id === s.id)
-
-    // XP/coins: same derivation as /api/naale/my-stats — placement answers
-    // excluded (calibration, not practice), so a student's own view and
-    // staff's view of them never disagree.
-    const practiceSessionIds = new Set(mySessions.filter(x => x.kind === 'practice').map(x => x.id))
-    const practiceAnswers = myAnswers.filter(a => practiceSessionIds.has(a.session_id))
-    const { xp, coins } = computeRewards(practiceAnswers, mySessions)
+    const progress = buildStudentProgress({
+      allTopics,
+      levels: levels.filter(l => l.student_id === s.id),
+      answers: answers.filter(a => a.student_id === s.id),
+      openAnswers: openAnswers.filter(a => a.student_id === s.id),
+      sessions: sessions.filter(x => x.student_id === s.id),
+    })
 
     return {
       student_id: s.id,
       full_name: s.full_name,
       avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
-      topics: buildTopicStats(allTopics, myLevels, myAnswers),
-      totals: {
-        answered: myAnswers.length,
-        correct: myAnswers.filter(a => a.is_correct).length,
-        sessions: mySessions.length,
-        completed_sessions: mySessions.filter(x => x.completed).length,
-        xp,
-        coins,
-      },
+      topics: progress.topics,
+      totals: progress.totals,
     }
   })
 

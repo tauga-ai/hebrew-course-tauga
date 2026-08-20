@@ -4,6 +4,21 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { pickNextTopic, difficultyLadder, MIN_LEVEL } from '@/lib/naale/leveling'
 import { publicFields } from '@/lib/naale/open-grading'
+import { selectAll } from '@/lib/naale/paginate'
+
+/** Row shapes for the paginated bank/answer reads below. Spelled out because
+ *  selectAll() needs the element type up front, unlike an inline query. */
+type BankRow = {
+  id: string
+  topic: string
+  difficulty: number
+  prompt: string
+  answer_kind: string
+  options: string[] | null
+  correct_answer: string
+}
+type OpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
+type AnsweredRow = { question_id: string; topic: string; answered_at: string }
 
 type PublicQuestion = {
   id: string
@@ -69,21 +84,30 @@ export async function GET(req: NextRequest) {
   const db = createServiceClient()
 
   // The whole bank fetched ONCE and filtered in memory below, rather than a
-  // separate query per (topic, difficulty) tried — with ~164 rows total this
-  // is trivial to hold in memory, and it turns what could be 15+ sequential
+  // separate query per (topic, difficulty) tried — at ~1300 rows this is
+  // still cheap to hold in memory, and it turns what could be 15+ sequential
   // round-trips (3 topics x up to 5 levels each) into one. Measured on the
   // remote project: each round-trip here runs 250ms-1000ms, so the original
   // per-level-query version could take 3+ seconds for a single /next call.
   // These three queries are independent of each other, so they run in
   // parallel too.
-  const [{ data: levels }, { data: mcqBank }, { data: openBank }, { data: answered }, { data: openAnswered }] = await Promise.all([
-    db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
-    db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer'),
-    db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields'),
+  // All five paginated: the MCQ bank alone is at PostgREST's 1000-row ceiling,
+  // and a silently trimmed bank would quietly shrink the pool this route picks
+  // from — a student could be told a topic was finished while questions
+  // remained. The answer lists grow for the life of the account.
+  const studentId = session.student.id
+  const [{ data: levels }, mcqBank, openBank, answered, openAnswered] = await Promise.all([
+    db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
+    selectAll<BankRow>('naale_questions', (from, to) =>
+      db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer').range(from, to)),
+    selectAll<OpenBankRow>('naale_open_questions', (from, to) =>
+      db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields').range(from, to)),
     // Every question this student has ever answered, in any session —
     // "unseen" is lifetime-scoped, not session-scoped.
-    db.from('naale_answers').select('question_id, topic, answered_at').eq('student_id', session.student.id).order('answered_at', { ascending: false }),
-    db.from('naale_open_answers').select('question_id, topic, answered_at').eq('student_id', session.student.id).order('answered_at', { ascending: false }),
+    selectAll<AnsweredRow>('naale_answers', (from, to) =>
+      db.from('naale_answers').select('question_id, topic, answered_at').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
+    selectAll<AnsweredRow>('naale_open_answers', (from, to) =>
+      db.from('naale_open_answers').select('question_id, topic, answered_at').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
   ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
@@ -92,11 +116,11 @@ export async function GET(req: NextRequest) {
   // never both — so merging by topic here can't collide two different
   // question kinds under one key.
   const bankByTopic = new Map<string, PublicQuestion[]>()
-  for (const row of mcqBank ?? []) {
+  for (const row of mcqBank) {
     if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
     bankByTopic.get(row.topic)!.push({ ...row, kind: 'mcq' })
   }
-  for (const row of openBank ?? []) {
+  for (const row of openBank) {
     if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
     bankByTopic.get(row.topic)!.push({ id: row.id, topic: row.topic, difficulty: row.difficulty, kind: 'open', prompt: row.prompt, fields: row.fields as Record<string, string> })
   }
@@ -109,11 +133,11 @@ export async function GET(req: NextRequest) {
     if (!levelByTopic.has(topic)) levelByTopic.set(topic, MIN_LEVEL)
   }
 
-  const seenIds = new Set([...(answered ?? []).map(a => a.question_id), ...(openAnswered ?? []).map(a => a.question_id)])
+  const seenIds = new Set([...answered.map(a => a.question_id), ...openAnswered.map(a => a.question_id)])
   // Whichever answer (mcq or open) is most recent overall decides prevTopic
   // — rotation shouldn't repeat the same topic regardless of which kind the
   // student's last answer happened to be.
-  const allAnswered = [...(answered ?? []), ...(openAnswered ?? [])].sort(
+  const allAnswered = [...answered, ...openAnswered].sort(
     (a, b) => new Date(b.answered_at).getTime() - new Date(a.answered_at).getTime()
   )
   const prevTopic = allAnswered[0]?.topic ?? null

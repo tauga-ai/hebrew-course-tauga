@@ -1,5 +1,6 @@
 import 'server-only'
 import { createServiceClient } from '@/lib/supabase/service'
+import { selectAll } from '@/lib/naale/paginate'
 
 /**
  * One placement question per topic.
@@ -16,17 +17,37 @@ import { createServiceClient } from '@/lib/supabase/service'
  * what lets the dev-only "show answer hints" toggle work for placement the
  * same way it does for practice.
  */
+/** Row shapes for the paginated bank reads — selectAll() needs the element
+ *  type up front, unlike an inline query. */
+type PlacementBankRow = {
+  id: string
+  topic: string
+  difficulty: number
+  prompt: string
+  answer_kind: string
+  options: string[] | null
+  correct_answer: string
+}
+type PlacementOpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
+
 export async function getPlacementQuestions() {
   const db = createServiceClient()
-  const [{ data: mcq }, { data: open }] = await Promise.all([
-    db.from('naale_questions')
-      .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
-      .order('difficulty', { ascending: true })
-      .order('id', { ascending: true }), // deterministic tie-break
-    db.from('naale_open_questions')
-      .select('id, topic, difficulty, prompt, fields')
-      .order('difficulty', { ascending: true })
-      .order('id', { ascending: true }),
+  // Paginated: this reads both banks whole, and the MCQ bank is at the 1000-row
+  // ceiling. A trimmed read here would drop a topic out of the placement test
+  // entirely, leaving the student unplaced in it.
+  const [mcq, open] = await Promise.all([
+    selectAll<PlacementBankRow>('naale_questions', (from, to) =>
+      db.from('naale_questions')
+        .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+        .order('difficulty', { ascending: true })
+        .order('id', { ascending: true }) // deterministic tie-break
+        .range(from, to)),
+    selectAll<PlacementOpenBankRow>('naale_open_questions', (from, to) =>
+      db.from('naale_open_questions')
+        .select('id, topic, difficulty, prompt, fields')
+        .order('difficulty', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)),
   ])
 
   // A topic name only ever exists in one of the two tables (see the infra

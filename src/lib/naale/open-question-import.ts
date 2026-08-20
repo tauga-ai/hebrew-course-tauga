@@ -7,6 +7,7 @@
  */
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { selectAll } from './paginate'
 import { buildColumnMap, checkTopicNumber, NUMBER_COL, questionIdFor } from './question-import'
 
 // Each content ticket's sheet reader imports buildColumnMap directly from
@@ -221,12 +222,12 @@ export async function runOpenQuestionImport(
   }
 
   // Reported, never deleted — same convention as runQuestionImport().
-  const { data: existing } = await db
-    .from('naale_open_questions')
-    .select('topic, question_id, prompt')
-    .in('topic', expectedSheets)
+  // Reads the whole bank, which is already past 1000 rows — an unpaginated
+  // read here would report phantom orphans for every row max_rows trimmed.
+  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_open_questions', (from, to) =>
+    db.from('naale_open_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
   const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
-  const orphans = (existing ?? [])
+  const orphans = existing
     .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
     .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 
