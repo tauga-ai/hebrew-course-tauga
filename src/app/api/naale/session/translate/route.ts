@@ -3,13 +3,13 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { translateWord } from '@/lib/naale/translate'
-
-const SESSION_TRANSLATION_CAP = 30
+import { sessionTranslationCap } from '@/lib/naale/translation-limits'
 
 /**
- * Long-press-to-translate a single word, during any live Naale session —
+ * Hover- (or long-press-) to-translate a single word, during any live Naale
+ * session —
  * practice or placement, both are naale_sessions rows, so this route
- * doesn't need to know which. The 30/session cap is enforced here from the
+ * doesn't need to know which. The per-session cap is enforced here from the
  * session row itself, never trusted from the client — same principle as
  * grading always happening server-side in session/answer/route.ts.
  */
@@ -42,8 +42,9 @@ export async function POST(req: NextRequest) {
   // check happens before the cap gate, and bypasses it entirely.
   const alreadyThisSession = owned.session.translated_words.includes(cleaned)
 
-  if (!alreadyThisSession && owned.session.translations_used >= SESSION_TRANSLATION_CAP) {
-    return NextResponse.json({ limited: true, used: owned.session.translations_used, cap: SESSION_TRANSLATION_CAP })
+  const cap = sessionTranslationCap()
+  if (!alreadyThisSession && owned.session.translations_used >= cap) {
+    return NextResponse.json({ limited: true, used: owned.session.translations_used, cap })
   }
 
   const db = createServiceClient()
@@ -67,5 +68,5 @@ export async function POST(req: NextRequest) {
   // used/cap are QA-only (see the dev-only badge in session/page.tsx and
   // placement/page.tsx) — real students never see a countdown, per Yuval's
   // explicit "should not be advertised... during normal use."
-  return NextResponse.json({ limited: false, translation, used, cap: SESSION_TRANSLATION_CAP })
+  return NextResponse.json({ limited: false, translation, used, cap })
 }
