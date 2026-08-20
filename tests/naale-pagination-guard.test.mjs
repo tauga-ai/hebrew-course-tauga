@@ -26,6 +26,9 @@ const GROWTH_TABLES = [
   'naale_open_answers',
   'naale_sessions',
   'naale_topic_levels',
+  // Grows for the life of the track. A silently trimmed list would hide
+  // exactly the reports nobody has dealt with yet.
+  'naale_question_reports',
 ]
 
 /** Markers that make a read safe. `.range(` covers selectAll() too, since the

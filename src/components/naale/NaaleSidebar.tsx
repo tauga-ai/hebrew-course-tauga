@@ -26,7 +26,11 @@ const STUDENT_ITEMS: NavItem[] = [
   { href: '/naale', icon: '▶️', label: 'תרגול' },
   { href: '/naale/stats', icon: '📊', label: 'ההתקדמות שלי' },
 ]
-const STAFF_ITEMS: NavItem[] = [{ href: '/naale/staff', icon: '👥', label: 'תלמידים' }]
+const STAFF_ITEMS: NavItem[] = [
+  { href: '/naale/staff', icon: '👥', label: 'תלמידים' },
+  // N4: reported questions. Staff-only, same gate as the students list.
+  { href: '/naale/staff/reports', icon: '🚩', label: 'דיווחים' },
+]
 const ADMIN_ITEMS: NavItem[] = [{ href: '/naale/admin', icon: '🛠️', label: 'ניהול' }]
 
 function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {

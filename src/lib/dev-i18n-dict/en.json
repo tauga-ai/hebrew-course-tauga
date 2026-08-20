@@ -519,5 +519,22 @@
   "מטבעות": "Coins",
   "חוזרים על שאלה מהתרגול הקודם": "Reviewing a question from your last practice",
   "רמות לפי נושא": "Levels by topic",
-  "תשובות טובות ברצף!": "good answers in a row!"
+  "תשובות טובות ברצף!": "good answers in a row!",
+  "מצאתם טעות בשאלה? דווחו לנו": "Found a mistake in the question? Report it to us",
+  "אנא פרטו מה הטעות בשאלה:": "Please describe what's wrong with the question:",
+  "שלח דיווח": "Send report",
+  "שולח…": "Sending…",
+  "תודה! הדיווח נשלח.": "Thanks! The report has been sent.",
+  "שליחת הדיווח נכשלה, נסו שוב": "Sending the report failed, please try again",
+  "דיווח על טעות בשאלה": "Report a mistake in this question",
+  "דיווחים על שאלות": "Reported questions",
+  "דיווחים": "Reports",
+  "הצג גם דיווחים שטופלו": "Also show handled reports",
+  "אין דיווחים": "No reports",
+  "אין דיווחים פתוחים": "No open reports",
+  "התשובה שלהם": "Their answer",
+  "ענו לא נכון": "Answered incorrectly",
+  "תלמיד/ה": "Student",
+  "סמן כטופל": "Mark as handled",
+  "פתח מחדש": "Reopen"
 }
