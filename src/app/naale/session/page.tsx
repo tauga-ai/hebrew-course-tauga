@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
+import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang } from '@/lib/dev-i18n'
@@ -156,6 +157,10 @@ function SessionRunner() {
   // live question"; any number is a position in `history`.
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [viewIndex, setViewIndex] = useState<number | null>(null)
+  // N4: which question the report modal is open for, or null. Holds the id
+  // rather than a boolean so the modal reports the question that was on
+  // screen when it opened, even if the session moves on underneath it.
+  const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null)
   // Written every render rather than threaded through loadNext's dependencies:
   // loadNext deliberately does NOT depend on per-answer state (see the ref
   // comment above it), and adding these would give it a new identity on every
@@ -826,6 +831,21 @@ function SessionRunner() {
                 💡 QA hint (dev-only, never shown in production): {q.correct_answer}
               </p>
             )}
+
+            {/* N4: "Found a mistake in the question? Report it to us." Bottom of
+                the question container, quiet by default — it must be findable
+                the moment a student doubts a question, without competing with
+                the answer controls for attention. Available while browsing
+                history too: noticing the mistake often happens on the way back,
+                and the report is about the question, not about the session's
+                current position. */}
+            <button
+              type="button"
+              onClick={() => setReportingQuestionId(q.id)}
+              className="mt-2 text-xs text-fg/40 transition-colors hover:text-fg/70 text-right"
+            >
+              🚩 {t('מצאתם טעות בשאלה? דווחו לנו')}
+            </button>
           </div>
 
           <div>
@@ -1112,6 +1132,15 @@ function SessionRunner() {
       <NaaleSidebar role="student" />
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">{content}</div>
       {popoverElement}
+      {/* Rendered at the page root, not inside the question container, so the
+          backdrop covers the whole viewport rather than one card. */}
+      {reportingQuestionId && (
+        <ReportQuestionModal
+          questionId={reportingQuestionId}
+          sessionId={sessionId}
+          onClose={() => setReportingQuestionId(null)}
+        />
+      )}
     </div>
   )
 }
