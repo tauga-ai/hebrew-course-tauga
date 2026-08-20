@@ -1,4 +1,5 @@
 import type { NaaleTopicLevel } from '@/lib/types'
+import { COIN_SCORE_THRESHOLD, computeGradedRewards, computeRewards } from './rewards'
 
 export interface NaaleTopicStat {
   topic: string
@@ -49,4 +50,86 @@ export function buildTopicStats(
       started: levelByTopic.has(topic) || c.answered > 0,
     }
   })
+}
+
+/** A graded (1-5) answer counts as "correct" for progress at 4 or above.
+ *  Aliased rather than re-stated as a literal so it can't drift from
+ *  applyGradedAnswer()'s leveling threshold or the coin threshold. */
+export const GRADED_CORRECT_SCORE = COIN_SCORE_THRESHOLD
+
+export interface NaaleProgressInput {
+  /** Every topic in BOTH banks — MCQ and AI-graded. Passing only the MCQ
+   *  bank is exactly the bug this function exists to prevent (audit H1). */
+  allTopics: string[]
+  levels: Pick<NaaleTopicLevel, 'topic' | 'level'>[]
+  answers: { topic: string; is_correct: boolean; is_review: boolean; session_id: string }[]
+  openAnswers: { topic: string; score: number; is_review: boolean; session_id: string }[]
+  sessions: { id: string; kind: string; completed: boolean }[]
+}
+
+export interface NaaleProgress {
+  topics: NaaleTopicStat[]
+  totals: {
+    answered: number
+    correct: number
+    sessions: number
+    completed_sessions: number
+    xp: number
+    coins: number
+  }
+}
+
+/**
+ * One student's whole progress view — the spec's "ID card" — from their raw
+ * rows. Shared by /api/naale/my-stats (the student's own view) and
+ * /api/naale/staff/students (staff's view of them).
+ *
+ * Shared deliberately. These two screens previously derived the same numbers
+ * from two separate copies of this logic, and they drifted: the staff route
+ * built its topic list from `naale_questions` alone, so all three AI-graded
+ * topics vanished from it entirely — level, exercise count and accuracy
+ * together — while the student's own screen showed them (audit H1). A student
+ * and their teacher could look at the same progress and read different
+ * numbers. Copying the logic a third time would just set up the next
+ * divergence, so both routes now call this.
+ *
+ * Two rules baked in, both matching what the student's own view already did:
+ *  - Review answers are excluded from every count — re-answering a question
+ *    already answered would otherwise look like double progress.
+ *  - Placement answers earn no XP or coins; placement is calibration, not
+ *    practice. Its answers still count toward answered/correct.
+ *
+ * Pure, so it's testable and so neither route can quietly special-case it.
+ */
+export function buildStudentProgress(input: NaaleProgressInput): NaaleProgress {
+  const answers = input.answers.filter(a => !a.is_review)
+  const openAnswers = input.openAnswers.filter(a => !a.is_review)
+
+  const topics = buildTopicStats(input.allTopics, input.levels, [
+    ...answers,
+    ...openAnswers.map(a => ({ topic: a.topic, is_correct: a.score >= GRADED_CORRECT_SCORE })),
+  ])
+
+  const practiceSessionIds = new Set(input.sessions.filter(s => s.kind === 'practice').map(s => s.id))
+  const { xp: mcqXp, coins: mcqCoins } = computeRewards(
+    answers.filter(a => practiceSessionIds.has(a.session_id)),
+    input.sessions
+  )
+  const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(
+    openAnswers.filter(a => practiceSessionIds.has(a.session_id))
+  )
+
+  return {
+    topics,
+    totals: {
+      answered: answers.length + openAnswers.length,
+      correct:
+        answers.filter(a => a.is_correct).length +
+        openAnswers.filter(a => a.score >= GRADED_CORRECT_SCORE).length,
+      sessions: input.sessions.length,
+      completed_sessions: input.sessions.filter(s => s.completed).length,
+      xp: mcqXp + gradedXp,
+      coins: mcqCoins + gradedCoins,
+    },
+  }
 }

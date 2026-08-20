@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildTopicStats } from '../src/lib/naale/stats'
+import { buildStudentProgress, buildTopicStats } from '../src/lib/naale/stats'
 
 test('buildTopicStats: includes topics the student has never touched', () => {
   const stats = buildTopicStats(['a', 'b'], [{ topic: 'a', level: 3 }], [{ topic: 'a', is_correct: true }])
@@ -26,4 +26,97 @@ test('buildTopicStats: a topic with answers but no level row still counts as sta
   const stats = buildTopicStats(['a'], [], [{ topic: 'a', is_correct: true }])
   assert.equal(stats[0].started, true)
   assert.equal(stats[0].level, null)
+})
+
+/**
+ * buildStudentProgress() exists because /api/naale/my-stats and
+ * /api/naale/staff/students used to derive these numbers from two separate
+ * copies of the logic, and drifted: the staff copy read only the MCQ bank, so
+ * every AI-graded topic vanished from staff's view while the student's own
+ * screen showed it (audit H1). These tests pin the behaviours that divergence
+ * broke.
+ */
+const SESSIONS = [
+  { id: 'p1', kind: 'practice', completed: true },
+  { id: 'plc', kind: 'placement', completed: false },
+]
+const TOPICS = ['הבנת הנקרא', 'סיפור בהמשכים'] // reading comprehension, story continuation
+
+test('buildStudentProgress: AI-graded topics appear with their own counts', () => {
+  const { topics } = buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [{ topic: 'סיפור בהמשכים', level: 3 }],
+    answers: [],
+    openAnswers: [
+      { topic: 'סיפור בהמשכים', score: 5, is_review: false, session_id: 'p1' },
+      { topic: 'סיפור בהמשכים', score: 2, is_review: false, session_id: 'p1' },
+    ],
+    sessions: SESSIONS,
+  })
+  const story = topics.find(t => t.topic === 'סיפור בהמשכים')!
+  assert.equal(story.level, 3)
+  assert.equal(story.answered, 2)
+  assert.equal(story.correct, 1)
+  assert.equal(story.started, true)
+})
+
+test('buildStudentProgress: a graded 3 is not "correct", a 4 is', () => {
+  const scored = (score: number) => buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [],
+    answers: [],
+    openAnswers: [{ topic: 'סיפור בהמשכים', score, is_review: false, session_id: 'p1' }],
+    sessions: SESSIONS,
+  }).totals.correct
+  assert.equal(scored(3), 0)
+  assert.equal(scored(4), 1)
+})
+
+test('buildStudentProgress: review answers are excluded from every count', () => {
+  const { topics, totals } = buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [],
+    answers: [{ topic: 'הבנת הנקרא', is_correct: true, is_review: true, session_id: 'p1' }],
+    openAnswers: [{ topic: 'סיפור בהמשכים', score: 5, is_review: true, session_id: 'p1' }],
+    sessions: SESSIONS,
+  })
+  assert.equal(totals.answered, 0)
+  assert.equal(totals.correct, 0)
+  assert.equal(totals.xp, 50, 'only the completed-session bonus remains')
+  assert.deepEqual(topics.map(t => t.answered), [0, 0])
+})
+
+test('buildStudentProgress: placement answers count as answered but earn no XP', () => {
+  // Placement is calibration, not practice — same rule the leveling streak uses.
+  const { totals } = buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [],
+    answers: [{ topic: 'הבנת הנקרא', is_correct: true, is_review: false, session_id: 'plc' }],
+    openAnswers: [{ topic: 'סיפור בהמשכים', score: 5, is_review: false, session_id: 'plc' }],
+    sessions: SESSIONS,
+  })
+  assert.equal(totals.answered, 2)
+  assert.equal(totals.correct, 2)
+  assert.equal(totals.coins, 0)
+  assert.equal(totals.xp, 50, 'the completed-session bonus only; no per-answer XP')
+})
+
+test('buildStudentProgress: MCQ and graded answers combine into one set of totals', () => {
+  const { totals } = buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [],
+    answers: [
+      { topic: 'הבנת הנקרא', is_correct: true, is_review: false, session_id: 'p1' },
+      { topic: 'הבנת הנקרא', is_correct: false, is_review: false, session_id: 'p1' },
+    ],
+    openAnswers: [{ topic: 'סיפור בהמשכים', score: 5, is_review: false, session_id: 'p1' }],
+    sessions: SESSIONS,
+  })
+  assert.equal(totals.answered, 3)
+  assert.equal(totals.correct, 2)
+  assert.equal(totals.sessions, 2)
+  assert.equal(totals.completed_sessions, 1)
+  // 10 (one correct MCQ) + 10 (a graded 5) + 50 (completed session)
+  assert.equal(totals.xp, 70)
+  assert.equal(totals.coins, 2)
 })

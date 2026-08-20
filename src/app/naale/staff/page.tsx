@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
@@ -93,12 +93,39 @@ function StudentRow({ s, critical, onSelect }: { s: StaffStudent; critical?: boo
   )
 }
 
+const DIALOG_MS = 180
+
 function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void }) {
   const acc = overallAccuracy(s.totals)
+  // `open` drives both directions: false on the first paint so the entrance
+  // has somewhere to animate FROM, then false again while closing so the exit
+  // is visible before the parent unmounts us.
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const id = setTimeout(() => setOpen(true), 16)
+    return () => clearTimeout(id)
+  }, [])
+
+  const close = useCallback(() => {
+    setOpen(false)
+    setTimeout(onClose, DIALOG_MS)
+  }, [onClose])
+
+  // Esc closes through the same path, so it animates out like the X does.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [close])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5">
+      <div
+        onClick={close}
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}`}
+      />
+      <div className={`relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5 transition-all duration-200 motion-reduce:transition-none ${open ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar name={s.full_name} avatarUrl={s.avatar_url} sizeClass="w-10 h-10 text-sm" />
@@ -107,7 +134,7 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
               <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="text-fg/40 hover:text-fg/70 text-xl leading-none shrink-0">
+          <button type="button" onClick={close} className="text-fg/40 hover:text-fg/70 text-xl leading-none shrink-0">
             ×
           </button>
         </div>

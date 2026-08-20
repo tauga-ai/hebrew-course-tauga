@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
 import { computeRewards, computeGradedRewards, computeStreak } from '@/lib/naale/rewards'
+import { selectAll } from '@/lib/naale/paginate'
 
 /**
  * Ends a session and decides whether it counts as "completed" — reaching the
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
   // route: placement is calibration, not practice. `completed` is already
   // always false for placement (excluding the +50 bonus), but the
   // per-correct-answer XP needs this explicit kind check too.
-  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: allSessions }] = await Promise.all([
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, allSessions] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean }[] })
       // Review answers (ticket 15) excluded too — same working decision as
@@ -80,13 +81,16 @@ export async function POST(req: NextRequest) {
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { score: number }[] })
       : db.from('naale_open_answers').select('score').eq('session_id', s.id).eq('is_review', false),
-    db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id),
+    // Every session this account has ever had, for the weekly streak — one a
+    // day crosses the row cap inside three years.
+    selectAll<{ completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id).range(from, to)),
   ])
 
   const { xp: mcqXp, coins: mcqCoins } = computeRewards(sessionAnswers ?? [], [{ completed }])
   const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(sessionOpenAnswers ?? [])
   const streak = computeStreak(
-    (allSessions ?? []).filter(x => x.completed).map(x => new Date(x.started_at))
+    allSessions.filter(x => x.completed).map(x => new Date(x.started_at))
   )
   // Same "4-5 counts as correct" read as everywhere else a graded score needs
   // a pass/fail comparison (my-stats, placementLevel, applyGradedAnswer).

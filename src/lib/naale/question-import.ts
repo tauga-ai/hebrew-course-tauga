@@ -8,6 +8,7 @@
  */
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { selectAll } from './paginate'
 
 // Every registered sheet shares this layout: a title row, a blank row, THEN
 // the header row — not row 1 like a plain spreadsheet. Confirmed against the
@@ -470,12 +471,12 @@ export async function runQuestionImport(
   // not-yet-imported topics aren't flagged as orphans of a workbook that
   // never covered them. Read even on a dry run so the preview shows the same
   // information a real run's console output would.
-  const { data: existing } = await db
-    .from('naale_questions')
-    .select('topic, question_id, prompt')
-    .in('topic', expectedSheets)
+  // Reads the whole bank, which is already past 1000 rows — an unpaginated
+  // read here would report phantom orphans for every row max_rows trimmed.
+  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_questions', (from, to) =>
+    db.from('naale_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
   const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
-  const orphans = (existing ?? [])
+  const orphans = existing
     .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
     .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 

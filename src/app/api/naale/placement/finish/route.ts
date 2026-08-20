@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession } from '@/lib/naale/session'
 import { placementLevel } from '@/lib/naale/leveling'
+import { loadAllTopics } from '@/lib/naale/topics'
 
 /**
  * Turns a completed placement into starting levels: for each in-scope topic,
@@ -43,14 +44,15 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
 
-  const [{ data: placementAnswers }, { data: openPlacementAnswers }, { data: bankTopics }, { data: openBankTopics }] = await Promise.all([
+  const [{ data: placementAnswers }, { data: openPlacementAnswers }, allTopics] = await Promise.all([
     db.from('naale_answers').select('topic, is_correct').eq('session_id', session_id),
     db.from('naale_open_answers').select('topic, score').eq('session_id', session_id),
     // Every topic in the bank gets a starting level — including any the student
     // somehow didn't see, which default to the easy level rather than being left
-    // absent (an absent row is what marks a student as unplaced).
-    db.from('naale_questions').select('topic'),
-    db.from('naale_open_questions').select('topic'),
+    // absent (an absent row is what marks a student as unplaced). Shared,
+    // paginated loader: a topic silently dropped here would leave a student
+    // permanently unplaced in it.
+    loadAllTopics(db),
   ])
 
   const correctByTopic = new Map<string, boolean>()
@@ -58,8 +60,6 @@ export async function POST(req: NextRequest) {
   // A score of 4-5 counts as "correct" for placementLevel() purposes, same
   // threshold used everywhere else a graded score needs a pass/fail read.
   for (const a of openPlacementAnswers ?? []) correctByTopic.set(a.topic, a.score >= 4)
-
-  const allTopics = [...new Set([...(bankTopics ?? []).map(r => r.topic), ...(openBankTopics ?? []).map(r => r.topic)])]
 
   const rows = allTopics.map(topic => ({
     student_id: session.student.id,

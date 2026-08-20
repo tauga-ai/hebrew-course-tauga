@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { buildTopicStats } from '@/lib/naale/stats'
-import { computeRewards, computeStreak, computeGradedRewards } from '@/lib/naale/rewards'
+import { buildStudentProgress } from '@/lib/naale/stats'
+import { loadAllTopics } from '@/lib/naale/topics'
+import { selectAll } from '@/lib/naale/paginate'
+import { computeStreak } from '@/lib/naale/rewards'
 
 /**
  * The authenticated Naale student's own progress — per-topic level and exercise
@@ -21,61 +23,42 @@ export async function GET() {
 
   const db = createServiceClient()
 
-  const [{ data: bankTopics }, { data: openBankTopics }, { data: levels }, { data: answers }, { data: openAnswers }, { data: sessions }] = await Promise.all([
-    db.from('naale_questions').select('topic'),
-    db.from('naale_open_questions').select('topic'),
-    db.from('naale_topic_levels').select('topic, level').eq('student_id', session.student.id),
-    db.from('naale_answers').select('topic, is_correct, session_id, is_review').eq('student_id', session.student.id),
-    db.from('naale_open_answers').select('topic, score, session_id, is_review').eq('student_id', session.student.id),
-    db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', session.student.id),
+  // One student's own rows, but "one student" is not a small number over a
+  // course: ~25 answers a session, several sessions a week, passes 1000 well
+  // inside a school year. Levels stay at one row per topic, so they don't.
+  const studentId = session.student.id
+  const [allTopics, { data: levels }, answers, openAnswers, sessions] = await Promise.all([
+    loadAllTopics(db),
+    db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
+    selectAll<{ topic: string; is_correct: boolean; session_id: string; is_review: boolean }>('naale_answers', (from, to) =>
+      db.from('naale_answers').select('topic, is_correct, session_id, is_review').eq('student_id', studentId).range(from, to)),
+    selectAll<{ topic: string; score: number; session_id: string; is_review: boolean }>('naale_open_answers', (from, to) =>
+      db.from('naale_open_answers').select('topic, score, session_id, is_review').eq('student_id', studentId).range(from, to)),
+    selectAll<{ id: string; kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', studentId).range(from, to)),
   ])
 
-  // Review answers (ticket 15) are excluded from every count below — a
-  // re-answer of an already-answered question would otherwise look like
-  // double-counted progress. Working decision, naale-track-first-build
-  // /CONTEXT.md §9, not yet Yuval-confirmed.
-  const nonReviewAnswers = (answers ?? []).filter(a => !a.is_review)
-  const nonReviewOpenAnswers = (openAnswers ?? []).filter(a => !a.is_review)
+  // Every rule behind these numbers — review answers excluded, a graded 4-5
+  // counting as correct, placement earning no XP/coins — lives in
+  // buildStudentProgress() rather than here, so this view and staff's view of
+  // the same student cannot drift apart. See that function for why it's shared
+  // rather than copied.
+  const progress = buildStudentProgress({
+    allTopics,
+    levels: levels ?? [],
+    answers,
+    openAnswers,
+    sessions,
+  })
 
-  const allTopics = [...new Set([...(bankTopics ?? []).map(r => r.topic), ...(openBankTopics ?? []).map(r => r.topic)])].sort()
-  // buildTopicStats() takes {topic, is_correct} — a graded score of 4-5 maps
-  // to "correct" for this progress view, matching the leveling/coin threshold
-  // used everywhere else a graded score needs a pass/fail read.
-  const topics = buildTopicStats(allTopics, levels ?? [], [
-    ...nonReviewAnswers,
-    ...nonReviewOpenAnswers.map(a => ({ topic: a.topic, is_correct: a.score >= 4 })),
-  ])
-
-  // XP/coins/streak: ticket 14's motivational layer, derived at read time from
-  // the rows above — see src/lib/naale/rewards.ts for why this is derived
-  // rather than a stored, incrementable counter.
-  //
-  // Placement answers are excluded from XP/coins: placement is calibration,
-  // not practice, same reasoning ticket 11 already used to exclude it from
-  // the leveling streak and the session-completion bonus (naale_sessions
-  // .completed is always false for placement, which already excludes it
-  // from the bonus/streak below — this filter is what additionally excludes
-  // it from the per-correct-answer XP, which isn't gated by `completed`).
-  const practiceSessionIds = new Set((sessions ?? []).filter(s => s.kind === 'practice').map(s => s.id))
-  const practiceAnswers = nonReviewAnswers.filter(a => practiceSessionIds.has(a.session_id))
-  const practiceOpenAnswers = nonReviewOpenAnswers.filter(a => practiceSessionIds.has(a.session_id))
-
-  const { xp: mcqXp, coins: mcqCoins } = computeRewards(practiceAnswers, sessions ?? [])
-  const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(practiceOpenAnswers)
+  // The one number staff's view doesn't show, so it stays out of the shared
+  // builder.
   const streak = computeStreak(
-    (sessions ?? []).filter(s => s.completed).map(s => new Date(s.started_at))
+    sessions.filter(s => s.completed).map(s => new Date(s.started_at))
   )
 
   return NextResponse.json({
-    topics,
-    totals: {
-      answered: nonReviewAnswers.length + nonReviewOpenAnswers.length,
-      correct: nonReviewAnswers.filter(a => a.is_correct).length + nonReviewOpenAnswers.filter(a => a.score >= 4).length,
-      sessions: (sessions ?? []).length,
-      completed_sessions: (sessions ?? []).filter(s => s.completed).length,
-      xp: mcqXp + gradedXp,
-      coins: mcqCoins + gradedCoins,
-      streak,
-    },
+    topics: progress.topics,
+    totals: { ...progress.totals, streak },
   })
 }
