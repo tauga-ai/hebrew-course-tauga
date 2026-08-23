@@ -1,5 +1,6 @@
 import 'server-only'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { isRetryableGeminiError } from './gemini-retry'
 
 export interface OpenGradingBuilder {
   /** Builds this topic's fixed system prompt (Noam's text, reproduced
@@ -162,6 +163,14 @@ export function publicFields(topic: string, fields: Record<string, string>): Rec
 
 export interface GradedResult { score: number; feedback: string }
 
+const REQUEST_TIMEOUT_MS = 15_000
+const MAX_ATTEMPTS = 2
+const RETRY_DELAY_MS = 500
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /** Throws on a missing registration, a provider error, or a malformed reply
  *  — callers (the answer routes) are responsible for catching this and
  *  falling back to a generic message, same pattern as sentence/feedback's
@@ -171,11 +180,28 @@ export async function gradeOpenAnswer(topic: string, prompt: string, fields: Rec
   if (!builder) throw new Error(`No grading prompt registered for topic: ${topic}`)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.2 } })
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: builder.buildPrompt(prompt, fields, userText) }] }],
-    generationConfig: { responseMimeType: 'application/json' },
-  })
+  const model = genAI.getGenerativeModel(
+    { model: 'gemini-2.5-flash', generationConfig: { temperature: 0.2 } },
+    { timeout: REQUEST_TIMEOUT_MS }
+  )
+
+  let result: Awaited<ReturnType<typeof model.generateContent>> | undefined
+  for (let attempt = 1; !result; attempt++) {
+    try {
+      result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: builder.buildPrompt(prompt, fields, userText) }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      })
+    } catch (err) {
+      const retryable = isRetryableGeminiError(err)
+      if (attempt >= MAX_ATTEMPTS || !retryable) {
+        console.error(`[open-grading] grading call failed for topic "${topic}" (attempt ${attempt}/${MAX_ATTEMPTS}, ${retryable ? 'retries exhausted' : 'non-retryable'}):`, err)
+        throw err
+      }
+      console.error(`[open-grading] transient error for topic "${topic}" (attempt ${attempt}/${MAX_ATTEMPTS}), retrying:`, err)
+      await sleep(RETRY_DELAY_MS)
+    }
+  }
 
   // Per the content-update spec docs' §7 ("if JSON parsing fails, log the raw
   // response"): the raw text is captured up front so it's logged either way a
