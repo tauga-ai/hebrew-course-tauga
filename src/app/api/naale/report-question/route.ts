@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { GRADED_CORRECT_SCORE } from '@/lib/naale/stats'
@@ -130,12 +130,18 @@ export async function POST(req: NextRequest) {
 
   // After the insert, deliberately: the report is safe in the table before
   // anyone is told about it, so a broken notification can never cost a report.
-  notifyQuestionReport({
-    reportId: inserted.id,
-    questionId: question.question_id,
-    topic: question.topic,
-    note: trimmedNote,
-  })
+  // Scheduled via after() rather than awaited (would slow the student's
+  // response) or fired bare (a serverless function can freeze before an
+  // un-awaited promise settles) — after() keeps the function alive until the
+  // send finishes without blocking the response.
+  after(() =>
+    notifyQuestionReport({
+      reportId: inserted.id,
+      questionId: question.question_id,
+      topic: question.topic,
+      note: trimmedNote,
+    })
+  )
 
   return NextResponse.json({ ok: true, report_id: inserted.id })
 }
