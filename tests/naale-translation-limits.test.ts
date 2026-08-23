@@ -18,7 +18,7 @@ afterEach(() => { delete process.env[TRANSLATION_CAP_ENV] })
 test('defaults to the documented cap when unset', () => {
   delete process.env[TRANSLATION_CAP_ENV]
   assert.equal(sessionTranslationCap(), DEFAULT_SESSION_TRANSLATION_CAP)
-  assert.equal(DEFAULT_SESSION_TRANSLATION_CAP, 150)
+  assert.equal(DEFAULT_SESSION_TRANSLATION_CAP, 9999)
 })
 
 test('an env override wins, so the number is tunable without a deploy of new code', () => {

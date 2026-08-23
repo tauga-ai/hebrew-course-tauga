@@ -13,7 +13,7 @@
  * level 5) — when that lands it becomes an argument to sessionTranslationCap()
  * rather than a change everywhere the cap is read.
  */
-export const DEFAULT_SESSION_TRANSLATION_CAP = 150
+export const DEFAULT_SESSION_TRANSLATION_CAP = 9999
 
 /** Env var name, so the number can be tuned without a code change. */
 export const TRANSLATION_CAP_ENV = 'NAALE_TRANSLATION_CAP'
