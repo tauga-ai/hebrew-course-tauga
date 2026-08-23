@@ -4,6 +4,7 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isExpired } from '@/lib/naale/session'
 import { applyGradedAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { gradeOpenAnswer } from '@/lib/naale/open-grading'
+import { wordLimitError } from '@/lib/naale/open-exercise-display'
 import { consecutiveGoodScoreStreak, STREAK_MILESTONES } from '@/lib/naale/rewards'
 import { checkAiRateLimit } from '@/lib/ai-rate-limit'
 import { getSessionReviewQueue } from '@/lib/naale/review-queue'
@@ -51,6 +52,12 @@ export async function POST(req: NextRequest) {
   ])
 
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
+
+  const limitError = wordLimitError(question.topic, user_text)
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 400 })
+  }
+
   if (answeredThisSession) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }

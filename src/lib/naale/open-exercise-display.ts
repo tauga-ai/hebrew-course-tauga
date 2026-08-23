@@ -94,3 +94,18 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
     },
   },
 }
+
+/** Same rule the answer textarea counts by — the one place this logic lives, so client and
+ *  server can never disagree about what "over the limit" means. */
+export function wordCount(text: string): number {
+  return text.trim() === '' ? 0 : text.trim().split(/\s+/).length
+}
+
+/** Null if the answer is within its topic's limit, or if the topic isn't registered here — a
+ *  display-registry gap must not be able to block grading. Otherwise a Hebrew message naming
+ *  the limit, ready to return to the client as-is. */
+export function wordLimitError(topic: string, text: string): string | null {
+  const limit = OPEN_EXERCISE_DISPLAY[topic]?.wordLimit
+  if (limit === undefined) return null
+  return wordCount(text) > limit ? `התשובה ארוכה מדי (מקסימום ${limit} מילים)` : null
+}
