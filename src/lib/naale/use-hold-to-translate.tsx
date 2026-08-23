@@ -192,7 +192,7 @@ export function useHoldToTranslate(sessionId: string | null) {
     // can overlap it near the top edge.
     <div
       role="status"
-      className={`fixed top-6 end-6 z-40 w-[min(20rem,calc(100vw-3rem))] rounded-xl border border-accent-naale/30 bg-card px-4 py-3 shadow-lg transition-all duration-300 ${
+      className={`fixed top-6 end-6 z-40 w-[min(20rem,calc(100vw-3rem))] rounded-xl border border-accent-naale/30 bg-surface px-4 py-3 shadow-lg transition-all duration-300 ${
         tipPhase === 'visible' ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
       }`}
     >
