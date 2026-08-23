@@ -207,18 +207,17 @@ export function useHoldToTranslate(sessionId: string | null) {
         ✕
       </button>
       {/* Both languages, stacked: there is no Russian UI locale to switch on,
-          and these are beginner Hebrew learners who read Russian.
-          NOTE: this wording is Noam's verbatim copy, written before the
-          trigger changed from click to hover — "click any word" now describes
-          the wrong gesture, and on an MCQ option a click submits the answer.
-          Flagged with him; swap both lines here if he confirms new wording. */}
+          and these are beginner Hebrew learners who read Russian. Copy
+          confirmed by Noam 2026-08-23, describing the hover trigger for
+          mouse. Does NOT yet mention touch/press-and-hold — see task.md
+          Phase 2 for that open question. */}
       <div className="flex items-start gap-2.5 pe-5">
         {/* Decorative: both lines already open with "tip"/"подсказка", so the
             bulb is aria-hidden rather than read out twice. */}
         <span aria-hidden="true" className="shrink-0 text-lg leading-6">💡</span>
         <div>
-          <p className="text-sm text-fg/80">{t('טיפ: לחצו על כל מילה כדי לראות את התרגום שלה.')}</p>
-          <p className="text-sm text-fg/60" lang="ru">Подсказка: нажмите на любое слово, чтобы увидеть его перевод.</p>
+          <p className="text-sm text-fg/80">{t('טיפ: העבירו את העכבר מעל מילה כדי לראות את התרגום שלה.')}</p>
+          <p className="text-sm text-fg/60" lang="ru">Подсказка: наведите курсор на любое слово, чтобы увидеть его перевод.</p>
         </div>
       </div>
     </div>
