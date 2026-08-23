@@ -100,8 +100,8 @@ export default function NaaleStaffReportsPage() {
               key={report.id}
               className={`rounded-2xl border p-4 ${
                 report.status === 'open'
-                  ? 'border-card-border bg-card'
-                  : 'border-card-border/60 bg-card/60 opacity-70'
+                  ? 'border-card-border bg-surface'
+                  : 'border-card-border/60 bg-surface/60 opacity-70'
               }`}
             >
               <div className="flex flex-wrap items-center gap-2 mb-2">
