@@ -31,6 +31,50 @@ export interface OpenExerciseDisplay {
   }
 }
 
+/**
+ * Story Continuation's 40 distinct `mandatory_word` connectors split into the
+ * grammatical families a single fixed clause can't all serve — a plain past
+ * declarative reads fine after a simple adverb but is a tense mismatch after
+ * a future-time word and doesn't fit the mood after a conditional. Found and
+ * verified empirically 2026-08-23 (item 14/L1); an unrecognized future
+ * connector falls back to 'simple' as the safest default.
+ */
+type ConnectorCategory = 'simple' | 'contrastive' | 'causal' | 'subordinate' | 'future' | 'conditional'
+
+const CONNECTOR_CATEGORY: Record<string, ConnectorCategory> = {
+  'לפתע': 'simple', 'פתאום': 'simple', 'לכן': 'simple', 'בעקבות זאת': 'simple',
+  'כתוצאה מכך': 'simple', 'אז': 'simple', 'לבסוף': 'simple', 'אחר כך': 'simple',
+  'בינתיים': 'simple', 'כמו כן': 'simple', 'למרבה המזל': 'simple', 'לרוע המזל': 'simple',
+  'וגם': 'simple', 'מיד לאחר מכן': 'simple',
+  'אבל': 'contrastive', 'אך': 'contrastive', 'למרות': 'contrastive', 'למרות זאת': 'contrastive',
+  'על אף ש': 'contrastive', 'אף על פי כן': 'contrastive', 'לעומת זאת': 'contrastive', 'בניגוד לכך': 'contrastive',
+  'כי': 'causal', 'בזכות': 'causal',
+  'אחרי ש': 'subordinate', 'לפני ש': 'subordinate', 'עד ש': 'subordinate', 'כדי ש': 'subordinate',
+  'עד כדי כך ש': 'subordinate', 'בגלל ש': 'subordinate', 'כדי ל': 'subordinate',
+  'מחר': 'future', 'בשנה הבאה': 'future', 'בקיץ הבא': 'future', 'בשבוע הבא': 'future',
+  'בחודש הבא': 'future', 'בעתיד': 'future',
+  'אילו': 'conditional', 'לו': 'conditional', 'אילולא': 'conditional', 'כאילו': 'conditional',
+}
+
+// Generic on purpose, same trick the original 'simple' clause already relied
+// on: no character names and no story-specific facts, just a vague pivot any
+// opening can plausibly lead to. The first attempt at these (contrastive/
+// causal/subordinate/conditional) named a fixed character ("דן") and got
+// docked for referencing the wrong protagonist on every real story — fixed
+// by staying as pronoun-only as the original.
+const CONTINUATION_CLAUSE: Record<ConnectorCategory, string> = {
+  simple: 'הכול השתנה לגמרי, והם הבינו שזה רק ההתחלה.',
+  contrastive: 'בסוף הכול הסתדר בצורה שאף אחד לא ציפה לה.',
+  causal: 'כולם התאחדו כדי לעזור אחד לשני.',
+  subordinate: 'המצב השתנה לגמרי, וכולם ידעו מה עליהם לעשות.',
+  future: 'הכול ישתנה, וכולם ידעו את האמת.',
+  conditional: 'הכול היה משתנה, כולם היו יודעים את האמת.',
+}
+
+function goodContinuationClause(mandatoryWord: string): string {
+  return CONTINUATION_CLAUSE[CONNECTOR_CATEGORY[mandatoryWord] ?? 'simple']
+}
+
 /** Populated by each content ticket — only סיפור בהמשכים registered here. */
 export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
   'סיפור בהמשכים': {
@@ -42,11 +86,18 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
     highlightField: fields => ({ label: 'מילת חובה', text: fields.mandatory_word }),
     emptyErrorMessage: 'אנא כתוב את המשך הסיפור.',
     devSampleAnswers: {
-      // mandatory_word here is always a discourse connector (לכן, אבל,
-      // לפתע, אחרי ש...), not a content word — so a fixed clause after it
-      // reads as a plausible (if generic) continuation for almost any
-      // opening, regardless of which connector this specific question uses.
-      good: fields => `${fields.mandatory_word} הכול השתנה לגמרי, והם הבינו שזה רק ההתחלה.`,
+      // mandatory_word here is always a discourse connector (לכן, אבל, לפתע,
+      // אחרי ש...) drawn from 40 distinct values across the bank, not a
+      // content word — so a single fixed clause can't follow all of them.
+      // They fall into grammatically distinct families: a plain past
+      // declarative clause reads fine after a simple adverb (לפתע, לכן) but
+      // is an outright tense mismatch after a future-time word (מחר, בעתיד)
+      // and doesn't fit the mood after a conditional (אילו, לו). Confirmed
+      // empirically 2026-08-23 (item 14/L1): the single-clause version
+      // scored ~50% on a live sample, including two genuine grammar/coherence
+      // failures. goodContinuationClause() below picks a clause built for
+      // that connector's actual grammatical family instead.
+      good: fields => `${fields.mandatory_word} ${goodContinuationClause(fields.mandatory_word)}`,
       // Unrelated to any story opening, and never uses the required word —
       // should reliably score 1-2 regardless of which question this fills.
       weak: () => 'חתול. שולחן. אתמול היה.',
