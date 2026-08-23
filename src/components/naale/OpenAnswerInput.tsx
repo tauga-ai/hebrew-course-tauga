@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { t } from '@/lib/dev-i18n'
+import { wordCount } from '@/lib/naale/open-exercise-display'
 
 interface OpenAnswerInputProps {
   value: string
@@ -27,8 +28,8 @@ const LOADING_MESSAGES = [
  * it.
  */
 export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading, disabled }: OpenAnswerInputProps) {
-  const wordCount = value.trim() === '' ? 0 : value.trim().split(/\s+/).length
-  const overLimit = wordCount > wordLimit
+  const count = wordCount(value)
+  const overLimit = count > wordLimit
   const [messageIndex, setMessageIndex] = useState(0)
   const [wasLoading, setWasLoading] = useState(loading)
 
@@ -58,7 +59,7 @@ export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading,
         className="w-full rounded-xl border border-card-border bg-surface p-3 text-fg resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 disabled:opacity-70"
       />
       <div className={`text-xs mt-1 text-left ${overLimit ? 'text-red-500' : 'text-fg/50'}`}>
-        {wordCount}/{wordLimit}
+        {count}/{wordLimit}
       </div>
       {/* Empty text does NOT disable this button — the caller's onSubmit is
           responsible for intercepting an empty value and showing its own

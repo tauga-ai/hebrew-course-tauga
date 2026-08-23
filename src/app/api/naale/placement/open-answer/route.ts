@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession } from '@/lib/naale/session'
 import { gradeOpenAnswer } from '@/lib/naale/open-grading'
+import { wordLimitError } from '@/lib/naale/open-exercise-display'
 import { checkAiRateLimit } from '@/lib/ai-rate-limit'
 
 /**
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
     .eq('id', question_id)
     .maybeSingle()
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
+
+  const limitError = wordLimitError(question.topic, user_text)
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 400 })
+  }
 
   // Same duplicate-submit guard as session/open-answer/route.ts — a fast
   // double-click here previously fell all the way through to the unique
