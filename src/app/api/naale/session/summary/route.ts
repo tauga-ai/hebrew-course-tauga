@@ -48,16 +48,6 @@ export async function POST(req: NextRequest) {
   if (!owned.ok) return NextResponse.json({ error: 'תרגול לא נמצא' }, { status: 404 })
   const s = owned.session
 
-  // Already generated: return the stored text. Regenerating at temperature
-  // 0.4 would word the same session differently, so a reload would visibly
-  // rewrite what the student was already told.
-  if (s.summary_text) {
-    return NextResponse.json({
-      summary_text: s.summary_text,
-      ui_icon: s.summary_icon ?? SESSION_SUMMARY_FALLBACK_ICON,
-    })
-  }
-
   // Placement is calibration, and its screen promises "אין ציון ואין לחץ זמן"
   // — a note pointing out weak topics contradicts that directly. A session
   // still running has nothing to summarise yet. Placement also has its own
@@ -73,6 +63,29 @@ export async function POST(req: NextRequest) {
   }
 
   const db = createServiceClient()
+
+  // Read the stored note HERE rather than widening loadOwnedSession()'s
+  // select. That helper backs ten Naale routes (placement/next, answer,
+  // translate, status, end, ...), so naming a new column in it makes every
+  // one of them fail until the migration has run — a deploy-order trap that
+  // took the whole placement flow down in local testing before this was
+  // split out. Confining the new columns to their one real consumer means
+  // the migration and the code can land in either order.
+  const { data: stored } = await db
+    .from('naale_sessions')
+    .select('summary_text, summary_icon')
+    .eq('id', s.id)
+    .maybeSingle<{ summary_text: string | null; summary_icon: string | null }>()
+
+  // Already generated: return the stored text. Regenerating at temperature
+  // 0.4 would word the same session differently, so a reload would visibly
+  // rewrite what the student was already told.
+  if (stored?.summary_text) {
+    return NextResponse.json({
+      summary_text: stored.summary_text,
+      ui_icon: stored.summary_icon ?? SESSION_SUMMARY_FALLBACK_ICON,
+    })
+  }
   const [{ data: answers }, { data: openAnswers }] = await Promise.all([
     db.from('naale_answers')
       .select('is_correct, topic, level_at_answer')
