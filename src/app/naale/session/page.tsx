@@ -19,6 +19,7 @@ import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 import { canGoBack, goBack, goForward, isResolved } from '@/lib/naale/session-history'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
+import type { NaaleTopicStat } from '@/lib/naale/stats'
 
 interface ServedQuestion {
   id: string
@@ -78,6 +79,7 @@ interface EndSummary {
   xp_earned: number
   coins_earned: number
   streak: number
+  topics: NaaleTopicStat[]
 }
 
 type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
@@ -115,6 +117,17 @@ function qaLog(label: string, data?: unknown) {
   if (!debugMode) return
   if (data === undefined) console.log(`[naale-qa] ${label}`)
   else console.log(`[naale-qa] ${label}`, data)
+}
+
+// Same tiers as score-color.ts's default palette (70/50), as a background
+// fill rather than text — the session-end topic rows color-code the
+// accuracy bar itself, which the general stats page's always-teal bar
+// doesn't do.
+function accuracyBarColor(pct: number | null) {
+  if (pct === null) return 'bg-fg/15'
+  if (pct >= 70) return 'bg-green-600 dark:bg-green-400'
+  if (pct >= 50) return 'bg-yellow-600 dark:bg-yellow-400'
+  return 'bg-red-500 dark:bg-red-400'
 }
 
 function SessionRunner() {
@@ -169,6 +182,12 @@ function SessionRunner() {
 
   const [doneReason, setDoneReason] = useState<DoneReason | null>(null)
   const [summary, setSummary] = useState<EndSummary | null>(null)
+  // The done screen is a 2-step recap when there's a per-topic breakdown to
+  // show (step 0: the celebratory/rewards moment — and eventually the AI
+  // feedback note, item 9, not built yet; step 1: "By topic" at full size,
+  // rather than the two competing for space on one long page). Collapses to
+  // a single step with no dots/Next when there's nothing to put on step 1.
+  const [resultStep, setResultStep] = useState<0 | 1>(0)
   const [answeredCount, setAnsweredCount] = useState(0)
   const [correctCount, setCorrectCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -648,59 +667,153 @@ function SessionRunner() {
     content = (
       <>
         <PageHeader backHref="/naale" title={t('תרגול')} />
-        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 text-center">
-          {doneReason === 'no_topics' ? (
-            <>
-              <div className="text-4xl mb-2">⚠️</div>
-              <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-4">
-                {t('אין תרגילים זמינים כרגע. פנה/י למדריך/ה.')}
-              </h2>
-            </>
-          ) : (
-            <>
-              <div className="text-4xl mb-2">{doneReason === 'bank_exhausted' ? '🎉' : '⏰'}</div>
-              <h2 className="text-lg font-bold text-fg mb-1">
-                {doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום') : t('הזמן נגמר!')}
-              </h2>
-              <p className="text-fg/70 mb-2">
-                {t('ענית על')} <LtrIsolate>{shownAnswered}</LtrIsolate> {t('תרגילים')}, <LtrIsolate>{shownCorrect}</LtrIsolate> {t('נכונות')}
-              </p>
-              {/* No total/percentage — the session ends on a clock, not on
-                  finishing a fixed set, so there's no denominator to show. */}
-              {summary && (
-                <p className={`text-sm mb-4 ${summary.completed ? 'text-green-700 dark:text-green-400' : 'text-fg/60'}`}>
-                  {summary.completed ? (
-                    t('התרגול נחשב כהושלם')
-                  ) : !summary.reached_timer && summary.answered_count < summary.min_answers ? (
-                    `${t('התרגול לא נחשב כהושלם - לא הגעתם לסוף הזמן ולפחות')} ${summary.min_answers} ${t('תשובות')}`
-                  ) : !summary.reached_timer ? (
-                    t('התרגול לא נחשב כהושלם - הסבב הסתיים רגע לפני תום הזמן, נסו שוב')
-                  ) : (
-                    `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`
+        {doneReason === 'no_topics' ? (
+          <div className="text-center py-16">
+            <div className="text-4xl mb-2">⚠️</div>
+            <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-4">
+              {t('אין תרגילים זמינים כרגע. פנה/י למדריך/ה.')}
+            </h2>
+            <button
+              onClick={() => router.push('/naale')}
+              className="w-full max-w-xs mx-auto block py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+            >
+              {t('לדף הבית')}
+            </button>
+          </div>
+        ) : (
+          <div className="max-w-xl mx-auto py-4">
+            {/* Two-step recap: step 0 is the celebratory/rewards moment (and
+                eventually the AI feedback note, item 9 — not built yet, this
+                is only the pager mechanic), step 1 is "By topic" at full
+                size. Collapses to one step with no dots when there's no
+                per-topic breakdown to show. */}
+            {summary && summary.topics.length > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-6">
+                {[0, 1].map(i => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${i === resultStep ? 'w-5 bg-primary-600' : 'w-1.5 bg-fg/20'}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {resultStep === 0 ? (
+              <>
+                <div className="text-center mb-8">
+                  <div className="text-6xl mb-3">{doneReason === 'bank_exhausted' ? '🎉' : '⏰'}</div>
+                  <h2 className="text-2xl font-extrabold text-fg mb-2">
+                    {doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום') : t('הזמן נגמר!')}
+                  </h2>
+                  {/* No total/percentage — the session ends on a clock, not on
+                      finishing a fixed set, so there's no denominator to show. */}
+                  <p className="text-fg/70">
+                    {t('ענית על')} <LtrIsolate>{shownAnswered}</LtrIsolate> {t('תרגילים')}, <LtrIsolate>{shownCorrect}</LtrIsolate> {t('נכונות')}
+                  </p>
+                  {summary && (
+                    <p className={`text-sm mt-2 ${summary.completed ? 'text-green-700 dark:text-green-400' : 'text-fg/60'}`}>
+                      {summary.completed ? (
+                        t('התרגול נחשב כהושלם')
+                      ) : !summary.reached_timer && summary.answered_count < summary.min_answers ? (
+                        `${t('התרגול לא נחשב כהושלם - לא הגעתם לסוף הזמן ולפחות')} ${summary.min_answers} ${t('תשובות')}`
+                      ) : !summary.reached_timer ? (
+                        t('התרגול לא נחשב כהושלם - הסבב הסתיים רגע לפני תום הזמן, נסו שוב')
+                      ) : (
+                        `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`
+                      )}
+                    </p>
                   )}
-                </p>
-              )}
-              {summary && (
-                <div className="flex items-center justify-center gap-4 text-sm text-fg/70 mb-4">
-                  <span>⭐ <LtrIsolate>{summary.xp_earned}</LtrIsolate> XP</span>
-                  <span>🪙 <LtrIsolate>{summary.coins_earned}</LtrIsolate></span>
-                  <span>🔥 <LtrIsolate>{summary.streak}</LtrIsolate> {t('שבועות ברצף')}</span>
+                  {summary && summary.completed && summary.streak === 0 && (
+                    <p className="text-xs text-fg/50 mt-2">
+                      {t('השלימו תרגול נוסף השבוע כדי להתחיל רצף')}
+                    </p>
+                  )}
                 </div>
-              )}
-              {summary && summary.completed && summary.streak === 0 && (
-                <p className="text-xs text-fg/50 mb-2">
-                  {t('השלימו תרגול נוסף השבוע כדי להתחיל רצף')}
-                </p>
-              )}
-            </>
-          )}
-          <button
-            onClick={() => router.push('/naale')}
-            className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
-          >
-            {t('לדף הבית')}
-          </button>
-        </div>
+
+                {summary && (
+                  <div className="grid grid-cols-3 gap-3 mb-8">
+                    <div className="rounded-2xl bg-black/5 dark:bg-white/5 p-4 text-center">
+                      <div className="text-xl mb-1">⭐</div>
+                      <div className="text-2xl font-extrabold text-fg"><LtrIsolate>{summary.xp_earned}</LtrIsolate></div>
+                      {/* "XP earned" */}
+                      <div className="text-xs text-fg/60 mt-0.5">{t('נקודות XP')}</div>
+                    </div>
+                    <div className="rounded-2xl bg-black/5 dark:bg-white/5 p-4 text-center">
+                      <div className="text-xl mb-1">🪙</div>
+                      <div className="text-2xl font-extrabold text-fg"><LtrIsolate>{summary.coins_earned}</LtrIsolate></div>
+                      <div className="text-xs text-fg/60 mt-0.5">{t('מטבעות')}</div>
+                    </div>
+                    <div className="rounded-2xl bg-black/5 dark:bg-white/5 p-4 text-center">
+                      <div className="text-xl mb-1">🔥</div>
+                      <div className="text-2xl font-extrabold text-fg"><LtrIsolate>{summary.streak}</LtrIsolate></div>
+                      <div className="text-xs text-fg/60 mt-0.5">{t('שבועות ברצף')}</div>
+                    </div>
+                  </div>
+                )}
+
+                {summary && summary.topics.length > 0 ? (
+                  <button
+                    onClick={() => setResultStep(1)}
+                    className="w-full py-3.5 rounded-2xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+                  >
+                    {t('הבא')}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => router.push('/naale')}
+                    className="w-full py-3.5 rounded-2xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+                  >
+                    {t('לדף הבית')}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <h3 className="text-base font-bold text-fg mb-3">{t('לפי נושא')}</h3>
+                <div className="rounded-2xl bg-black/5 dark:bg-white/5 px-5 mb-6">
+                  {summary!.topics.map((topic, i) => (
+                    <div key={topic.topic} className={`py-4 ${i > 0 ? 'border-t border-card-border' : ''}`}>
+                      <div className="flex justify-between items-baseline gap-3 mb-2">
+                        <span className="font-bold text-fg flex-1 min-w-0 truncate">{topic.topic}</span>
+                        <span className="text-xs font-bold text-fg bg-surface border border-card-border rounded-full px-2.5 py-1 shrink-0">
+                          {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
+                        </span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-surface overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${accuracyBarColor(topic.accuracy_pct)}`}
+                          style={{ width: `${topic.accuracy_pct ?? 0}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1.5 text-sm">
+                        <span className={`font-bold ${scoreColor(topic.accuracy_pct)}`}>
+                          {topic.accuracy_pct === null ? '—' : `${Math.round(topic.accuracy_pct)}%`}
+                        </span>
+                        {/* "N correct" */}
+                        <span className="text-fg/50"><LtrIsolate>{topic.correct}</LtrIsolate>/<LtrIsolate>{topic.answered}</LtrIsolate> {t('נכונות')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setResultStep(0)}
+                    className="rounded-2xl border border-card-border px-5 py-3.5 font-semibold text-fg/70 hover:text-fg transition"
+                  >
+                    {t('חזרה')}
+                  </button>
+                  <button
+                    onClick={() => router.push('/naale')}
+                    className="flex-1 py-3.5 rounded-2xl bg-primary-600 text-white font-semibold hover:opacity-90 transition"
+                  >
+                    {t('לדף הבית')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </>
     )
   } else {
