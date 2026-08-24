@@ -1,13 +1,14 @@
 /**
  * Creates (or resets the password of) a fixed set of Naale-track test
- * accounts for local dev sign-in, via the dev-only email/password fallback
- * on /naale/login (gated behind NODE_ENV === 'development' — never
- * reachable in production).
+ * accounts, so local QA doesn't need real Gmail accounts or a live Google
+ * OAuth round-trip. See test-user.md for the credentials this produces —
+ * gitignored, never commit it.
  *
- * Real students only ever use Google OAuth (per ticket 3's roster-identity
- * decision); these exist purely so local QA doesn't need real Gmail
- * accounts or a live Google OAuth round-trip. See test-user.md for the
- * credentials this produces — gitignored, never commit it.
+ * These are TEST accounts specifically. To issue a password to a real roster
+ * member, use scripts/set-naale-password.ts instead — it checks roster
+ * membership first and won't invent rows. (The email/password form on
+ * /naale/login is production UI as of the naale-password-login ticket, so
+ * this script is no longer the only thing it serves.)
  *
  * Uses auth.admin.createUser({ email_confirm: true }) so no real inbox is
  * needed. Idempotent: an email that already has an auth user gets its
@@ -23,6 +24,7 @@
  *   npx tsx --env-file=.env.local scripts/create-naale-test-users.ts
  */
 import { createServiceClient } from '../src/lib/supabase/service'
+import { findAuthUserByEmail } from '../src/lib/naale/auth-admin'
 
 const PASSWORD = 'Password123!'
 
@@ -35,27 +37,13 @@ const TEST_USERS: { email: string; role: 'student' | 'staff' }[] = [
   { email: 'naale_staff3@test.com', role: 'staff' },
 ]
 
-async function findUserByEmail(db: ReturnType<typeof createServiceClient>, email: string) {
-  const target = email.toLowerCase()
-  let page = 1
-  const perPage = 200
-  while (true) {
-    const { data, error } = await db.auth.admin.listUsers({ page, perPage })
-    if (error) throw error
-    const found = data.users.find(u => u.email?.toLowerCase() === target)
-    if (found) return found
-    if (data.users.length < perPage) return null
-    page++
-  }
-}
-
 async function ensureUser(db: ReturnType<typeof createServiceClient>, email: string, role: 'student' | 'staff') {
   const { error: rosterError } = await db
     .from('naale_roster')
     .upsert({ email, role }, { onConflict: 'email' })
   if (rosterError) throw rosterError
 
-  const existing = await findUserByEmail(db, email)
+  const existing = await findAuthUserByEmail(db, email)
 
   if (existing) {
     const { error } = await db.auth.admin.updateUserById(existing.id, { password: PASSWORD })
