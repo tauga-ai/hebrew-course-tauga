@@ -8,15 +8,40 @@ export const SESSION_MINUTES = 30
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3
 
-/** Absorbs ordinary client/server clock drift at the exact deadline
- *  boundary. The session close-out is triggered by the STUDENT'S device
- *  clock reaching what it believes is the deadline; hasReachedTimer
- *  independently re-verifies against the SERVER's own clock. Without slack
- *  here, ordinary drift (observed in production: ~900ms) can flip a session
- *  that visibly ran its full clock into "not completed." Small enough to
- *  stay well below any genuinely-early finish — see the 60s-remaining case
- *  in tests/naale-session.test.ts, which stays unaffected. */
-const TIMER_GRACE_MS = 2000
+/** Absorbs the gap between when a session actually closes and when the
+ *  server thinks its deadline was. The close-out is triggered on the
+ *  STUDENT'S side; hasReachedTimer re-verifies against the SERVER's clock,
+ *  and without slack here a session that visibly ran its full timer flips
+ *  to "not completed."
+ *
+ *  Raised 2000 -> 30000 on 2026-08-24. The original 2s was sized against a
+ *  single observed ~900ms drift, but real sessions were measured closing
+ *  ~5.5s early — 2db627c0 at 5.702s (7 answers, 6 correct) and 0938c20d at
+ *  5.312s, both denied completion despite the student sitting through the
+ *  whole clock. That cost them the 50 XP completion bonus and blocked the
+ *  weekly streak entirely, which needs two COMPLETED sessions a week.
+ *
+ *  The ~5.5s cause is NOT yet understood, and this constant is not the real
+ *  fix — it makes the symptom harmless while that's investigated. Ruled out
+ *  by measurement, not assumption: clock skew (browser, dev server and
+ *  database all agreed within 60ms), the countdown firing early (secondsUntil
+ *  rounds up, so it cannot reach zero before the deadline passes), and both
+ *  server-side expiry checks (isExpired and /next, neither of which has any
+ *  slack, so both fire at or after the deadline). See
+ *  .claude/ai-docs/tickets/naale-session-close-timing/ for the open
+ *  investigation — if the cause is found and fixed, bring this back down.
+ *
+ *  Spec note: naale-process-flow.md item 23 requires the timer to have
+ *  elapsed AND >=3 answers, and that rule is unchanged. What this widens is
+ *  how accurately "elapsed" is measured. It is a trade, not a free win — at
+ *  30s a student who genuinely quits at 29:35 also counts as complete. That
+ *  false positive is the cheaper error: the false negative it replaces was
+ *  taking real progress away from students who did everything asked. Same
+ *  class of unfairness as questions.md item 6, still open with the client.
+ *  Kept at 30s rather than higher so the 60s-remaining case in
+ *  tests/naale-session.test.ts stays untouched — that test is the guard
+ *  against this widening into "quitting early counts." */
+const TIMER_GRACE_MS = 30_000
 
 export function hasReachedTimer(deadlineAt: string, now = Date.now()): boolean {
   return new Date(deadlineAt).getTime() - TIMER_GRACE_MS <= now
