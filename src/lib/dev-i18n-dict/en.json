@@ -486,7 +486,6 @@
   "התרגול נחשב כהושלם": "This session counted as completed",
   "התרגול לא נחשב כהושלם - נדרשות לפחות": "This session did not count as completed — at least",
   "התרגול לא נחשב כהושלם - לא הגעתם לסוף הזמן ולפחות": "This session did not count as completed — you didn't reach the end of the time and at least",
-  "התרגול לא נחשב כהושלם - הסבב הסתיים רגע לפני תום הזמן, נסו שוב": "This session did not count as completed — it ended just before time was up, try again",
   "השלימו תרגול נוסף השבוע כדי להתחיל רצף": "Complete one more practice session this week to start a streak",
   "ענית על": "You answered",
   "שאלון קצר": "Quick questionnaire",
@@ -544,5 +543,7 @@
   "תלמיד/ה": "Student",
   "סמן כטופל": "Mark as handled",
   "פתח מחדש": "Reopen",
-  "מכינים לך סיכום אישי…": "Preparing your personal summary…"
+  "מכינים לך סיכום אישי…": "Preparing your personal summary…",
+  "הסבב הסתיים": "Round over",
+  "התרגול לא נחשב כהושלם - נסו שוב ותישארו עד סוף הזמן": "This session did not count as completed — try again and stay until time is up"
 }

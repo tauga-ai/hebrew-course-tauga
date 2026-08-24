@@ -511,13 +511,31 @@ function SessionRunner() {
   // rule treats a same-tick call to a state-setting function as "synchronous
   // within the effect" regardless of that function's own internal await —
   // a genuine callback (timer/promise) boundary is what it wants instead.
+  //
+  // `!submitting` is what stops a graded answer being thrown away. An
+  // AI-graded answer sits in flight for 5-15s while Gemini scores it, and
+  // closing the session inside that window means /session/end computes its
+  // summary before the answer row exists — so the answer is graded, written
+  // to the DB, and then silently missing from the exercise count, the XP
+  // total and the AI summary's view of which topics went well. Observed on
+  // session 2db627c0: the screen said 6 answered / 60 XP while a score-3
+  // answer worth 4 XP landed just after ended_at, and nothing told the
+  // student their answer had been dropped.
+  //
+  // This DELAYS the close rather than cancelling it — `submitting` is in the
+  // deps, so the moment the request resolves this effect re-runs with
+  // `remaining` still 0 and closes the session then. Safe against hanging
+  // only because the request it waits on can't hang: gradeOpenAnswer() caps
+  // each Gemini call at 15s and retries at most once, and both submit
+  // handlers clear `submitting` in a `finally`. If that timeout policy ever
+  // goes away, this guard needs a ceiling of its own.
   useEffect(() => {
-    if (remaining === 0 && doneReason === null) {
+    if (remaining === 0 && doneReason === null && !submitting) {
       qaLog('countdown reached zero — ending session')
       const id = setTimeout(() => finishSession('time_up'), 0)
       return () => clearTimeout(id)
     }
-  }, [remaining, doneReason, finishSession])
+  }, [remaining, doneReason, submitting, finishSession])
 
   // Takes the answer explicitly rather than reading `selected` internally —
   // selectAndSubmit() below calls this in the same tick it sets `selected`,
@@ -693,6 +711,23 @@ function SessionRunner() {
     const shownAnswered = summary?.answered_count ?? answeredCount
     const shownCorrect = summary?.correct_count ?? correctCount
 
+    // The headline used to read `doneReason` alone — which is the CLIENT's
+    // reason for stopping. Whether the clock genuinely ran out is the
+    // SERVER's call (summary.reached_timer), and when the two disagree the
+    // old copy announced "הזמן נגמר!" ("Time's up!") directly above a line
+    // explaining the session ended BEFORE time was up. Each statement was
+    // true on its own; together they read as the app arguing with itself.
+    //
+    // Requires a non-null `summary`, so the offline path (session/end failed
+    // and the recap falls back to locally-tracked counts) keeps today's
+    // wording rather than dropping to a blank headline.
+    const endedEarly = summary !== null && !summary.reached_timer
+    const doneEmoji = doneReason === 'bank_exhausted' ? '🎉' : endedEarly ? '🏁' : '⏰'
+    const doneHeadline =
+      doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום')
+      : endedEarly ? t('הסבב הסתיים')
+      : t('הזמן נגמר!')
+
     content = (
       <>
         <PageHeader backHref="/naale" title={t('תרגול')} />
@@ -730,10 +765,8 @@ function SessionRunner() {
             {resultStep === 0 ? (
               <>
                 <div className="text-center mb-8">
-                  <div className="text-6xl mb-3">{doneReason === 'bank_exhausted' ? '🎉' : '⏰'}</div>
-                  <h2 className="text-2xl font-extrabold text-fg mb-2">
-                    {doneReason === 'bank_exhausted' ? t('כל הכבוד! סיימת את כל התרגילים להיום') : t('הזמן נגמר!')}
-                  </h2>
+                  <div className="text-6xl mb-3">{doneEmoji}</div>
+                  <h2 className="text-2xl font-extrabold text-fg mb-2">{doneHeadline}</h2>
                   {/* No total/percentage — the session ends on a clock, not on
                       finishing a fixed set, so there's no denominator to show. */}
                   <p className="text-fg/70">
@@ -746,7 +779,11 @@ function SessionRunner() {
                       ) : !summary.reached_timer && summary.answered_count < summary.min_answers ? (
                         `${t('התרגול לא נחשב כהושלם - לא הגעתם לסוף הזמן ולפחות')} ${summary.min_answers} ${t('תשובות')}`
                       ) : !summary.reached_timer ? (
-                        t('התרגול לא נחשב כהושלם - הסבב הסתיים רגע לפני תום הזמן, נסו שוב')
+                        // Was "הסבב הסתיים רגע לפני תום הזמן, נסו שוב" — now
+                        // that the headline above says "הסבב הסתיים", that
+                        // opening clause just repeated it back. This says what
+                        // to do differently instead.
+                        t('התרגול לא נחשב כהושלם - נסו שוב ותישארו עד סוף הזמן')
                       ) : (
                         `${t('התרגול לא נחשב כהושלם - נדרשות לפחות')} ${summary.min_answers} ${t('תשובות')}`
                       )}
