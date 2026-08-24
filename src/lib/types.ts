@@ -103,6 +103,11 @@ export interface NaaleSession {
   completed: boolean
   translations_used: number
   translated_words: string[]
+  /** Noam's AI end-of-session note. Null until generated — and stays null on
+   *  a failed generation, so a retry can still produce a real one rather than
+   *  the hardcoded fallback being frozen into the row. */
+  summary_text: string | null
+  summary_icon: string | null
 }
 
 export interface NaaleAnswer {

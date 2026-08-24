@@ -17,6 +17,7 @@ import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-ques
 import { getSessionMinutesOverride, subscribeSessionMinutesOverride } from '@/lib/naale/dev-fast-session'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 import { canGoBack, goBack, goForward, isResolved } from '@/lib/naale/session-history'
+import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
@@ -143,6 +144,12 @@ function SessionRunner() {
   // "next question" click — a small optimization, not a correctness need
   // (it would just cheaply report done again).
   const [reviewExhausted, setReviewExhausted] = useState(false)
+  // Noam's AI end-of-session note. Deliberately SEPARATE state from
+  // `summary` — it arrives from its own route after the recap has already
+  // painted, so a slow or failed note can never delay or blank the numbers
+  // session/end already returned.
+  const [summaryNote, setSummaryNote] = useState<SessionSummary | null>(null)
+  const [noteLoading, setNoteLoading] = useState(false)
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
   const [selected, setSelected] = useState<string>('')
   const [result, setResult] = useState<AnswerResult | null>(null)
@@ -240,6 +247,28 @@ function SessionRunner() {
         const data = await res.json()
         setSummary(data)
         qaLog(`session ended (${reason})`, data)
+
+        // Deferred on purpose: blocking session/end on Gemini would put up to
+        // ~30s of spinner in front of XP the student has already earned. Not
+        // awaited — the note is an addition to a screen that is already
+        // complete without it, so nothing here can hold up the recap.
+        //
+        // Deliberately NOT gated on `kind !== 'placement'`. Placement runs on
+        // its own page and never reaches this recap, and finishSession's deps
+        // are [sessionId], so `kind` is a stale closure on the boot path that
+        // calls it in the same tick as setKind() (the race kindOverride
+        // exists to dodge) — the check would read null and fire anyway. The
+        // route refuses placement server-side.
+        setNoteLoading(true)
+        fetch('/api/naale/session/summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        })
+          .then(r => (r.ok ? r.json() : null))
+          .then(note => { if (note?.summary_text) setSummaryNote(note) })
+          .catch(() => {})
+          .finally(() => setNoteLoading(false))
       }
     } catch {
       // Best-effort — the summary falls back to the locally-tracked counts.
@@ -729,6 +758,27 @@ function SessionRunner() {
                     </p>
                   )}
                 </div>
+
+                {/* Noam's AI performance note. Rendered above the reward
+                    tiles so the personal sentence is the first thing read
+                    after the headline, not an afterthought under the
+                    numbers. min-h reserves the card's height up front so the
+                    tiles don't jump when the text arrives a moment later. */}
+                {(noteLoading || summaryNote) && (
+                  <div className="rounded-2xl bg-black/5 dark:bg-white/5 p-4 mb-6 min-h-[5.5rem] flex items-center gap-3">
+                    {summaryNote ? (
+                      <>
+                        <span className="text-2xl shrink-0">{summaryNote.ui_icon}</span>
+                        <p className="text-sm text-fg/80 leading-relaxed text-start">{summaryNote.summary_text}</p>
+                      </>
+                    ) : (
+                      // Same shimmer as OpenAnswerInput's AI wait rather than
+                      // a second loading idiom for the same "Gemini is
+                      // thinking" state.
+                      <p className="text-sm shimmer-text mx-auto">{t('מכינים לך סיכום אישי…')}</p>
+                    )}
+                  </div>
+                )}
 
                 {summary && (
                   <div className="grid grid-cols-3 gap-3 mb-8">
