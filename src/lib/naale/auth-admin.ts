@@ -35,3 +35,20 @@ export async function findAuthUserByEmail(db: Db, email: string): Promise<User |
     page++
   }
 }
+
+/**
+ * Whether this account can be signed into with a password.
+ *
+ * "Has an account" and "has a password" are different questions, and
+ * conflating them is a real bug: an account created by Google OAuth exists but
+ * has no password at all, so skipping it as "already provisioned" would leave
+ * that student unable to use the email/password option Idan asked for.
+ *
+ * `app_metadata.providers` is populated by listUsers(), so this needs no
+ * extra round trip. Verified 2026-08-24 against the live project: a
+ * script-created account reads ["email"], a Google account reads ["google"].
+ */
+export function hasPasswordIdentity(user: User): boolean {
+  const providers = user.app_metadata?.providers
+  return Array.isArray(providers) && providers.includes('email')
+}
