@@ -829,7 +829,14 @@ function SessionRunner() {
                           {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
                         </span>
                       </div>
-                      <div className="h-2.5 rounded-full bg-surface overflow-hidden">
+                      {/* The empty half of the bar needs its own visible fill.
+                          This track was `bg-surface`, which is the same value
+                          as the panel behind it — so anything under 100% drew
+                          its unfilled portion as a hole, and a 0% row showed
+                          no bar at all rather than an empty one. Matches
+                          LevelSteps' existing unfilled-dot colours rather
+                          than introducing a second idiom for the same idea. */}
+                      <div className="h-2.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
                         <div
                           className={`h-full rounded-full ${accuracyBarColor(topic.accuracy_pct)}`}
                           style={{ width: `${topic.accuracy_pct ?? 0}%` }}
