@@ -13,16 +13,19 @@
  *
  * Single-email mode creates the account, or resets its password if it exists.
  *
- * --all covers every roster row but SKIPS addresses that already have an
- * account unless --reset is passed — so re-running it to onboard new roster
- * rows can't silently reset the whole school's passwords.
+ * --all covers every roster row but SKIPS addresses that already have a
+ * PASSWORD unless --reset is passed — so re-running it to onboard new roster
+ * rows can't silently reset the whole school's passwords. Note "has a
+ * password", not "has an account": a Google user has an account with no
+ * password, and --all deliberately DOES give them one, so both sign-in
+ * options work for them.
  *
  * See .claude/ai-docs/docs/naale-password-login/issuing-credentials.md for the
  * counselor-facing version of all this.
  */
 import { writeFileSync } from 'fs'
 import { createServiceClient } from '../src/lib/supabase/service'
-import { findAuthUserByEmail } from '../src/lib/naale/auth-admin'
+import { findAuthUserByEmail, hasPasswordIdentity } from '../src/lib/naale/auth-admin'
 
 type Db = ReturnType<typeof createServiceClient>
 type RosterRow = { email: string; role: 'student' | 'staff' }
@@ -181,10 +184,17 @@ async function main() {
   for (const row of rows) {
     const email = row.email.toLowerCase()
 
-    if (all && !reset && (await findAuthUserByEmail(db, email))) {
-      console.log(`${email} (${row.role}) — already has an account, skipped. Pass --reset to overwrite.`)
-      skipped++
-      continue
+    // Skip on "already has a PASSWORD", not "already has an account". A
+    // Google account exists but has no password, so treating it as already
+    // provisioned would leave that person unable to use the email option at
+    // all — which is the thing this ticket exists to give them.
+    if (all && !reset) {
+      const existing = await findAuthUserByEmail(db, email)
+      if (existing && hasPasswordIdentity(existing)) {
+        console.log(`${email} (${row.role}) — already has a password, skipped. Pass --reset to overwrite.`)
+        skipped++
+        continue
+      }
     }
 
     let password: string
