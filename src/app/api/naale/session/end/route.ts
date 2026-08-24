@@ -4,6 +4,7 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
 import { computeRewards, computeGradedRewards, computeStreak } from '@/lib/naale/rewards'
 import { selectAll } from '@/lib/naale/paginate'
+import { buildSessionProgress } from '@/lib/naale/stats'
 
 /**
  * Ends a session and decides whether it counts as "completed" — reaching the
@@ -69,18 +70,18 @@ export async function POST(req: NextRequest) {
   // per-correct-answer XP needs this explicit kind check too.
   const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, allSessions] = await Promise.all([
     s.kind === 'placement'
-      ? Promise.resolve({ data: [] as { is_correct: boolean }[] })
+      ? Promise.resolve({ data: [] as { is_correct: boolean; topic: string; level_at_answer: number }[] })
       // Review answers (ticket 15) excluded too — same working decision as
       // my-stats and staff/students, naale-track-first-build/CONTEXT.md §9.
-      : db.from('naale_answers').select('is_correct').eq('session_id', s.id).eq('is_review', false),
+      : db.from('naale_answers').select('is_correct, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Was missing entirely until now — this session's AI-graded (open-response)
     // answers never contributed to its own end-of-session xp_earned/coins_earned
     // or correct_count, even though my-stats' running total already includes
     // them correctly. A session containing only open-response answers always
     // showed "0 XP" on this screen regardless of how well the student did.
     s.kind === 'placement'
-      ? Promise.resolve({ data: [] as { score: number }[] })
-      : db.from('naale_open_answers').select('score').eq('session_id', s.id).eq('is_review', false),
+      ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
+      : db.from('naale_open_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Every session this account has ever had, for the weekly streak — one a
     // day crosses the row cap inside three years.
     selectAll<{ completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
@@ -96,6 +97,11 @@ export async function POST(req: NextRequest) {
   // a pass/fail comparison (my-stats, placementLevel, applyGradedAnswer).
   const correct_count = (sessionAnswers ?? []).filter(a => a.is_correct).length
     + (sessionOpenAnswers ?? []).filter(a => a.score >= 4).length
+  // Per-topic breakdown for just this session (ticket: naale-session-breakdown)
+  // — reuses the same shared aggregation logic as the all-time stats views,
+  // scoped to this session's own rows via level_at_answer rather than the
+  // student's current live level.
+  const { topics } = buildSessionProgress(s.id, s.kind, completed, sessionAnswers ?? [], sessionOpenAnswers ?? [])
 
   return NextResponse.json({
     answered_count: s.answered_count,
@@ -107,5 +113,6 @@ export async function POST(req: NextRequest) {
     xp_earned: mcqXp + gradedXp,
     coins_earned: mcqCoins + gradedCoins,
     streak,
+    topics,
   })
 }

@@ -133,3 +133,42 @@ export function buildStudentProgress(input: NaaleProgressInput): NaaleProgress {
     },
   }
 }
+
+export interface SessionAnswerRow {
+  topic: string
+  is_correct: boolean
+  level_at_answer: number
+}
+export interface SessionOpenAnswerRow {
+  topic: string
+  score: number
+  level_at_answer: number
+}
+
+/**
+ * One session's own progress view, reusing buildStudentProgress() rather than
+ * re-deriving per-topic logic a second time. `allTopics`/`levels` are built
+ * from the session's own rows (only topics actually touched appear; level is
+ * `level_at_answer`, captured per row at answer time, not the student's
+ * current live level from naale_topic_levels) — a past session's breakdown
+ * should reflect what was true then, not now.
+ */
+export function buildSessionProgress(
+  sessionId: string,
+  sessionKind: string,
+  sessionCompleted: boolean,
+  answers: SessionAnswerRow[],
+  openAnswers: SessionOpenAnswerRow[]
+): NaaleProgress {
+  const topicsTouched = new Set([...answers.map(a => a.topic), ...openAnswers.map(a => a.topic)])
+  const levelByTopic = new Map<string, number>()
+  for (const a of [...answers, ...openAnswers]) levelByTopic.set(a.topic, a.level_at_answer)
+
+  return buildStudentProgress({
+    allTopics: [...topicsTouched],
+    levels: [...levelByTopic].map(([topic, level]) => ({ topic, level })),
+    answers: answers.map(a => ({ ...a, is_review: false, session_id: sessionId })),
+    openAnswers: openAnswers.map(a => ({ ...a, is_review: false, session_id: sessionId })),
+    sessions: [{ id: sessionId, kind: sessionKind, completed: sessionCompleted }],
+  })
+}

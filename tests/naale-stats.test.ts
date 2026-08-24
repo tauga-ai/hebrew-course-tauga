@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildStudentProgress, buildTopicStats } from '../src/lib/naale/stats'
+import { buildStudentProgress, buildTopicStats, buildSessionProgress } from '../src/lib/naale/stats'
 
 test('buildTopicStats: includes topics the student has never touched', () => {
   const stats = buildTopicStats(['a', 'b'], [{ topic: 'a', level: 3 }], [{ topic: 'a', is_correct: true }])
@@ -115,6 +115,47 @@ test('buildStudentProgress: MCQ and graded answers combine into one set of total
   assert.equal(totals.answered, 3)
   assert.equal(totals.correct, 2)
   assert.equal(totals.sessions, 2)
+  assert.equal(totals.completed_sessions, 1)
+  // 10 (one correct MCQ) + 10 (a graded 5) + 50 (completed session)
+  assert.equal(totals.xp, 70)
+  assert.equal(totals.coins, 2)
+})
+
+/**
+ * buildSessionProgress() (naale-session-breakdown) scopes buildStudentProgress()
+ * to one session's own rows — only topics actually touched appear, and level
+ * comes from level_at_answer rather than the student's current live level.
+ */
+test('buildSessionProgress: only topics touched in this session appear', () => {
+  const { topics } = buildSessionProgress(
+    's1', 'practice', true,
+    [{ topic: 'הבנת הנקרא', is_correct: true, level_at_answer: 2 }],
+    []
+  )
+  assert.deepEqual(topics.map(t => t.topic), ['הבנת הנקרא'])
+})
+
+test('buildSessionProgress: level reflects level_at_answer, not a passed-in current level', () => {
+  const { topics } = buildSessionProgress(
+    's1', 'practice', true,
+    [],
+    [{ topic: 'סיפור בהמשכים', score: 5, level_at_answer: 4 }]
+  )
+  assert.equal(topics[0].level, 4)
+})
+
+test('buildSessionProgress: totals match a hand-computed sum for mixed MCQ/graded rows', () => {
+  const { totals } = buildSessionProgress(
+    's1', 'practice', true,
+    [
+      { topic: 'הבנת הנקרא', is_correct: true, level_at_answer: 2 },
+      { topic: 'הבנת הנקרא', is_correct: false, level_at_answer: 2 },
+    ],
+    [{ topic: 'סיפור בהמשכים', score: 5, level_at_answer: 3 }]
+  )
+  assert.equal(totals.answered, 3)
+  assert.equal(totals.correct, 2)
+  assert.equal(totals.sessions, 1)
   assert.equal(totals.completed_sessions, 1)
   // 10 (one correct MCQ) + 10 (a graded 5) + 50 (completed session)
   assert.equal(totals.xp, 70)
