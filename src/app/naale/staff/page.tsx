@@ -178,12 +178,15 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
         </div>
 
         {s.session_dates.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold text-fg/70 mb-2">{t('תאריכי תרגול')}</h3>
-            <div className="space-y-1">
+          <div className="mt-4 bg-black/5 dark:bg-white/5 rounded-xl p-3">
+            <p className="text-[10px] text-fg/50 uppercase tracking-wide mb-2">{t('היסטוריית תרגולים')}</p>
+            <div className="space-y-2">
               {s.session_dates.map((date, i) => (
-                <div key={i} className="text-sm text-fg/60">
-                  <LtrIsolate>{new Date(date).toLocaleDateString('he-IL')}</LtrIsolate>
+                <div key={i} className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-accent-naale' : 'bg-accent-naale/40'}`} />
+                  <span className="text-xs text-fg/70">
+                    <LtrIsolate>{new Date(date).toLocaleDateString('he-IL')}</LtrIsolate>
+                  </span>
                 </div>
               ))}
             </div>
