@@ -65,5 +65,6 @@ export async function GET(req: NextRequest) {
     ended: s.ended_at !== null,
     expired: isExpired(deadline_at),
     completed: s.completed,
+    translation_lang: session.student.translation_lang ?? 'ru',
   })
 }

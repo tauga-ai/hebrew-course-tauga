@@ -48,9 +48,10 @@ export async function POST(req: NextRequest) {
   }
 
   const db = createServiceClient()
+  const targetLang = session.student.translation_lang === 'ar' ? 'ar' : 'ru'
   let translation: string
   try {
-    translation = await translateWord(db, cleaned)
+    translation = await translateWord(db, cleaned, targetLang)
   } catch (err) {
     console.error('Naale translate error:', err)
     return NextResponse.json({ error: 'התרגום נכשל' }, { status: 502 }) // "Translation failed"

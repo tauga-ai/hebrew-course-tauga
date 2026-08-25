@@ -39,7 +39,11 @@ export async function GET() {
 
   return NextResponse.json({
     role: session.role,
-    student: { id: session.student.id, full_name: session.student.full_name },
+    student: {
+      id: session.student.id,
+      full_name: session.student.full_name,
+      translation_lang: session.student.translation_lang ?? 'ru',
+    },
     avatar_url: avatarUrl,
     is_admin: !!adminRow,
   })

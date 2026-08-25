@@ -134,7 +134,8 @@ function accuracyBarColor(pct: number | null) {
 function SessionRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
-  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId)
+  const [translationLang, setTranslationLang] = useState<'ru' | 'ar'>('ru')
+  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId, translationLang)
 
   const [deadlineMs, setDeadlineMs] = useState<number | null>(null)
   // Ticket 15: only practice sessions review; placement never does. Read
@@ -467,6 +468,7 @@ function SessionRunner() {
       setCorrectCount(data.correct_count)
       setDeadlineMs(new Date(data.deadline_at).getTime())
       setKind(data.kind)
+      if (data.translation_lang) setTranslationLang(data.translation_lang)
       if (data.ended || data.expired) { completed = true; finishSession('time_up'); return }
       completed = true
       loadNext(data.kind)

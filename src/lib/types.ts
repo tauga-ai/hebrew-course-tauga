@@ -12,6 +12,9 @@ export interface Student {
   /** Naale track only — denormalized from naale_roster at provisioning time
    *  (see requireNaaleStaff()/getNaaleSession()). Null on the other two tracks. */
   naale_role?: 'student' | 'staff' | null
+  /** Naale track only — language for the hold-to-translate feature. 'ru' (Russian)
+   *  or 'ar' (Arabic). Defaults to 'ru' for all existing students. */
+  translation_lang?: 'ru' | 'ar'
 }
 
 export interface PracticeSet {
