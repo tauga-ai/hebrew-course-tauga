@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     difficulty: question.difficulty,
     level_at_answer: question.difficulty,
     is_correct: isCorrect,
+    chosen_answer: String(answer),
   })
   if (error) {
     // Same DB-level backstop as naale_answers_session_question_unique closes

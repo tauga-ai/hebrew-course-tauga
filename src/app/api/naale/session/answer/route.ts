@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
     level_at_answer: before.level,
     is_correct: isCorrect,
     is_review: isSanctionedReview,
+    chosen_answer: String(answer),
   })
   if (answerError) {
     // 23505 = Postgres unique_violation, from the naale_answers_session_question_unique

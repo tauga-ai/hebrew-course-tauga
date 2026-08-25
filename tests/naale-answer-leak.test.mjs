@@ -11,9 +11,14 @@ const NAALE_API_DIR = join(import.meta.dirname, '..', 'src', 'app', 'api', 'naal
 // Routes that legitimately reference correct_answer, and why:
 //  - The two answer routes GRADE, and only return it after the student has
 //    already submitted.
+//  - The mistakes route reads correct_answer only for questions the student has
+//    already answered and been shown the answer for — it is a review surface,
+//    not a question-serving one, and it only returns rows where is_correct=false
+//    and chosen_answer is non-null (i.e. already graded submissions).
 const GRADING_ROUTES = new Set([
   'session/answer/route.ts',
   'placement/answer/route.ts',
+  'my-mistakes/route.ts',
 ])
 //  - The three question-serving routes gate it behind `debugMode` (a
 //    process.env.NEXT_PUBLIC_DEBUG_MODE check, baked in at build time, never
