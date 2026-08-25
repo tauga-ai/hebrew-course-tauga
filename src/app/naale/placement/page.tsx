@@ -56,7 +56,8 @@ const SAFETY_CAP_MS = 5000
 function PlacementRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
-  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId)
+  const [translationLang, setTranslationLang] = useState<'ru' | 'ar'>('ru')
+  const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId, translationLang)
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
@@ -88,6 +89,13 @@ function PlacementRunner() {
   useEffect(() => {
     if (!sessionId) router.replace('/naale')
   }, [sessionId, router])
+
+  useEffect(() => {
+    fetch('/api/naale/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (data?.student?.translation_lang) setTranslationLang(data.student.translation_lang) })
+      .catch(() => {})
+  }, [])
 
   // Best-effort: a failed write here just means /session/start offers
   // placement again next time, which is safe — see the route's own comment.

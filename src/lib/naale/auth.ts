@@ -13,7 +13,7 @@ export type NaaleSessionResult =
   | { status: 'ok'; user: User; role: NaaleRole; student: Student }
 
 const NAALE_TRACK = 'naale'
-const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group, naale_role'
+const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group, naale_role, translation_lang'
 
 /**
  * Resolves a Naale-track caller from the Supabase session.

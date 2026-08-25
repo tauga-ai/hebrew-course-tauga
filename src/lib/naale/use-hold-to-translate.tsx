@@ -49,7 +49,7 @@ interface PopoverState {
  *    set justTranslatedRef, since on touch the hold ends in a tap the option
  *    button would otherwise treat as an answer.
  */
-export function useHoldToTranslate(sessionId: string | null) {
+export function useHoldToTranslate(sessionId: string | null, targetLang: 'ru' | 'ar' = 'ru') {
   const [popover, setPopover] = useState<PopoverState | null>(null)
   // 'entering' drives the slide-in transition; 'gone' unmounts it entirely so
   // a faded tip can never sit invisibly over the page swallowing clicks.
@@ -217,7 +217,10 @@ export function useHoldToTranslate(sessionId: string | null) {
         <span aria-hidden="true" className="shrink-0 text-lg leading-6">💡</span>
         <div>
           <p className="text-sm text-fg/80">{t('טיפ: העבירו את העכבר מעל מילה כדי לראות את התרגום שלה.')}</p>
-          <p className="text-sm text-fg/60" lang="ru">Подсказка: наведите курсор на любое слово, чтобы увидеть его перевод.</p>
+          {targetLang === 'ar'
+            ? <p className="text-sm text-fg/60" lang="ar" dir="rtl">تلميح: حرك المؤشر فوق أي كلمة لرؤية ترجمتها.</p>
+            : <p className="text-sm text-fg/60" lang="ru">Подсказка: наведите курсор на любое слово, чтобы увидеть его перевод.</p>
+          }
         </div>
       </div>
     </div>

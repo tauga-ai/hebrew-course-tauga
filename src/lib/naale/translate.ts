@@ -1,21 +1,23 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const TARGET_LANG = 'ru'
-
 /**
  * Looks up `word`'s translation in the naale_word_translations cache; on a
  * miss, calls Google Cloud Translation (Basic, REST v2 — simple API-key
  * auth, same style as GEMINI_API_KEY's reuse for Google TTS in
  * src/app/api/tts/route.ts, no OAuth/service account needed) and writes
  * the result back so this exact word is never translated twice.
+ *
+ * targetLang is per-student ('ru' Russian or 'ar' Arabic) — the cache is
+ * keyed on (source_word, target_lang) so Russian and Arabic entries never
+ * collide. Defaults to 'ru' to preserve existing behaviour.
  */
-export async function translateWord(db: SupabaseClient, word: string): Promise<string> {
+export async function translateWord(db: SupabaseClient, word: string, targetLang: 'ru' | 'ar' = 'ru'): Promise<string> {
   const { data: cached } = await db
     .from('naale_word_translations')
     .select('translation')
     .eq('source_word', word)
-    .eq('target_lang', TARGET_LANG)
+    .eq('target_lang', targetLang)
     .maybeSingle()
 
   if (cached) return cached.translation
@@ -25,7 +27,7 @@ export async function translateWord(db: SupabaseClient, word: string): Promise<s
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: word, source: 'he', target: TARGET_LANG, format: 'text' }),
+      body: JSON.stringify({ q: word, source: 'he', target: targetLang, format: 'text' }),
     }
   )
   if (!res.ok) {
@@ -45,7 +47,7 @@ export async function translateWord(db: SupabaseClient, word: string): Promise<s
   // erroring, since both writers have the same correct translation.
   await db
     .from('naale_word_translations')
-    .upsert({ source_word: word, target_lang: TARGET_LANG, translation }, { onConflict: 'source_word,target_lang' })
+    .upsert({ source_word: word, target_lang: targetLang, translation }, { onConflict: 'source_word,target_lang' })
 
   return translation
 }
