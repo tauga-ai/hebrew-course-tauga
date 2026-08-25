@@ -932,7 +932,14 @@ function SessionRunner() {
         <PageHeader
           onBack={handleBackClick}
           title={t('תרגול')}
-          right={remaining !== null ? <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate> : null}
+          right={remaining !== null ? (
+            <span className={
+              remaining <= 120000 ? 'text-red-500 dark:text-red-400 font-semibold' :
+              remaining <= 300000 ? 'text-amber-500 dark:text-amber-400 font-semibold' : ''
+            }>
+              <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate>
+            </span>
+          ) : null}
         />
 
         {/* justify-between: prompt (+ review banner / reward flash / hint)
@@ -945,33 +952,29 @@ function SessionRunner() {
             the same card style already used on placement's intro/done
             screens — a redesign, requested directly, of what used to be
             bare content straight on the page background. */}
-        <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+        <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out] overflow-hidden">
           <div>
-            {/* Count, not a percentage bar — there is no total to divide by;
-                the session ends on the clock, not on exhausting a fixed set. */}
-            <p className="text-xs text-fg/60 mb-4">
-              {/* Explicit dir — same reasoning as placement/page.tsx's question
-                  counter: a translated word next to an isolated number needs
-                  an unambiguous base direction, or the pair can reorder in
-                  English/LTR debug mode. */}
-              <span dir={debugMode && getDevLang() === 'en' ? 'ltr' : 'rtl'}>
-                {t('תרגיל')} <LtrIsolate>{viewing ? viewIndex! + 1 : answeredCount + 1}</LtrIsolate>
-              </span>
-              {debugMode && showQuestionBadge && (
-                <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
-                  {q.topic} · L{q.difficulty}
-                  {/* QA-only: the 30/session translate cap is never shown to
-                      real students (Yuval's explicit "no visible countdown"
-                      call) — this piggybacks on the same dev-only badge. */}
-                  {debugTranslations && ` · 🔤${debugTranslations.used}/${debugTranslations.cap}`}
-                  {/* QA-only: how many answered questions the back button can
-                      reach. Client-side and per page load, so this reads 0 on a
-                      session that was already open before this code shipped —
-                      which looks identical to a broken back button without it. */}
-                  {` · ⏪${history.length}`}
+            {/* Card header strip — topic + counter. Full-bleed with negative
+                margins so the accent band reaches the card edges despite p-6.
+                Parent's overflow-hidden + rounded-2xl handle the top corners. */}
+            <div className="bg-accent-naale/10 -mx-6 -mt-6 px-6 py-3 mb-4 flex items-center justify-between">
+              <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide">{q.topic}</p>
+              <p className="text-xs text-fg/60 flex items-center gap-2">
+                {/* Explicit dir — same reasoning as before: a translated word
+                    next to an isolated number needs an unambiguous base
+                    direction, or the pair can reorder in English/LTR debug mode. */}
+                <span dir={debugMode && getDevLang() === 'en' ? 'ltr' : 'rtl'}>
+                  {t('תרגיל')} <LtrIsolate>{viewing ? viewIndex! + 1 : answeredCount + 1}</LtrIsolate>
                 </span>
-              )}
-            </p>
+                {debugMode && showQuestionBadge && (
+                  <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
+                    {q.topic} · L{q.difficulty}
+                    {debugTranslations && ` · 🔤${debugTranslations.used}/${debugTranslations.cap}`}
+                    {` · ⏪${history.length}`}
+                  </span>
+                )}
+              </p>
+            </div>
 
             {/* Ticket 15: visually distinguishes a re-served question from new
                 material, and doubles as the "why am I seeing this again" intro the
@@ -992,13 +995,6 @@ function SessionRunner() {
             )}
 
             {hintElement}
-
-            {/* Eyebrow: the question's own topic (e.g. "השלמת משפטים"). Wrapped
-                in t() for debug-mode English QA only — the underlying q.topic
-                value passed to OPEN_EXERCISE_DISPLAY/OPEN_GRADING_BUILDERS
-                lookups below is untouched, so this is purely a display-layer
-                translation, not a change to real content. */}
-            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
 
             {q.kind === 'open' ? (
               <>
@@ -1040,7 +1036,7 @@ function SessionRunner() {
             )}
           </div>
 
-          <div>
+          <div className="-mx-6 -mb-6 px-6 pb-6 pt-4 bg-black/[0.02] dark:bg-white/[0.03]">
             {q.kind === 'open' ? (
               <>
                 {!openResult ? (
