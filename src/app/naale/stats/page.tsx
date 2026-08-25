@@ -7,6 +7,7 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
 import { SessionHistory } from '@/components/naale/SessionHistory'
+import { MistakesHistory } from '@/components/naale/MistakesHistory'
 import { MAX_LEVEL } from '@/lib/naale/leveling'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
@@ -199,6 +200,7 @@ export default function NaaleStatsPage() {
             it — the ticket keeps the cumulative numbers as this page's
             primary content and adds session-by-session as a second way in. */}
         <SessionHistory />
+        <MistakesHistory />
       </>
     )
   }
