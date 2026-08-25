@@ -48,7 +48,16 @@ export function SessionHistory() {
 
   const detail = useResource<SessionDetail>(openId ? `/api/naale/sessions/${openId}` : null)
 
-  if (loading) return null
+  if (loading) return (
+    <>
+      <h2 className="text-sm font-semibold text-fg/70 mb-2 mt-6">{t('היסטוריית תרגולים')}</h2>
+      <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 space-y-3 animate-pulse">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-14 rounded-xl bg-black/5 dark:bg-white/5" />
+        ))}
+      </div>
+    </>
+  )
   if (error || !data) return null
 
   const sessions = data.sessions.filter(s => s.kind === 'practice')
