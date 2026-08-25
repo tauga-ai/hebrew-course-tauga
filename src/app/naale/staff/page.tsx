@@ -123,7 +123,7 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         onClick={close}
-        className={`absolute inset-0 bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/90 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}`}
       />
       <div className={`relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5 transition-all duration-200 motion-reduce:transition-none ${open ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}>
         <div className="flex items-start justify-between mb-4">

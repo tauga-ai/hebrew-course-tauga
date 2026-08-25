@@ -44,7 +44,7 @@ function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/90" onClick={onCancel} />
       <div className="relative w-full max-w-xs bg-surface rounded-2xl shadow-xl p-5 text-center">
         <p className="text-sm text-fg mb-5">{t('האם את/ה בטוח/ה שברצונך להתנתק?')}</p>
         <div className="flex gap-2">
