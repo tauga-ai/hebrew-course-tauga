@@ -358,26 +358,23 @@ function PlacementRunner() {
       {/* Card wrapper, matching this same page's intro/done screens' card
           style — a redesign, requested directly, of what used to be bare
           content straight on the page background. */}
-      <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out]">
+      <div key={q.id} className="bg-surface rounded-2xl shadow-sm border border-card-border p-6 flex flex-col justify-between min-h-[70vh] animate-[question-enter_0.3s_ease-out] overflow-hidden">
         <div>
-          {/* Unlike practice (ticket 10), placement has a real denominator —
-              one question per topic, fixed — so n of total is meaningful here. */}
-          <p className="text-xs text-fg/60 mb-4">
-            {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
-            {/* QA-only: the 30/session translate cap is never shown to real
-                students (Yuval's explicit "no visible countdown" call). */}
-            {debugMode && debugTranslations && (
-              <span className="ms-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
-                🔤{debugTranslations.used}/{debugTranslations.cap}
-              </span>
-            )}
-          </p>
+          {/* Card header strip — topic + counter. Same full-bleed negative-margin
+              approach as session/page.tsx. */}
+          <div className="bg-accent-naale/10 -mx-6 -mt-6 px-6 py-3 mb-4 flex items-center justify-between">
+            <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide">{q.topic}</p>
+            <p className="text-xs text-fg/60 flex items-center gap-2">
+              {t('שאלה')} <LtrIsolate>{questionNumber}</LtrIsolate> {t('מתוך')} <LtrIsolate>{total}</LtrIsolate>
+              {debugMode && debugTranslations && (
+                <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-fg/70 font-mono">
+                  🔤{debugTranslations.used}/{debugTranslations.cap}
+                </span>
+              )}
+            </p>
+          </div>
 
           {hintElement}
-
-          {/* Eyebrow: the question's own topic — same treatment as
-              session/page.tsx. */}
-          <p className="text-xs font-semibold text-accent-naale uppercase tracking-wide mb-2 text-right">{q.topic}</p>
 
           {q.kind === 'open' ? (
             <>
@@ -404,7 +401,7 @@ function PlacementRunner() {
           )}
         </div>
 
-        <div>
+        <div className="-mx-6 -mb-6 px-6 pb-6 pt-4 bg-black/[0.02] dark:bg-white/[0.03]">
           {q.kind === 'open' ? (
             <>
               {!openResult ? (
