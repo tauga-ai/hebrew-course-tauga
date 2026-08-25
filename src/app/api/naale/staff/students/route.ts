@@ -71,8 +71,8 @@ export async function GET() {
       db.from('naale_answers').select('student_id, topic, is_correct, is_review, session_id').in('student_id', studentIds).range(from, to)),
     selectAll<{ student_id: string; topic: string; score: number; is_review: boolean; session_id: string }>('naale_open_answers', (from, to) =>
       db.from('naale_open_answers').select('student_id, topic, score, is_review, session_id').in('student_id', studentIds).range(from, to)),
-    selectAll<{ id: string; student_id: string; kind: string; completed: boolean }>('naale_sessions', (from, to) =>
-      db.from('naale_sessions').select('id, student_id, kind, completed').in('student_id', studentIds).range(from, to)),
+    selectAll<{ id: string; student_id: string; kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('id, student_id, kind, completed, started_at').in('student_id', studentIds).range(from, to)),
   ])
 
   // Google's profile photo per student, same display-only relay as
@@ -99,12 +99,18 @@ export async function GET() {
       sessions: sessions.filter(x => x.student_id === s.id),
     })
 
+    const sessionDates = sessions
+      .filter(x => x.student_id === s.id && x.completed && x.kind === 'practice')
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+      .map(x => x.started_at)
+
     return {
       student_id: s.id,
       full_name: s.full_name,
       avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
       topics: progress.topics,
       totals: progress.totals,
+      session_dates: sessionDates,
     }
   })
 

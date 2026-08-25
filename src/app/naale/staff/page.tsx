@@ -18,6 +18,7 @@ interface StaffStudent {
   avatar_url: string | null
   topics: NaaleTopicStat[]
   totals: { answered: number; correct: number; sessions: number; completed_sessions: number; xp: number; coins: number }
+  session_dates: string[]
 }
 
 interface StaffStudents {
@@ -175,6 +176,19 @@ function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void })
             </div>
           ))}
         </div>
+
+        {s.session_dates.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-fg/70 mb-2">{t('תאריכי תרגול')}</h3>
+            <div className="space-y-1">
+              {s.session_dates.map((date, i) => (
+                <div key={i} className="text-sm text-fg/60">
+                  <LtrIsolate>{new Date(date).toLocaleDateString('he-IL')}</LtrIsolate>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
