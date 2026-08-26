@@ -1,12 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
 import { Avatar } from '@/components/naale/Avatar'
+import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
+import { nextSessionKind, type SessionKind } from '@/lib/naale/next-session-kind'
 import { useResource } from '@/lib/hooks/use-resource'
 import { scoreColor } from '@/lib/score-color'
 import {
@@ -121,6 +123,10 @@ export default function NaaleStaffPage() {
   const [search, setSearch] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetKind, setSheetKind] = useState<SessionKind>('practice')
+  const [myLang, setMyLang] = useState<'ru' | 'ar'>('ru')
+  const practiceButtonRef = useRef<HTMLButtonElement>(null)
 
   const students = useMemo(() => data?.students ?? [], [data])
 
@@ -138,6 +144,40 @@ export default function NaaleStaffPage() {
     if (!q) return students
     return students.filter(s => s.full_name.toLowerCase().includes(q))
   }, [students, search])
+
+  /**
+   * Staff get the same pre-session sheet students do. They are exercising the
+   * real flow, and a staff member who taps this commits the same 30 minutes to
+   * the same timer — the sheet is the only place that says so.
+   *
+   * Their own stats and language are fetched here rather than on page load:
+   * this is a rarely-used button on a roster screen, so the requests only
+   * happen when someone reaches for it.
+   */
+  async function openPracticeSheet() {
+    setStartError('')
+    try {
+      const [statsRes, meRes] = await Promise.all([
+        fetch('/api/naale/my-stats'),
+        fetch('/api/naale/me'),
+      ])
+      if (statsRes.ok) setSheetKind(nextSessionKind((await statsRes.json()).topics))
+      if (meRes.ok) {
+        const meData = await meRes.json()
+        if (meData?.student?.translation_lang) setMyLang(meData.student.translation_lang)
+      }
+    } catch {
+      // Defaults stand: 'practice' and 'ru' differ from the truth by one line
+      // of copy and one preselected chip, neither worth blocking the sheet on.
+    }
+    setSheetOpen(true)
+  }
+
+  function closePracticeSheet() {
+    setSheetOpen(false)
+    setStartError('')
+    practiceButtonRef.current?.focus()
+  }
 
   async function handlePractice() {
     setStarting(true)
@@ -161,14 +201,16 @@ export default function NaaleStaffPage() {
         <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>
           <button
-            onClick={handlePractice}
-            disabled={starting}
+            ref={practiceButtonRef}
+            onClick={openPracticeSheet}
             className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
           >
             {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
           </button>
         </div>
-        {startError && <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>}
+        {startError && !sheetOpen && (
+          <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>
+        )}
 
         {loading && <LoadingSpinner />}
         {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
@@ -226,6 +268,17 @@ export default function NaaleStaffPage() {
           </>
         )}
       </div>
+
+      {sheetOpen && (
+        <StartSessionSheet
+          kind={sheetKind}
+          lang={myLang}
+          starting={starting}
+          error={startError}
+          onStart={handlePractice}
+          onClose={closePracticeSheet}
+        />
+      )}
     </div>
   )
 }

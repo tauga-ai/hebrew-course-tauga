@@ -1,18 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
+import { nextSessionKind } from '@/lib/naale/next-session-kind'
 import { LevelSteps } from '@/components/naale/LevelSteps'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { t } from '@/lib/dev-i18n'
 
 interface NaaleMe {
   role: 'student' | 'staff'
-  student: { id: string; full_name: string }
+  // translation_lang is already in /api/naale/me's response — the sheet needs
+  // it to show which language is currently selected.
+  student: { id: string; full_name: string; translation_lang?: 'ru' | 'ar' }
   is_admin: boolean
 }
 
@@ -43,6 +47,9 @@ export default function NaaleHome() {
   const [topics, setTopics] = useState<NaaleTopicStat[] | null>(null)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  // The element that opened the sheet, so keyboard focus returns to it.
+  const startTileRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -84,6 +91,12 @@ export default function NaaleHome() {
     return () => { cancelled = true }
   }, [router])
 
+  /**
+   * Called from the sheet's Start button, never straight from the tile:
+   * /api/naale/session/start creates the session row and stamps deadline_at,
+   * so calling it before the student has read the terms would run the clock
+   * while they read.
+   */
   async function handleStart() {
     setStarting(true)
     setError('')
@@ -98,6 +111,15 @@ export default function NaaleHome() {
       setStarting(false)
     }
   }
+
+  function closeSheet() {
+    setSheetOpen(false)
+    setError('')
+    startTileRef.current?.focus()
+  }
+
+  // Shared with the staff self-practice button — see nextSessionKind().
+  const nextKind = nextSessionKind(topics)
 
   if (error && !me) {
     return (
@@ -160,9 +182,9 @@ export default function NaaleHome() {
         <div className="grid grid-cols-1 @[480px]:grid-cols-2 gap-3 mb-6">
           <button
             type="button"
-            onClick={handleStart}
-            disabled={starting}
-            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale disabled:cursor-default"
+            ref={startTileRef}
+            onClick={() => setSheetOpen(true)}
+            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale"
           >
             <span className="shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-2xl border border-accent-naale/30 bg-accent-naale/10 text-accent-naale">▶️</span>
             <span className="flex-1 min-w-0">
@@ -215,8 +237,21 @@ export default function NaaleHome() {
           ))}
         </CardGrid>
 
-        {error && <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>}
+        {error && !sheetOpen && (
+          <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>
+        )}
       </div>
+
+      {sheetOpen && (
+        <StartSessionSheet
+          kind={nextKind}
+          lang={me.student.translation_lang ?? 'ru'}
+          starting={starting}
+          error={error}
+          onStart={handleStart}
+          onClose={closeSheet}
+        />
+      )}
     </div>
   )
 }

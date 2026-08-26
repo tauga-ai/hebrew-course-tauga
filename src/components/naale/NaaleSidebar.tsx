@@ -101,7 +101,6 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
-  const [translationLang, setTranslationLang] = useState<'ru' | 'ar'>('ru')
 
   useEffect(() => {
     let cancelled = false
@@ -118,9 +117,6 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
         if (data) {
           setFullName(role === 'admin' ? data.full_name : data.student.full_name)
           setAvatarUrl(data.avatar_url)
-          if (role === 'student' && data.student?.translation_lang) {
-            setTranslationLang(data.student.translation_lang)
-          }
         }
         setProfileLoading(false)
       })
@@ -131,16 +127,6 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
       cancelled = true
     }
   }, [role])
-
-  async function toggleTranslationLang() {
-    const next: 'ru' | 'ar' = translationLang === 'ru' ? 'ar' : 'ru'
-    setTranslationLang(next)
-    await fetch('/api/naale/me/preferences', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ translation_lang: next }),
-    })
-  }
 
   async function confirmLogout() {
     const supabase = createClient()
@@ -242,18 +228,6 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
       )}
 
       <div className="flex flex-col gap-1 shrink-0 md:mt-auto">
-        {role === 'student' && (
-          <button
-            type="button"
-            onClick={toggleTranslationLang}
-            title={t(translationLang === 'ru' ? 'עבור לתרגום בערבית' : 'עבור לתרגום ברוסית')}
-            className="flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
-          >
-            <span>{translationLang === 'ru' ? '🇷🇺' : '🇸🇦'}</span>
-            <span className={hideOnCollapse}>{translationLang === 'ru' ? t('תרגום: רוסית') : t('תרגום: ערבית')}</span>
-          </button>
-        )}
-
         <button
           type="button"
           onClick={toggleTheme}
