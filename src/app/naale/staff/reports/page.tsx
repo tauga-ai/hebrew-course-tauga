@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { useResource } from '@/lib/hooks/use-resource'
 import { t } from '@/lib/dev-i18n'
 
@@ -66,10 +66,8 @@ export default function NaaleStaffReportsPage() {
   const openCount = (reports ?? []).filter(r => r.status === 'open').length
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="staff" />
-      <div className="flex-1 p-4 max-w-4xl mx-auto w-full">
-        <div className="flex justify-between items-center mt-4 mb-6 gap-3">
+    <NaaleShell role="staff" contentClassName="max-w-4xl">
+      <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           {/* "Reported questions" */}
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">
             {t('דיווחים על שאלות')}
@@ -154,7 +152,6 @@ export default function NaaleStaffReportsPage() {
             </div>
           ))}
         </div>
-      </div>
-    </div>
+    </NaaleShell>
   )
 }

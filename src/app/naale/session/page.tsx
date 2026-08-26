@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
@@ -1341,12 +1341,12 @@ function SessionRunner() {
   }
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="student" />
-      <div className="flex-1 p-4 max-w-2xl mx-auto w-full">{content}</div>
+    <NaaleShell role="student" contentClassName="max-w-2xl">
+      {content}
       {popoverElement}
-      {/* Rendered at the page root, not inside the question container, so the
-          backdrop covers the whole viewport rather than one card. */}
+      {/* Rendered here rather than inside the question container so the
+          backdrop covers the whole viewport rather than one card — both use
+          fixed positioning, so nesting depth doesn't affect where they land. */}
       {reportingQuestionId && (
         <ReportQuestionModal
           questionId={reportingQuestionId}
@@ -1354,7 +1354,7 @@ function SessionRunner() {
           onClose={() => setReportingQuestionId(null)}
         />
       )}
-    </div>
+    </NaaleShell>
   )
 }
 
