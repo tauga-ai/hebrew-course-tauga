@@ -172,3 +172,95 @@ export function buildSessionProgress(
     sessions: [{ id: sessionId, kind: sessionKind, completed: sessionCompleted }],
   })
 }
+
+export interface SessionDay {
+  /** he-IL formatted date — the same string the UI renders beside the count. */
+  label: string
+  /** ISO timestamp of the latest session that day, for sorting. */
+  latest: string
+  count: number
+  session_ids: string[]
+}
+
+/**
+ * Collapses sessions that share a calendar day into one entry.
+ *
+ * One row per session renders two sessions on the same day as two visually
+ * identical dates, since no time is shown — and Noam's five-minute sessions
+ * make several-a-day the normal case, not an edge case. Grouped on the he-IL
+ * date string rather than a UTC day boundary so the grouping can never
+ * disagree with the label displayed next to it.
+ *
+ * Lives here rather than in session-history.ts (which is in-session
+ * back/forward navigation) so staff and student screens shape this the same
+ * way, for the same reason buildStudentProgress() is shared.
+ */
+export function groupSessionsByDay(sessions: { id: string; started_at: string }[]): SessionDay[] {
+  const byLabel = new Map<string, SessionDay>()
+
+  for (const s of sessions) {
+    const label = new Date(s.started_at).toLocaleDateString('he-IL')
+    const existing = byLabel.get(label)
+    if (existing) {
+      existing.count += 1
+      existing.session_ids.push(s.id)
+      if (s.started_at > existing.latest) existing.latest = s.started_at
+    } else {
+      byLabel.set(label, { label, latest: s.started_at, count: 1, session_ids: [s.id] })
+    }
+  }
+
+  return [...byLabel.values()].sort((a, b) => (a.latest < b.latest ? 1 : -1))
+}
+
+/** Days of attendance the staff detail view shows at once. A sliding window for
+ *  now; once the program has a start date behind it, "since the program began"
+ *  is the more honest frame — it grows instead of dropping history off the end. */
+export const ATTENDANCE_DAYS = 28
+
+export interface AttendanceDay {
+  /** he-IL date, matching groupSessionsByDay()'s keys. */
+  label: string
+  /** Sessions started that day. 0 for a day with no practice. */
+  count: number
+  /** Day-of-month, for the sparse axis labels under the strip. */
+  dayOfMonth: number
+  isToday: boolean
+}
+
+/**
+ * One cell per day for the last `days` days, oldest first, counting sessions.
+ *
+ * The gaps are the point: a list of dates shows when a student practiced, but
+ * only a continuous run of days shows when they *didn't* — which is the thing
+ * a counselor is actually trying to see. Built by walking the local calendar
+ * with setDate() rather than subtracting milliseconds, so a DST shift can't
+ * duplicate or skip a day.
+ *
+ * `now` is a parameter so this is testable; callers pass new Date().
+ */
+export function buildAttendanceWindow(
+  sessions: { id: string; started_at: string }[],
+  now: Date,
+  days: number = ATTENDANCE_DAYS
+): AttendanceDay[] {
+  const countByLabel = new Map<string, number>()
+  for (const day of groupSessionsByDay(sessions)) countByLabel.set(day.label, day.count)
+
+  const todayLabel = now.toLocaleDateString('he-IL')
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - (days - 1))
+
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    const label = d.toLocaleDateString('he-IL')
+    return {
+      label,
+      count: countByLabel.get(label) ?? 0,
+      dayOfMonth: d.getDate(),
+      isToday: label === todayLabel,
+    }
+  })
+}

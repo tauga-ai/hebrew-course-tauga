@@ -1,48 +1,29 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
-import { LevelSteps } from '@/components/naale/LevelSteps'
 import { Avatar } from '@/components/naale/Avatar'
 import { useResource } from '@/lib/hooks/use-resource'
 import { scoreColor } from '@/lib/score-color'
-import type { NaaleTopicStat } from '@/lib/naale/stats'
+import {
+  NEEDS_ATTENTION_THRESHOLD,
+  overallAccuracy,
+  statusLabel,
+  type StaffStudentRow,
+} from '@/lib/naale/staff-view'
 import { t } from '@/lib/dev-i18n'
 
-interface StaffStudent {
-  student_id: string
-  full_name: string
-  avatar_url: string | null
-  topics: NaaleTopicStat[]
-  totals: { answered: number; correct: number; sessions: number; completed_sessions: number; xp: number; coins: number }
-  session_dates: string[]
-}
-
 interface StaffStudents {
-  students: StaffStudent[]
-}
-
-// Not a spec number — the "bad" threshold scoreColor() already uses everywhere else
-// in the app. Retune here if 50% turns out to be the wrong cutoff for this cohort.
-const NEEDS_ATTENTION_THRESHOLD = 50
-
-function overallAccuracy(totals: StaffStudent['totals']): number | null {
-  return totals.answered > 0 ? Math.round((totals.correct / totals.answered) * 100) : null
+  students: StaffStudentRow[]
 }
 
 const BAR_PALETTE = { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' }
 
-function statusLabel(acc: number | null): string {
-  if (acc === null) return 'לא התחיל'
-  if (acc >= 70) return 'מצוין'
-  if (acc >= 50) return 'סביר'
-  return 'דורש תשומת לב'
-}
-
-function AccuracyBar({ totals }: { totals: StaffStudent['totals'] }) {
+function AccuracyBar({ totals }: { totals: StaffStudentRow['totals'] }) {
   const acc = overallAccuracy(totals)
   if (acc === null) return <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
   return (
@@ -60,11 +41,23 @@ function AccuracyBar({ totals }: { totals: StaffStudent['totals'] }) {
   )
 }
 
-function StudentRow({ s, critical, onSelect }: { s: StaffStudent; critical?: boolean; onSelect: (s: StaffStudent) => void }) {
+/**
+ * A roster row. The last cell is a real `<Link>` to the student's detail
+ * route, which is also the keyboard path: it was a styled `<span>` inside a
+ * click-only `<tr>`, so neither the row nor the affordance was reachable or
+ * announced as a control. The row keeps a click handler for the mouse, but
+ * `role="button"` is deliberately NOT on the `<tr>` — that strips its row
+ * semantics, costing a screen reader the table structure, and a focusable row
+ * wrapping a focusable link is nested interactive content.
+ */
+function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean }) {
+  const router = useRouter()
   const acc = overallAccuracy(s.totals)
+  const href = `/naale/staff/students/${s.student_id}`
+
   return (
     <tr
-      onClick={() => onSelect(s)}
+      onClick={() => router.push(href)}
       className={`cursor-pointer transition ${critical
           ? 'bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20'
           : 'hover:bg-black/5 dark:hover:bg-white/5'
@@ -86,114 +79,16 @@ function StudentRow({ s, critical, onSelect }: { s: StaffStudent; critical?: boo
         <LtrIsolate>{s.totals.completed_sessions}</LtrIsolate>
       </td>
       <td className="p-3 text-center border-b border-card-border">
-        <span className="text-xs font-medium text-primary-600 dark:text-primary-400 border border-card-border rounded-lg px-2 py-1 whitespace-nowrap">
+        <Link
+          href={href}
+          onClick={e => e.stopPropagation()}
+          aria-label={`${t('הצג')} — ${s.full_name}`}
+          className="inline-block text-xs font-medium text-primary-600 dark:text-primary-400 border border-card-border rounded-lg px-2 py-1 whitespace-nowrap transition hover:bg-black/5 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
           {t('הצג')}
-        </span>
+        </Link>
       </td>
     </tr>
-  )
-}
-
-const DIALOG_MS = 180
-
-function StudentDialog({ s, onClose }: { s: StaffStudent; onClose: () => void }) {
-  const acc = overallAccuracy(s.totals)
-  // `open` drives both directions: false on the first paint so the entrance
-  // has somewhere to animate FROM, then false again while closing so the exit
-  // is visible before the parent unmounts us.
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    const id = setTimeout(() => setOpen(true), 16)
-    return () => clearTimeout(id)
-  }, [])
-
-  const close = useCallback(() => {
-    setOpen(false)
-    setTimeout(onClose, DIALOG_MS)
-  }, [onClose])
-
-  // Esc closes through the same path, so it animates out like the X does.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [close])
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        onClick={close}
-        className={`absolute inset-0 bg-black/90 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}`}
-      />
-      <div className={`relative w-full max-w-sm max-h-[85vh] bg-surface rounded-2xl shadow-xl overflow-y-auto p-5 transition-all duration-200 motion-reduce:transition-none ${open ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar name={s.full_name} avatarUrl={s.avatar_url} sizeClass="w-10 h-10 text-sm" />
-            <div className="min-w-0">
-              <div className="font-bold text-fg truncate">{s.full_name}</div>
-              <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
-            </div>
-          </div>
-          <button type="button" onClick={close} className="text-fg/40 hover:text-fg/70 text-xl leading-none shrink-0">
-            ×
-          </button>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-5">
-          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
-            <div className="text-lg">⭐</div>
-            <div className="font-bold text-accent-naale mt-0.5"><LtrIsolate>{s.totals.xp}</LtrIsolate></div>
-            <div className="text-[10px] text-fg/50 mt-0.5">{t('נקודות XP')}</div>
-          </div>
-          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
-            <div className="text-lg">🪙</div>
-            <div className="font-bold text-fg mt-0.5"><LtrIsolate>{s.totals.coins}</LtrIsolate></div>
-            <div className="text-[10px] text-fg/50 mt-0.5">{t('מטבעות')}</div>
-          </div>
-          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center">
-            <div className="text-lg">✅</div>
-            <div className="font-bold text-fg mt-0.5"><LtrIsolate>{s.totals.completed_sessions}</LtrIsolate></div>
-            <div className="text-[10px] text-fg/50 mt-0.5">{t('תרגולים שהושלמו')}</div>
-          </div>
-        </div>
-
-        <h3 className="text-sm font-semibold text-fg/70 mb-2">{t('מיומנויות')}</h3>
-        <div className="space-y-2">
-          {s.topics.map(topic => (
-            <div key={topic.topic} className="flex justify-between items-center text-sm">
-              <span className="text-fg/70 flex-1 min-w-0 truncate">{topic.topic}</span>
-              {topic.started ? (
-                <span className="flex items-center gap-3 shrink-0">
-                  <LevelSteps level={topic.level ?? 1} />
-                  <span className={`font-semibold ${scoreColor(topic.accuracy_pct)}`}>
-                    <LtrIsolate>{`${topic.correct}/${topic.answered}`}</LtrIsolate>
-                  </span>
-                </span>
-              ) : (
-                <span className="text-fg/30 text-xs shrink-0">{t('לא התחיל')}</span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {s.session_dates.length > 0 && (
-          <div className="mt-4 bg-black/5 dark:bg-white/5 rounded-xl p-3">
-            <p className="text-[10px] text-fg/50 uppercase tracking-wide mb-2">{t('היסטוריית תרגולים')}</p>
-            <div className="space-y-2">
-              {s.session_dates.map((date, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-accent-naale' : 'bg-accent-naale/40'}`} />
-                  <span className="text-xs text-fg/70">
-                    <LtrIsolate>{new Date(date).toLocaleDateString('he-IL')}</LtrIsolate>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -223,7 +118,6 @@ export default function NaaleStaffPage() {
   // Only for the sidebar's admin nav item — staff themselves are gated by
   // requireNaaleStaff() above via /api/naale/staff/students, not this call.
   const { data: me } = useResource<{ is_admin: boolean }>('/api/naale/me')
-  const [selected, setSelected] = useState<StaffStudent | null>(null)
   const [search, setSearch] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
@@ -260,15 +154,6 @@ export default function NaaleStaffPage() {
     }
   }
 
-  useEffect(() => {
-    if (!selected) return
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setSelected(null)
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [selected])
-
   return (
     <div className="min-h-screen md:flex">
       <NaaleSidebar role="staff" showAdminLink={me?.is_admin ?? false} />
@@ -299,7 +184,7 @@ export default function NaaleStaffPage() {
                   <table className="w-full bg-surface rounded-xl border border-red-200 dark:border-red-500/30 text-sm">
                     <tbody>
                       {needsAttention.map(s => (
-                        <StudentRow key={s.student_id} s={s} critical onSelect={setSelected} />
+                        <StudentRow key={s.student_id} s={s} critical />
                       ))}
                     </tbody>
                   </table>
@@ -332,7 +217,7 @@ export default function NaaleStaffPage() {
                   </thead>
                   <tbody>
                     {filtered.map(s => (
-                      <StudentRow key={s.student_id} s={s} onSelect={setSelected} />
+                      <StudentRow key={s.student_id} s={s} />
                     ))}
                   </tbody>
                 </table>
@@ -341,7 +226,6 @@ export default function NaaleStaffPage() {
           </>
         )}
       </div>
-      {selected && <StudentDialog s={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }
