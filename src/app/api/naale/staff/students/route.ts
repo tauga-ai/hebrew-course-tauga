@@ -29,8 +29,13 @@ import { selectAll } from '@/lib/naale/paginate'
  * This route used to read only naale_questions/naale_answers and derive its
  * own totals, so all three AI-graded topics were absent from every response —
  * level, exercise count and accuracy together — while the student's own screen
- * showed them (audit H1). Topic list and number-crunching are now the same
- * shared functions /api/naale/my-stats uses, so the two views can't disagree.
+ * showed them (audit H1). Number-crunching is now the same shared function
+ * /api/naale/my-stats uses, so the two views can't disagree.
+ *
+ * Returns one row per student: identity, avatar and totals. Per-topic levels
+ * and session dates are served by
+ * /api/naale/staff/students/[studentId] instead — this is the cohort-wide
+ * read, so anything added here is paid for once per student.
  */
 export async function GET() {
   const staff = await requireNaaleStaff()
@@ -90,6 +95,12 @@ export async function GET() {
     )
   )
 
+  // `totals` only — `topics` and `session_dates` moved to
+  // /api/naale/staff/students/[studentId] when detail became its own route.
+  // They were here so a dialog could open with no second fetch, which meant
+  // every addition to the detail view inflated the payload for the whole
+  // cohort. The per-student number crunching stays: the roster's accuracy bar
+  // and "needs attention" section are derived from it.
   const rows = (students ?? []).map(s => {
     const progress = buildStudentProgress({
       allTopics,
@@ -99,18 +110,11 @@ export async function GET() {
       sessions: sessions.filter(x => x.student_id === s.id),
     })
 
-    const sessionDates = sessions
-      .filter(x => x.student_id === s.id && x.completed && x.kind === 'practice')
-      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
-      .map(x => x.started_at)
-
     return {
       student_id: s.id,
       full_name: s.full_name,
       avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
-      topics: progress.topics,
       totals: progress.totals,
-      session_dates: sessionDates,
     }
   })
 

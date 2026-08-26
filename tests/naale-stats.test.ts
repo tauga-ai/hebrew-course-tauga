@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildStudentProgress, buildTopicStats, buildSessionProgress } from '../src/lib/naale/stats'
+import { buildStudentProgress, buildTopicStats, buildSessionProgress, groupSessionsByDay, buildAttendanceWindow } from '../src/lib/naale/stats'
 
 test('buildTopicStats: includes topics the student has never touched', () => {
   const stats = buildTopicStats(['a', 'b'], [{ topic: 'a', level: 3 }], [{ topic: 'a', is_correct: true }])
@@ -160,4 +160,61 @@ test('buildSessionProgress: totals match a hand-computed sum for mixed MCQ/grade
   // 10 (one correct MCQ) + 10 (a graded 5) + 50 (completed session)
   assert.equal(totals.xp, 70)
   assert.equal(totals.coins, 2)
+})
+
+test('groupSessionsByDay: two sessions on one day collapse into one entry', () => {
+  const days = groupSessionsByDay([
+    { id: 's2', started_at: '2026-08-25T14:00:00.000Z' },
+    { id: 's1', started_at: '2026-08-25T09:00:00.000Z' },
+  ])
+  assert.equal(days.length, 1, 'same calendar day is one row, not two identical dates')
+  assert.equal(days[0].count, 2)
+  assert.deepEqual(days[0].session_ids.sort(), ['s1', 's2'])
+  assert.equal(days[0].latest, '2026-08-25T14:00:00.000Z', 'latest session drives the sort')
+})
+
+test('groupSessionsByDay: different days stay separate, newest first', () => {
+  const days = groupSessionsByDay([
+    { id: 'a', started_at: '2026-08-24T09:00:00.000Z' },
+    { id: 'b', started_at: '2026-08-26T09:00:00.000Z' },
+    { id: 'c', started_at: '2026-08-25T09:00:00.000Z' },
+  ])
+  assert.equal(days.length, 3)
+  assert.deepEqual(days.map(d => d.session_ids[0]), ['b', 'c', 'a'])
+  assert.ok(days.every(d => d.count === 1))
+})
+
+test('groupSessionsByDay: no sessions yields no rows', () => {
+  assert.deepEqual(groupSessionsByDay([]), [])
+})
+
+test('buildAttendanceWindow: one cell per day, oldest first, today last', () => {
+  const now = new Date('2026-08-26T10:00:00.000Z')
+  const days = buildAttendanceWindow([], now, 7)
+  assert.equal(days.length, 7)
+  assert.equal(days[6].isToday, true, 'today is the last cell')
+  assert.ok(days.slice(0, 6).every(d => !d.isToday))
+  assert.ok(days.every(d => d.count === 0), 'no sessions means an empty strip, not a missing one')
+})
+
+test('buildAttendanceWindow: sessions land on their day and same-day sessions add up', () => {
+  const now = new Date('2026-08-26T10:00:00.000Z')
+  const days = buildAttendanceWindow(
+    [
+      { id: 'a', started_at: '2026-08-26T07:00:00.000Z' },
+      { id: 'b', started_at: '2026-08-26T09:00:00.000Z' },
+      { id: 'c', started_at: '2026-08-24T09:00:00.000Z' },
+    ],
+    now,
+    7
+  )
+  assert.equal(days[6].count, 2, 'two sessions today')
+  assert.equal(days[4].count, 1, 'one session two days ago')
+  assert.equal(days.reduce((n, d) => n + d.count, 0), 3, 'every session is counted exactly once')
+})
+
+test('buildAttendanceWindow: sessions older than the window are dropped, not folded in', () => {
+  const now = new Date('2026-08-26T10:00:00.000Z')
+  const days = buildAttendanceWindow([{ id: 'old', started_at: '2026-01-01T09:00:00.000Z' }], now, 7)
+  assert.equal(days.reduce((n, d) => n + d.count, 0), 0)
 })
