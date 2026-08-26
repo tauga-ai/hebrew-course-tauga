@@ -4,7 +4,7 @@ import { useResource } from '@/lib/hooks/use-resource'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
 import { SessionHistory } from '@/components/naale/SessionHistory'
 import { MistakesHistory } from '@/components/naale/MistakesHistory'
@@ -111,8 +111,9 @@ export default function NaaleStatsPage() {
             {started && (
               <div className="flex gap-5 shrink-0 border-s border-card-border ps-5">
                 <span>
-                  <span className="block text-lg font-bold text-fg tabular-nums leading-tight">
-                    🔥 <LtrIsolate>{String(data.totals.streak)}</LtrIsolate>
+                  <span className="flex items-center gap-1 text-lg font-bold text-fg tabular-nums leading-tight">
+                    <span aria-hidden>🔥</span>
+                    <LtrIsolate>{String(data.totals.streak)}</LtrIsolate>
                   </span>
                   <span className="block text-[0.65rem] font-semibold tracking-wide text-fg/40">{t('רצף')}</span>
                 </span>
@@ -206,9 +207,6 @@ export default function NaaleStatsPage() {
   }
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="student" />
-      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">{content}</div>
-    </div>
+    <NaaleShell role="student">{content}</NaaleShell>
   )
 }

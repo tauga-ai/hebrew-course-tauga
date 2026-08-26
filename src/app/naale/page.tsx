@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
 import { nextSessionKind } from '@/lib/naale/next-session-kind'
 import { LevelSteps } from '@/components/naale/LevelSteps'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
+import { primeNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { t } from '@/lib/dev-i18n'
 
 interface NaaleMe {
@@ -17,6 +18,7 @@ interface NaaleMe {
   // translation_lang is already in /api/naale/me's response — the sheet needs
   // it to show which language is currently selected.
   student: { id: string; full_name: string; translation_lang?: 'ru' | 'ar' }
+  avatar_url: string | null
   is_admin: boolean
 }
 
@@ -75,6 +77,14 @@ export default function NaaleHome() {
       // Staff get their own view — the email decided this, not a picker.
       if (data.role === 'staff') { router.replace('/naale/staff'); return }
       setMe(data)
+      // NaaleSidebar (rendered below via NaaleShell) reads the same profile
+      // — priming here means it reuses this fetch instead of firing its own.
+      primeNaaleProfile('student', {
+        full_name: data.student.full_name,
+        avatar_url: data.avatar_url,
+        translation_lang: data.student.translation_lang,
+        is_admin: data.is_admin,
+      })
 
       // Best-effort: a failed rewards fetch shouldn't block the home screen
       // itself from rendering, so it's fetched separately and just omitted
@@ -135,15 +145,13 @@ export default function NaaleHome() {
   if (!me) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="student" showAdminLink={me.is_admin} />
-      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-        <div className="mt-4 mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name}</h1>
-            <p className="text-sm text-fg/60">{t('נעלה')}</p>
-          </div>
+    <NaaleShell role="student" showAdminLink={me.is_admin}>
+      <div className="mt-4 mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name}</h1>
+          <p className="text-sm text-fg/60">{t('נעלה')}</p>
         </div>
+      </div>
 
         {rewards ? (
           <div className="grid grid-cols-3 gap-3 mb-6">
@@ -237,10 +245,9 @@ export default function NaaleHome() {
           ))}
         </CardGrid>
 
-        {error && !sheetOpen && (
-          <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>
-        )}
-      </div>
+      {error && !sheetOpen && (
+        <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>
+      )}
 
       {sheetOpen && (
         <StartSessionSheet
@@ -252,6 +259,6 @@ export default function NaaleHome() {
           onClose={closeSheet}
         />
       )}
-    </div>
+    </NaaleShell>
   )
 }

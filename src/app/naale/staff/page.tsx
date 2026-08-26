@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { Avatar } from '@/components/naale/Avatar'
 import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
 import { nextSessionKind, type SessionKind } from '@/lib/naale/next-session-kind'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { useResource } from '@/lib/hooks/use-resource'
 import { scoreColor } from '@/lib/score-color'
 import {
@@ -29,7 +30,7 @@ function AccuracyBar({ totals }: { totals: StaffStudentRow['totals'] }) {
   const acc = overallAccuracy(totals)
   if (acc === null) return <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
   return (
-    <div className="flex items-center gap-2 min-w-[120px]">
+    <div className="flex items-center gap-2 min-w-[80px] sm:min-w-[120px]">
       <div className="flex-1 bg-gray-200 dark:bg-white/10 rounded-full h-2">
         <div
           className={`h-2 rounded-full ${scoreColor(acc, { palette: BAR_PALETTE })}`}
@@ -65,8 +66,8 @@ function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean })
           : 'hover:bg-black/5 dark:hover:bg-white/5'
         }`}
     >
-      <td className="p-3 border-b border-card-border">
-        <div className="flex items-center gap-3">
+      <td className="p-2 sm:p-3 border-b border-card-border">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Avatar name={s.full_name} avatarUrl={s.avatar_url} />
           <div className="min-w-0">
             <div className="font-medium text-fg truncate">{s.full_name}</div>
@@ -74,13 +75,16 @@ function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean })
           </div>
         </div>
       </td>
-      <td className="p-3 border-b border-card-border">
+      <td className="p-2 sm:p-3 border-b border-card-border">
         <AccuracyBar totals={s.totals} />
       </td>
-      <td className="p-3 text-center border-b border-card-border text-fg/70">
+      {/* Least essential of the four columns on a narrow screen — the name,
+          accuracy and the action stay; this one only reappears at sm: and up.
+          Its <th> below is hidden the same way so the columns stay aligned. */}
+      <td className="hidden sm:table-cell p-3 text-center border-b border-card-border text-fg/70">
         <LtrIsolate>{s.totals.completed_sessions}</LtrIsolate>
       </td>
-      <td className="p-3 text-center border-b border-card-border">
+      <td className="p-2 sm:p-3 text-center border-b border-card-border">
         <Link
           href={href}
           onClick={e => e.stopPropagation()}
@@ -119,7 +123,9 @@ export default function NaaleStaffPage() {
   const { data, loading, error } = useResource<StaffStudents>('/api/naale/staff/students')
   // Only for the sidebar's admin nav item — staff themselves are gated by
   // requireNaaleStaff() above via /api/naale/staff/students, not this call.
-  const { data: me } = useResource<{ is_admin: boolean }>('/api/naale/me')
+  // Shared with NaaleSidebar (mounted below via NaaleShell), which reads the
+  // same cached profile instead of firing its own /api/naale/me.
+  const { profile: me, refresh: refreshProfile } = useNaaleProfile('staff')
   const [search, setSearch] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
@@ -157,15 +163,11 @@ export default function NaaleStaffPage() {
   async function openPracticeSheet() {
     setStartError('')
     try {
-      const [statsRes, meRes] = await Promise.all([
-        fetch('/api/naale/my-stats'),
-        fetch('/api/naale/me'),
-      ])
+      // refreshProfile() bypasses the shared cache on purpose — this needs
+      // the freshest translation_lang, not whatever was cached at page load.
+      const [statsRes, freshMe] = await Promise.all([fetch('/api/naale/my-stats'), refreshProfile()])
       if (statsRes.ok) setSheetKind(nextSessionKind((await statsRes.json()).topics))
-      if (meRes.ok) {
-        const meData = await meRes.json()
-        if (meData?.student?.translation_lang) setMyLang(meData.student.translation_lang)
-      }
+      if (freshMe?.translation_lang) setMyLang(freshMe.translation_lang)
     } catch {
       // Defaults stand: 'practice' and 'ru' differ from the truth by one line
       // of copy and one preselected chip, neither worth blocking the sheet on.
@@ -195,79 +197,76 @@ export default function NaaleStaffPage() {
   }
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="staff" showAdminLink={me?.is_admin ?? false} />
-      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-        <div className="flex justify-between items-center mt-4 mb-6 gap-3">
-          <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>
-          <button
-            ref={practiceButtonRef}
-            onClick={openPracticeSheet}
-            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
-          >
-            {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
-          </button>
-        </div>
-        {startError && !sheetOpen && (
-          <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>
-        )}
+    <NaaleShell role="staff" showAdminLink={me?.is_admin ?? false}>
+      <div className="flex justify-between items-center mt-4 mb-6 gap-3">
+        <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('תלמידים')}</h1>
+        <button
+          ref={practiceButtonRef}
+          onClick={openPracticeSheet}
+          className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+        >
+          {starting ? t('מתחיל תרגול...') : t('נסה תרגול בעצמך')}
+        </button>
+      </div>
+      {startError && !sheetOpen && (
+        <p className="text-red-500 dark:text-red-400 text-sm text-center mb-4">{startError}</p>
+      )}
 
-        {loading && <LoadingSpinner />}
-        {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
+      {loading && <LoadingSpinner />}
+      {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
-        {data && (
-          <>
-            {needsAttention.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
-                  {t('דורש תשומת לב')} ({needsAttention.length})
-                </h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full bg-surface rounded-xl border border-red-200 dark:border-red-500/30 text-sm">
-                    <tbody>
-                      {needsAttention.map(s => (
-                        <StudentRow key={s.student_id} s={s} critical />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t('חיפוש תלמיד...')}
-              className="w-full mb-4 border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-
-            {filtered.length === 0 ? (
-              <p className="text-fg/50 text-sm text-center p-6">
-                {students.length === 0 ? t('אין עדיין תלמידים') : t('לא נמצאו תלמידים')}
-              </p>
-            ) : (
+      {data && (
+        <>
+          {needsAttention.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
+                {t('דורש תשומת לב')} ({needsAttention.length})
+              </h2>
               <div className="overflow-x-auto">
-                <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
-                  <thead>
-                    <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
-                      <th className="text-right p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
-                      <th className="text-right p-3 font-semibold text-fg/80">{t('דיוק כולל')}</th>
-                      <th className="p-3 font-semibold text-fg/80 text-center">{t('תרגולים שהושלמו')}</th>
-                      <th className="p-3 w-16" />
-                    </tr>
-                  </thead>
+                <table className="w-full bg-surface rounded-xl border border-red-200 dark:border-red-500/30 text-sm">
                   <tbody>
-                    {filtered.map(s => (
-                      <StudentRow key={s.student_id} s={s} />
+                    {needsAttention.map(s => (
+                      <StudentRow key={s.student_id} s={s} critical />
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          )}
+
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t('חיפוש תלמיד...')}
+            className="w-full mb-4 border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+
+          {filtered.length === 0 ? (
+            <p className="text-fg/50 text-sm text-center p-6">
+              {students.length === 0 ? t('אין עדיין תלמידים') : t('לא נמצאו תלמידים')}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
+                <thead>
+                  <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
+                    <th className="text-right p-2 sm:p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
+                    <th className="text-right p-2 sm:p-3 font-semibold text-fg/80">{t('דיוק כולל')}</th>
+                    <th className="hidden sm:table-cell p-3 font-semibold text-fg/80 text-center">{t('תרגולים שהושלמו')}</th>
+                    <th className="p-2 sm:p-3 w-16" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(s => (
+                    <StudentRow key={s.student_id} s={s} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       {sheetOpen && (
         <StartSessionSheet
@@ -279,6 +278,6 @@ export default function NaaleStaffPage() {
           onClose={closePracticeSheet}
         />
       )}
-    </div>
+    </NaaleShell>
   )
 }

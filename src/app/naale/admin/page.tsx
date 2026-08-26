@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { Avatar } from '@/components/naale/Avatar'
 import type { QuestionImportReport } from '@/lib/naale/question-import'
 import type { OpenQuestionImportReport } from '@/lib/naale/open-question-import'
@@ -223,9 +223,7 @@ export default function NaaleAdminPage() {
   if (!ready) return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="admin" />
-      <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
+    <NaaleShell role="admin">
         <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('ניהול')}</h1>
         </div>
@@ -574,7 +572,6 @@ export default function NaaleAdminPage() {
           )}
         </div>
         </div>
-      </div>
 
       {confirmTarget && (
         <ConfirmDialog
@@ -583,6 +580,6 @@ export default function NaaleAdminPage() {
           onCancel={() => setConfirmTarget(null)}
         />
       )}
-    </div>
+    </NaaleShell>
   )
 }

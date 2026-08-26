@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { NaaleSidebar } from '@/components/naale/NaaleSidebar'
+import { NaaleShell } from '@/components/naale/NaaleShell'
 import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
 import { AttendanceStrip } from '@/components/naale/AttendanceStrip'
 import { Avatar } from '@/components/naale/Avatar'
@@ -52,10 +52,8 @@ export default function NaaleStaffStudentPage() {
   const now = useMemo(() => new Date(), [])
 
   return (
-    <div className="min-h-screen md:flex">
-      <NaaleSidebar role="staff" />
-      <div className="flex-1 p-4 max-w-4xl mx-auto w-full">
-        <PageHeader backHref="/naale/staff" />
+    <NaaleShell role="staff" contentClassName="max-w-4xl">
+      <PageHeader backHref="/naale/staff" />
 
         {loading && <LoadingSpinner />}
         {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
@@ -156,8 +154,7 @@ export default function NaaleStaffStudentPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </NaaleShell>
   )
 }
 

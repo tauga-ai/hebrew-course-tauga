@@ -8,6 +8,7 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { t, debugMode } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
@@ -90,12 +91,16 @@ function PlacementRunner() {
     if (!sessionId) router.replace('/naale')
   }, [sessionId, router])
 
+  // refresh() bypasses the shared cache on purpose — this page loads right
+  // after the pre-session sheet, which is the exact moment translation_lang
+  // could have just changed. A cached value here would be stale for the
+  // same reason staff/page.tsx's openPracticeSheet() needs a fresh read.
+  const { refresh: refreshProfile } = useNaaleProfile('student')
   useEffect(() => {
-    fetch('/api/naale/me')
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (data?.student?.translation_lang) setTranslationLang(data.student.translation_lang) })
-      .catch(() => {})
-  }, [])
+    refreshProfile().then(profile => {
+      if (profile?.translation_lang) setTranslationLang(profile.translation_lang)
+    })
+  }, [refreshProfile])
 
   // Best-effort: a failed write here just means /session/start offers
   // placement again next time, which is safe — see the route's own comment.
