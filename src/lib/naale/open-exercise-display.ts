@@ -76,6 +76,29 @@ function goodContinuationClause(mandatoryWord: string): string {
 }
 
 /** Populated by each content ticket — only סיפור בהמשכים registered here. */
+/**
+ * The `fields` keys each topic's blocks/highlightField actually render.
+ *
+ * `naale_open_questions.fields` also holds grading-only values —
+ * `expected_phrasing`, `expected_summary` — which are the model answer for
+ * that exact row. Any route that ships `fields` to the client should project
+ * it through this first. It matters most on the mistakes-review screen: those
+ * questions can be re-served by the session-opening review, so handing over
+ * the model answer would hand over the answer to a question the student is
+ * about to be asked again.
+ */
+export const OPEN_PUBLIC_FIELD_KEYS: Record<string, string[]> = {
+  'סיפור בהמשכים': ['student_task', 'mandatory_word'],
+  'ווטסאפ והודעות': ['recipient'],
+  'סיכום טקסט קצר': ['student_task'],
+}
+
+/** Drops every key the given topic does not display. Unknown topic → nothing. */
+export function publicOpenFields(topic: string, fields: Record<string, string>): Record<string, string> {
+  const allowed = OPEN_PUBLIC_FIELD_KEYS[topic] ?? []
+  return Object.fromEntries(allowed.filter(k => k in fields).map(k => [k, fields[k]]))
+}
+
 export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
   'סיפור בהמשכים': {
     wordLimit: 30,
