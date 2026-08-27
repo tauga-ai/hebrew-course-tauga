@@ -42,7 +42,12 @@ export async function POST(req: NextRequest) {
   // answerable. The 30-minute session is untouched: this only ever relaxes
   // anything for kind === 'topic'.
   const isLate = isExpired(owned.session.deadline_at)
-  const softStopEligible = isLate && isPendingQuestion(owned.session, question_id)
+  // kind === 'topic' is checked HERE, not inside isPendingQuestion() — that
+  // function was widened to cover practice sessions for placement recycling
+  // (naale-placement-question-recycling), and the soft stop must NOT widen
+  // with it. The 30-minute session keeps its hard stop at expiry.
+  const softStopEligible =
+    isLate && owned.session.kind === 'topic' && isPendingQuestion(owned.session, question_id)
   if (owned.session.ended_at || (isLate && !softStopEligible)) {
     return NextResponse.json({ error: 'הזמן נגמר', code: 'expired' }, { status: 409 })
   }
@@ -73,13 +78,20 @@ export async function POST(req: NextRequest) {
   // ids are unique across both banks, so the kind tag is only needed for
   // deciding which table to READ from, not for this check.
   const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
-  // A topic session's exhaustion fallback (Question selection, ticket.md)
-  // deliberately RE-serves an already-answered question — /next only ever
+  // Two paths deliberately RE-serve an already-answered question: a topic
+  // session's exhaustion fallback, and a reclaimed placement question in
+  // either session kind (naale-placement-question-recycling). /next only ever
   // sets pending_question_id to something it just legitimately served, so a
   // match here means this student's own recycled question, not a replay
-  // attempt. Unlike a sanctioned review, this does NOT feed into
-  // applyAnswer()/answered_count/reward suppression below — the spec has no
-  // carve-out for a recycled answer, it's graded and counted like any other.
+  // attempt. Unlike a sanctioned review, neither feeds into
+  // applyAnswer()/answered_count/reward suppression below — Noam confirmed
+  // (2026-08-27) a repeat still earns XP and still moves the level: "We want
+  // to keep rewarding them for practicing and reinforcing their memory, even
+  // if it's recycled content."
+  //
+  // A reclaimed placement question can never ALSO be a sanctioned review:
+  // getSessionReviewQueue() draws only from kind='practice' sessions, so
+  // placement answers never enter the review pool.
   const isRecycledInThisSession = isPendingQuestion(owned.session, question_id)
   if (answeredEver && !isSanctionedReview && !isRecycledInThisSession) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })

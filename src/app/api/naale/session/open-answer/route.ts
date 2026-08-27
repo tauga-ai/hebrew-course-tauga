@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
   // Same soft-stop carve-out as session/answer/route.ts — see that file's
   // comment for the full reasoning. Topic sessions only.
   const isLate = isExpired(owned.session.deadline_at)
-  const softStopEligible = isLate && isPendingQuestion(owned.session, question_id)
+  // Own kind check, not delegated to isPendingQuestion() — see
+  // session/answer/route.ts for the full reasoning.
+  const softStopEligible =
+    isLate && owned.session.kind === 'topic' && isPendingQuestion(owned.session, question_id)
   if (owned.session.ended_at || (isLate && !softStopEligible)) {
     return NextResponse.json({ error: 'הזמן נגמר', code: 'expired' }, { status: 409 })
   }
