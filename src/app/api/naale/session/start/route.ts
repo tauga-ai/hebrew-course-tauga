@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride } from '@/lib/naale/session'
+import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride, canPause, remainingMs, resumedDeadline } from '@/lib/naale/session'
 import { selectAll } from '@/lib/naale/paginate'
 
 /**
@@ -30,9 +30,15 @@ export async function POST(req: NextRequest) {
   // call site that predates this ticket sends no body at all, so this must
   // tolerate that rather than requiring JSON.
   let topic: string | null = null
+  // 'resume' / 'start_over' answer the returning-student prompt
+  // (naale-topic-session-resume). Validated against the literal set rather than
+  // passed through: it selects a branch below, so an unrecognised value must
+  // fall back to the default path, never reach a switch it wasn't meant to.
+  let action: 'resume' | 'start_over' | undefined
   try {
     const body = await req.json()
     topic = typeof body?.topic === 'string' && body.topic.trim() ? body.topic.trim() : null
+    action = body?.action === 'resume' || body?.action === 'start_over' ? body.action : undefined
   } catch {
     // No body / invalid JSON — treat as the plain 30-minute start.
   }
@@ -46,14 +52,22 @@ export async function POST(req: NextRequest) {
   // 14's XP-completion-bonus and weekly streak would silently undercount,
   // since both only look at completed sessions. No cron job needed: this
   // runs lazily, the next time the student starts anything.
-  const stale = await selectAll<{ id: string; deadline_at: string; answered_count: number }>('naale_sessions', (from, to) =>
+  const stale = await selectAll<{
+    id: string; deadline_at: string; answered_count: number; paused_remaining_ms: number | null
+  }>('naale_sessions', (from, to) =>
     db.from('naale_sessions')
-      .select('id, deadline_at, answered_count')
+      .select('id, deadline_at, answered_count, paused_remaining_ms')
       .eq('student_id', session.student.id)
       .is('ended_at', null)
       .range(from, to))
 
   for (const s of stale) {
+    // A PAUSED session's deadline_at is frozen in the past by construction
+    // (naale-topic-session-resume) — that is how banking the remainder works.
+    // Without this guard the sweep would close exactly the sessions the resume
+    // flow exists to preserve, and the failure would be silent: no error, no
+    // log, just "resume does nothing". Highest-risk line in that ticket.
+    if (s.paused_remaining_ms !== null) continue
     if (isExpired(s.deadline_at)) {
       await db
         .from('naale_sessions')
@@ -75,14 +89,100 @@ export async function POST(req: NextRequest) {
   // Resume a still-live session rather than starting a second one.
   const { data: live } = await db
     .from('naale_sessions')
-    .select('id, kind, topic, deadline_at, answered_count, started_at')
+    .select('id, kind, topic, deadline_at, answered_count, started_at, paused_remaining_ms')
     .eq('student_id', session.student.id)
     .is('ended_at', null)
     .order('started_at', { ascending: false })
     .limit(1)
 
   const existing = live?.[0]
-  if (existing && !isExpired(existing.deadline_at)) {
+
+  // --- naale-topic-session-resume -------------------------------------------
+  // An unfinished PAUSABLE session is offered back rather than silently
+  // resumed: Noam asked for an explicit Resume / Start Over choice ("they
+  // shouldn't be forced to finish that old session"). Everything else keeps
+  // resuming silently, which is the existing behaviour and the only one the
+  // 30-minute session has — it has no start-over affordance at all, by his
+  // explicit instruction.
+  //
+  // Note this branch sits BEFORE the isExpired() check below on purpose: a
+  // paused session's deadline_at is frozen in the past, so it would otherwise
+  // fall through and be treated as expired.
+  if (existing && canPause(existing) && action === undefined) {
+    return NextResponse.json({
+      resumable: {
+        session_id: existing.id,
+        topic: existing.topic,
+        seconds_remaining: Math.ceil(remainingMs(existing) / 1000),
+        answered_count: existing.answered_count,
+      },
+    })
+  }
+
+  if (existing && canPause(existing) && action === 'resume') {
+    // The clock restarts from whatever was banked. If the student was never
+    // detected leaving (a crash, a dead battery), remainingMs() falls back to
+    // the live deadline, so they resume with whatever genuinely remains rather
+    // than with a full timer.
+    const deadline_at = resumedDeadline(remainingMs(existing))
+
+    const { error } = await db
+      .from('naale_sessions')
+      .update({ deadline_at, paused_remaining_ms: null })
+      .eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({
+      session_id: existing.id,
+      kind: existing.kind,
+      topic: existing.topic,
+      deadline_at,
+      seconds_remaining: secondsRemaining(deadline_at),
+      answered_count: existing.answered_count,
+      resumed: true,
+    })
+  }
+
+  // A resume with nothing to resume must NOT fall through to the creation path
+  // below. It did, and the consequences were invisible: resumeClock() on the
+  // session page posts action:'resume' with NO topic, so every such call minted
+  // a fresh session — `kind` resolving to 'practice' because `topic` was null.
+  // The client fires that call on every return-to-tab, so a session that had
+  // already ended spawned a brand new one on each switch, silently, several
+  // per minute (observed 2026-08-27: repeated "clock resumed
+  // {seconds_remaining: 300}" — a FULL session, not a banked remainder, which
+  // is what gave it away).
+  //
+  // 409 rather than an error page: the client's resume handler already treats a
+  // non-ok response as "go back to the dashboard", which is exactly right —
+  // whatever it meant to resume is gone, and the dashboard is where a student
+  // finds out what they actually have.
+  if (action === 'resume' && !(existing && canPause(existing))) {
+    return NextResponse.json({ error: 'no_resumable_session' }, { status: 409 })
+  }
+
+  if (existing && canPause(existing) && action === 'start_over') {
+    // Ends the old session with the same close-out the stale sweep uses, so a
+    // session that genuinely ran its timer still counts as completed. The
+    // ANSWERS are untouched: XP and coins are derived from naale_answers rather
+    // than stored, so everything earned before the interruption survives —
+    // Noam's "any questions they already completed before quitting still count,
+    // of course". Start Over discards the session, not the work.
+    const { error } = await db
+      .from('naale_sessions')
+      .update({
+        ended_at: new Date().toISOString(),
+        completed: isSessionCompleted(existing.deadline_at, existing.answered_count),
+        paused_remaining_ms: null,
+      })
+      .eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Falls through to the normal creation path below, which will start a
+    // fresh session on the topic requested in this same request body.
+  }
+  // --------------------------------------------------------------------------
+
+  if (existing && !isExpired(existing.deadline_at) && !(canPause(existing) && action === 'start_over')) {
     // Dev-only: if the QA override changed since this session was created
     // (or was set for the first time after it), make the resumed session
     // reflect it instead of always keeping whatever deadline was computed at

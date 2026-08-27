@@ -106,7 +106,16 @@ export interface NaaleSession {
    *  (naale-topic-based-sessions). Unused for 'placement'/'practice'. */
   pending_question_id: string | null
   started_at: string
+  /** When this session ends. CAUTION: on a PAUSED session this is stale and
+   *  sits in the past by construction — pausing banks the remainder and resume
+   *  sets deadline_at = now + remainder (naale-topic-session-resume). Check
+   *  paused_remaining_ms before trusting this, or use remainingMs(), which
+   *  handles both. */
   deadline_at: string
+  /** Milliseconds left when a 5-minute topic session was paused; null while
+   *  running. 0 is legitimate (paused with no time left), so test for null
+   *  explicitly rather than truthiness — isPaused() does. */
+  paused_remaining_ms: number | null
   ended_at: string | null
   answered_count: number
   completed: boolean

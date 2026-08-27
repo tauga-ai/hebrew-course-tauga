@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isSessionCompleted, isExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion } from '../src/lib/naale/session-rules'
+import { isSessionCompleted, isExpired, isSessionExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion, canPause, isPaused, remainingToBank, resumedDeadline, remainingMs } from '../src/lib/naale/session-rules'
 
 const NOW = 1_700_000_000_000
 const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString()
@@ -136,4 +136,135 @@ test('an unseen question always beats a reclaimed placement one', () => {
 test('secondsRemaining: never negative', () => {
   assert.equal(secondsRemaining(iso(30_000), NOW), 30)
   assert.equal(secondsRemaining(iso(-90_000), NOW), 0)
+})
+
+// --- naale-topic-session-resume ---------------------------------------------
+
+test('canPause: topic sessions only — the 30-minute session must never pause', () => {
+  // The gate the whole feature hangs off. A future decision to allow 30-minute
+  // pausing is a deliberate change to canPause(), never an accident elsewhere:
+  // pausing a 30-minute session would let a student spread one sitting across a
+  // day and still earn streak credit.
+  assert.equal(canPause({ kind: 'topic' }), true)
+  assert.equal(canPause({ kind: 'practice' }), false)
+  assert.equal(canPause({ kind: 'placement' }), false)
+})
+
+test('isPaused: zero remaining still counts as paused', () => {
+  // The obvious bug this guards: 0 is falsy, so a truthiness check would report
+  // a session paused with no time left as running — and its stale deadline_at
+  // would then be trusted.
+  assert.equal(isPaused({ paused_remaining_ms: 0 }), true)
+  assert.equal(isPaused({ paused_remaining_ms: 1000 }), true)
+  assert.equal(isPaused({ paused_remaining_ms: null }), false)
+})
+
+test('remainingToBank: never negative', () => {
+  assert.equal(remainingToBank(iso(30_000), NOW), 30_000)
+  // Paused after the deadline had already passed — resumes as immediately
+  // over, not with negative time.
+  assert.equal(remainingToBank(iso(-5_000), NOW), 0)
+})
+
+test('resumedDeadline: the clock restarts from what was banked', () => {
+  assert.equal(resumedDeadline(90_000, NOW), new Date(NOW + 90_000).toISOString())
+  // A student who resumes with nothing left gets a deadline of now, not the past.
+  assert.equal(resumedDeadline(-1, NOW), new Date(NOW).toISOString())
+})
+
+test('remainingMs: reads the banked value when paused, the deadline when running', () => {
+  // The point of this helper: a paused session's deadline_at is frozen in the
+  // past, so reading it directly would report 0 for a session that still has
+  // three minutes owed to it.
+  assert.equal(
+    remainingMs({ deadline_at: iso(-600_000), paused_remaining_ms: 180_000 }, NOW),
+    180_000
+  )
+  assert.equal(
+    remainingMs({ deadline_at: iso(45_000), paused_remaining_ms: null }, NOW),
+    45_000
+  )
+})
+
+test('the stale-session sweep skips paused sessions', () => {
+  // Mirrors the guard in session/start/route.ts. THE regression test for this
+  // ticket: a paused session's deadline is in the past by construction, so
+  // without the skip the sweep closes exactly the sessions resume exists to
+  // preserve — silently, with no error to trace.
+  const sweepWouldClose = (s: { deadline_at: string; paused_remaining_ms: number | null }) =>
+    s.paused_remaining_ms === null && isExpired(s.deadline_at, NOW)
+
+  assert.equal(
+    sweepWouldClose({ deadline_at: iso(-600_000), paused_remaining_ms: 180_000 }),
+    false,
+    'a paused session must survive the sweep despite its past deadline'
+  )
+  assert.equal(
+    sweepWouldClose({ deadline_at: iso(-600_000), paused_remaining_ms: null }),
+    true,
+    'a genuinely abandoned session is still closed'
+  )
+  assert.equal(
+    sweepWouldClose({ deadline_at: iso(60_000), paused_remaining_ms: null }),
+    false,
+    'a live session is untouched'
+  )
+})
+
+test('a paused session survives a round trip with the time it was owed', () => {
+  // End to end through the pure helpers: 3:12 left, student leaves, comes back
+  // ten minutes later, resumes.
+  const banked = remainingToBank(iso(192_000), NOW)
+  assert.equal(banked, 192_000)
+
+  const LATER = NOW + 600_000
+  const deadline = resumedDeadline(banked, LATER)
+  assert.equal(secondsRemaining(deadline, LATER), 192)
+  assert.equal(isExpired(deadline, LATER), false)
+})
+
+test('a paused session is not expired, however far its deadline has slipped', () => {
+  // The trap behind session/status: a paused session's deadline_at is frozen
+  // in the PAST by construction, so isExpired() reads true for every one of
+  // them. /status reported that raw, and the session page believes /status —
+  // boot calls finishSession('time_up') on an expired session. Net effect: any
+  // boot onto a paused session (a reload, or arriving from Continue) ended the
+  // very session the pause existed to preserve, and the banked time was gone.
+  //
+  // The remainder is the truth for a paused session; the clock is not.
+  const longAgo = { deadline_at: iso(-3_600_000), paused_remaining_ms: 20_000 }
+
+  assert.equal(isExpired(longAgo.deadline_at), true, 'the frozen clock does read as expired')
+  assert.equal(isPaused(longAgo), true)
+  assert.equal(remainingMs(longAgo, NOW), 20_000, 'but 20s were banked and are still owed')
+})
+
+test('remainingToBank floors at zero rather than banking a negative', () => {
+  // A session whose timer ran out while the tab was already hidden banks 0,
+  // not a negative — resumedDeadline() would otherwise hand back a deadline in
+  // the past and the session would expire the instant it resumed.
+  assert.equal(remainingToBank(iso(-5_000), NOW), 0)
+  assert.equal(isPaused({ paused_remaining_ms: remainingToBank(iso(-5_000), NOW) }), true)
+})
+
+test('isSessionExpired: a paused session is never expired, a running one still is', () => {
+  // The bug this exists to prevent shipped to four routes at once. Each called
+  // isExpired(session.deadline_at), which cannot tell a paused session from a
+  // finished one — a paused deadline is frozen in the PAST by construction.
+  // /status called it 'expired', /next answered done:time_up, and /answer marked
+  // every post-resume answer late. A student arriving from Continue with 277
+  // seconds banked landed on "Time's up! You answered 0 exercises".
+  const pausedLongAgo = { deadline_at: iso(-3_600_000), paused_remaining_ms: 20_000 }
+  const pausedAtZero = { deadline_at: iso(-3_600_000), paused_remaining_ms: 0 }
+  const running = { deadline_at: iso(45_000), paused_remaining_ms: null }
+  const finished = { deadline_at: iso(-1_000), paused_remaining_ms: null }
+
+  assert.equal(isSessionExpired(pausedLongAgo, NOW), false, 'paused with time banked')
+  assert.equal(isSessionExpired(pausedAtZero, NOW), false, 'paused with 0 banked is still paused')
+  assert.equal(isSessionExpired(running, NOW), false, 'running with time left')
+  assert.equal(isSessionExpired(finished, NOW), true, 'genuinely out of time')
+
+  // The bare check is what got this wrong — kept as the contrast, so anyone
+  // tempted to "simplify" back to it sees the two disagree on purpose.
+  assert.equal(isExpired(pausedLongAgo.deadline_at, NOW), true)
 })
