@@ -16,6 +16,28 @@ export const COINS_PER_CORRECT = 1
 export const SESSIONS_PER_WEEK_FOR_STREAK = 2
 
 /**
+ * Whether a session counts toward the weekly streak. Hardcoded to exclude
+ * 5-minute topic sessions — confirmed by the spec (naale-topic-based-sessions
+ * ticket.md), not a pending decision, so unlike countsAsTrackedSession below
+ * this is not meant to be flipped without a spec change.
+ */
+export function countsTowardStreak(s: { kind: string }): boolean {
+  return s.kind !== 'topic'
+}
+
+/**
+ * Whether a session counts as a "completed session" — the staff dashboard's
+ * completed_sessions total AND the XP_PER_COMPLETED_SESSION bonus, bundled
+ * under one flip point because the spec is silent on both and this is the
+ * more consistent reading given the streak is already excluded outright.
+ * This IS a pending decision (task.md §1, ticket.md's one open question) —
+ * flip this one line if Noam says either should count for topic sessions.
+ */
+export function countsAsTrackedSession(s: { kind: string }): boolean {
+  return s.kind !== 'topic'
+}
+
+/**
  * Israel time, Sunday-start — Yuval-confirmed 2026-08-13 ("from 00:01 every
  * Sunday morning"; read as plain-language for local midnight, which is what
  * this already computes — see naale-track-first-build/CONTEXT.md §9).

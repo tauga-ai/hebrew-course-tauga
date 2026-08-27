@@ -11,6 +11,11 @@ interface OpenAnswerInputProps {
   wordLimit: number
   loading: boolean
   disabled?: boolean
+  /** Defaults to "שלח תשובה". A topic session passes "סיום התרגול" once its
+   *  timer has run out on this question (Timer: soft stop,
+   *  naale-topic-based-sessions) — submitting still works identically,
+   *  this only changes what the button says. */
+  submitLabel?: string
 }
 
 const LOADING_MESSAGES = [
@@ -27,7 +32,7 @@ const LOADING_MESSAGES = [
  * own question content above this and its own score/feedback display below
  * it.
  */
-export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading, disabled }: OpenAnswerInputProps) {
+export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading, disabled, submitLabel }: OpenAnswerInputProps) {
   const count = wordCount(value)
   const overLimit = count > wordLimit
   const [messageIndex, setMessageIndex] = useState(0)
@@ -95,7 +100,7 @@ export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading,
             </span>
           </span>
         ) : (
-          t('שלח תשובה')
+          submitLabel ?? t('שלח תשובה')
         )}
       </button>
     </div>

@@ -38,12 +38,16 @@ export async function GET() {
   const db = createServiceClient()
   const studentId = session.student.id
 
-  // Practice session ids, so placement is excluded by set membership. Doing it
-  // this way also covers rows written before this change, which a column
-  // filter could not.
+  // Practice AND topic session ids, so placement is excluded by set
+  // membership. The exclusion this set exists for is placement's above-level
+  // calibration questions (see the doc comment above) — a wrong answer during
+  // a 5-minute topic session is a real mistake the same way a 30-minute one
+  // is, so topic sessions belong on this screen too
+  // (naale-topic-based-sessions). Doing it this way also covers rows written
+  // before this change, which a column filter could not.
   const sessions = await selectAll<{ id: string; kind: string }>('naale_sessions', (from, to) =>
     db.from('naale_sessions').select('id, kind').eq('student_id', studentId).range(from, to))
-  const practiceIds = new Set(sessions.filter(s => s.kind === 'practice').map(s => s.id))
+  const practiceIds = new Set(sessions.filter(s => s.kind === 'practice' || s.kind === 'topic').map(s => s.id))
 
   const [mcq, open] = await Promise.all([
     selectAll<{

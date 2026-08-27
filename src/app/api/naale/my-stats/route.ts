@@ -4,7 +4,7 @@ import { getNaaleSession } from '@/lib/naale/auth'
 import { buildStudentProgress } from '@/lib/naale/stats'
 import { loadAllTopics } from '@/lib/naale/topics'
 import { selectAll } from '@/lib/naale/paginate'
-import { computeStreak } from '@/lib/naale/rewards'
+import { computeStreak, countsTowardStreak } from '@/lib/naale/rewards'
 
 /**
  * The authenticated Naale student's own progress — per-topic level and exercise
@@ -54,7 +54,7 @@ export async function GET() {
   // The one number staff's view doesn't show, so it stays out of the shared
   // builder.
   const streak = computeStreak(
-    sessions.filter(s => s.completed).map(s => new Date(s.started_at))
+    sessions.filter(s => s.completed && countsTowardStreak(s)).map(s => new Date(s.started_at))
   )
 
   return NextResponse.json({

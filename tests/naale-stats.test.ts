@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildStudentProgress, buildTopicStats, buildSessionProgress, groupSessionsByDay, buildAttendanceWindow } from '../src/lib/naale/stats'
+import { XP_PER_CORRECT, COINS_PER_CORRECT } from '../src/lib/naale/rewards'
 
 test('buildTopicStats: includes topics the student has never touched', () => {
   const stats = buildTopicStats(['a', 'b'], [{ topic: 'a', level: 3 }], [{ topic: 'a', is_correct: true }])
@@ -119,6 +120,27 @@ test('buildStudentProgress: MCQ and graded answers combine into one set of total
   // 10 (one correct MCQ) + 10 (a graded 5) + 50 (completed session)
   assert.equal(totals.xp, 70)
   assert.equal(totals.coins, 2)
+})
+
+// naale-topic-based-sessions: per-question XP/coins count for a topic
+// session exactly like a practice session, but the completion bonus and
+// completed_sessions do NOT — the ticket's one pending decision, defaulted
+// to "no" (see rewards.ts's countsAsTrackedSession).
+test('buildStudentProgress: a topic session earns per-question XP but not the completion bonus or completed_sessions credit', () => {
+  // Isolated from SESSIONS on purpose — that fixture's practice session is
+  // itself completed:true, which would contribute its own +50 bonus and
+  // muddy what this test is actually checking.
+  const { totals } = buildStudentProgress({
+    allTopics: TOPICS,
+    levels: [],
+    answers: [{ topic: 'הבנת הנקרא', is_correct: true, is_review: false, session_id: 't1' }],
+    openAnswers: [],
+    sessions: [{ id: 't1', kind: 'topic', completed: true }],
+  })
+  assert.equal(totals.answered, 1)
+  assert.equal(totals.completed_sessions, 0, 'topic session excluded from completed_sessions credit')
+  assert.equal(totals.xp, XP_PER_CORRECT, 'per-question XP only, no +50 completion bonus for the topic session')
+  assert.equal(totals.coins, COINS_PER_CORRECT)
 })
 
 /**

@@ -12,10 +12,18 @@ import type { ReactNode } from 'react'
  * force 3 columns into a narrow container on any wide screen, squashing
  * card text down to a couple of characters.
  */
-export function CardGrid({ children }: { children: ReactNode }) {
+export function CardGrid({ children, cols = 3 }: { children: ReactNode; cols?: 3 | 4 }) {
   return (
     <div className="@container">
-      <div className="grid grid-cols-1 @[480px]:grid-cols-2 @[720px]:grid-cols-3 auto-rows-fr gap-3">{children}</div>
+      <div
+        className={`grid grid-cols-1 @[480px]:grid-cols-2 @[720px]:grid-cols-3 auto-rows-fr gap-3${
+          // Opt-in only: every other student page is tuned for at most 3
+          // columns, so widening the shared default would reflow them all.
+          cols === 4 ? ' @[960px]:grid-cols-4' : ''
+        }`}
+      >
+        {children}
+      </div>
     </div>
   )
 }

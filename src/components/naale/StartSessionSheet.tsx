@@ -33,6 +33,7 @@ const SHEET_MS = 220
 
 export function StartSessionSheet({
   kind,
+  topicName,
   lang,
   starting,
   error,
@@ -40,8 +41,12 @@ export function StartSessionSheet({
   onClose,
 }: {
   /** Derived by the caller from whether any topic has a level yet — the same
-   *  condition /api/naale/session/start uses to choose. */
-  kind: 'practice' | 'placement'
+   *  condition /api/naale/session/start uses to choose. 'topic' added by
+   *  naale-topic-based-sessions — a 5-minute session scoped to one topic. */
+  kind: 'practice' | 'placement' | 'topic'
+  /** Required when kind === 'topic' — the topic this session will be scoped
+   *  to, shown as the eyebrow label the same way 'placement' shows its own. */
+  topicName?: string
   lang: TranslationLang
   starting: boolean
   error: string
@@ -116,19 +121,40 @@ export function StartSessionSheet({
               {t('מבחן רמה')}
             </span>
           )}
+          {/* Topic names ARE run through t() for display — reversing this
+              slot's original "real content, leave unwrapped" call, which was
+              made when the dashboard's cards were also unwrapped. They now
+              translate too, and a card reading "Reading Comprehension" that
+              opens a sheet labelled "הבנת הנקרא" is worse than either choice
+              on its own. Display only: the prop itself stays the raw Hebrew,
+              because it's the key onStart sends to session/start.
+              Same eyebrow slot 'placement' uses above. */}
+          {kind === 'topic' && topicName && (
+            <span className="self-start text-[10px] font-bold tracking-wide uppercase text-accent-naale border border-accent-naale/30 bg-accent-naale/10 rounded-full px-2 py-0.5">
+              {t(topicName)}
+            </span>
+          )}
           <h2 id="start-session-title" className="text-xl font-extrabold text-fg">
-            {t(kind === 'placement' ? 'מתחילים במבחן רמה?' : 'מתחילים תרגול?')}
+            {t(kind === 'placement' ? 'מתחילים במבחן רמה?' : kind === 'topic' ? 'מתחילים תרגול ממוקד?' : 'מתחילים תרגול?')}
           </h2>
         </div>
 
         {/* One line, because it has to survive being read every day. Placement
             gets its own: it is timed the same 30 minutes, but it writes
             completed:false, so it earns no completion XP — claiming 50 XP here
-            would be a promise the app does not keep. */}
+            would be a promise the app does not keep. Topic gets its own too:
+            5 minutes, not 30, and deliberately doesn't count toward the streak
+            or completed-session credit (naale-topic-based-sessions) — no XP
+            claim here either, since promising a number this line doesn't
+            control (per-question XP still applies, but stating an amount
+            invites the same "the app doesn't keep this promise" risk 30
+            was written to avoid). */}
         <p className="text-sm text-fg/65 leading-relaxed">
           {t(kind === 'placement'
             ? '30 דקות · המבחן קובע באיזו רמה תתחיל בכל נושא'
-            : '30 דקות · הישאר עד הסוף כדי שהתרגול ייחשב · 50 XP')}
+            : kind === 'topic'
+              ? '5 דקות · שאלות מהנושא הזה בלבד'
+              : '30 דקות · הישאר עד הסוף כדי שהתרגול ייחשב · 50 XP')}
         </p>
 
         <div className="flex items-center justify-between gap-3">

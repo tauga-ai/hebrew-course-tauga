@@ -98,7 +98,13 @@ export interface NaaleTopicLevel {
 export interface NaaleSession {
   id: string
   student_id: string
-  kind: 'placement' | 'practice'
+  kind: 'placement' | 'practice' | 'topic'
+  /** Set only when kind === 'topic' — the single topic this session is scoped to. */
+  topic: string | null
+  /** The question_id session/next most recently served, used to authorize one
+   *  late answer past the deadline and to authorize a recycled re-answer
+   *  (naale-topic-based-sessions). Unused for 'placement'/'practice'. */
+  pending_question_id: string | null
   started_at: string
   deadline_at: string
   ended_at: string | null
