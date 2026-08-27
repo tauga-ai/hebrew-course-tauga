@@ -219,48 +219,68 @@ export function groupSessionsByDay(sessions: { id: string; started_at: string }[
   return [...byLabel.values()].sort((a, b) => (a.latest < b.latest ? 1 : -1))
 }
 
-/** Days of attendance the staff detail view shows at once. A sliding window for
- *  now; once the program has a start date behind it, "since the program began"
- *  is the more honest frame — it grows instead of dropping history off the end. */
-export const ATTENDANCE_DAYS = 28
+/** Sunday. Inferred from the streak rule (Yuval-confirmed Sunday-start,
+ *  Asia/Jerusalem) rather than specified by Noam — isolated here so a wrong
+ *  guess is a one-line change and not a grid rewrite. */
+export const WEEK_START_DAY = 0
 
-export interface AttendanceDay {
-  /** he-IL date, matching groupSessionsByDay()'s keys. */
-  label: string
+export interface AttendanceMonthDay {
+  /** he-IL date, matching groupSessionsByDay()'s keys. Null for a leading
+   *  blank — a grid slot belonging to no day of this month. */
+  label: string | null
   /** Sessions started that day. 0 for a day with no practice. */
   count: number
-  /** Day-of-month, for the sparse axis labels under the strip. */
-  dayOfMonth: number
+  dayOfMonth: number | null
   isToday: boolean
 }
 
 /**
- * One cell per day for the last `days` days, oldest first, counting sessions.
+ * One cell per day of a single calendar month, weekday-aligned.
  *
- * The gaps are the point: a list of dates shows when a student practiced, but
- * only a continuous run of days shows when they *didn't* — which is the thing
- * a counselor is actually trying to see. Built by walking the local calendar
- * with setDate() rather than subtracting milliseconds, so a DST shift can't
+ * Replaces buildAttendanceWindow(), which showed a rolling 28 days ending
+ * today. Noam asked for a month view with navigation so staff can see history
+ * beyond the last 28 days; a rolling window cannot express "March" and has no
+ * notion of weekday alignment.
+ *
+ * The gaps are still the point — the reason the strip replaced a list of dates
+ * in the first place: a list shows the days a student practised, but only a
+ * continuous run also shows the days they did not. Weekday alignment adds to
+ * that rather than replacing it, since "only ever practises on Sundays" is
+ * readable off a grid and invisible in a strip.
+ *
+ * Leading blanks put the 1st under its true weekday. Walks the calendar with
+ * setDate() rather than subtracting milliseconds, so a DST shift cannot
  * duplicate or skip a day.
  *
  * `now` is a parameter so this is testable; callers pass new Date().
  */
-export function buildAttendanceWindow(
+export function buildAttendanceMonth(
   sessions: { id: string; started_at: string }[],
-  now: Date,
-  days: number = ATTENDANCE_DAYS
-): AttendanceDay[] {
+  year: number,
+  month: number,
+  now: Date
+): AttendanceMonthDay[] {
   const countByLabel = new Map<string, number>()
   for (const day of groupSessionsByDay(sessions)) countByLabel.set(day.label, day.count)
 
   const todayLabel = now.toLocaleDateString('he-IL')
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - (days - 1))
+  const first = new Date(year, month, 1)
+  // Day 0 of the month falls on a Thursday? Then Sun/Mon/Tue/Wed are blanks.
+  const leading = (first.getDay() - WEEK_START_DAY + 7) % 7
+  // Day 0 of the NEXT month is the last day of this one — avoids a per-month
+  // length table and gets February right in leap years for free.
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-  return Array.from({ length: days }, (_, i) => {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
+  const blanks: AttendanceMonthDay[] = Array.from({ length: leading }, () => ({
+    label: null,
+    count: 0,
+    dayOfMonth: null,
+    isToday: false,
+  }))
+
+  const days: AttendanceMonthDay[] = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = new Date(year, month, 1)
+    d.setDate(1 + i)
     const label = d.toLocaleDateString('he-IL')
     return {
       label,
@@ -269,4 +289,18 @@ export function buildAttendanceWindow(
       isToday: label === todayLabel,
     }
   })
+
+  return [...blanks, ...days]
+}
+
+/** The month of a student's earliest session, so navigation can stop there
+ *  rather than paging back into months that predate the student — a run of
+ *  empty grids reads as a broken screen. Null when they have never practised. */
+export function firstSessionMonth(
+  sessions: { started_at: string }[]
+): { year: number; month: number } | null {
+  if (sessions.length === 0) return null
+  const earliest = sessions.reduce((a, b) => (a.started_at < b.started_at ? a : b))
+  const d = new Date(earliest.started_at)
+  return { year: d.getFullYear(), month: d.getMonth() }
 }

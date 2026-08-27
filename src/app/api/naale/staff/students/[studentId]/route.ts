@@ -85,10 +85,20 @@ export async function GET(
   const meta = authUser?.user?.user_metadata
   const avatarUrl = (meta?.avatar_url as string | undefined) ?? (meta?.picture as string | undefined) ?? null
 
+  // Both kinds, tagged. The attendance calendar's type toggle filters these
+  // client-side, and the sessions query above has no date bound, so month
+  // navigation needs no further server work — the full history is already here.
+  // `completed` stays: an abandoned session is not attendance.
+  //
+  // NOTE: totals.completed_sessions is computed separately, through
+  // countsAsTrackedSession(), and deliberately still excludes topic sessions.
+  // That is this ticket's open question for Noam, not an oversight — see
+  // ticket.md. Flip that one helper if he wants the number to follow the
+  // toggle.
   const sessionDates = sessions
-    .filter(x => x.completed && x.kind === 'practice')
+    .filter(x => x.completed && (x.kind === 'practice' || x.kind === 'topic'))
     .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
-    .map(x => ({ id: x.id, started_at: x.started_at }))
+    .map(x => ({ id: x.id, started_at: x.started_at, kind: x.kind }))
 
   return NextResponse.json({
     student: {
