@@ -7,6 +7,7 @@ import { CardGrid } from '@/components/ui/CardGrid'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
+import { ResumeSessionSheet } from '@/components/naale/ResumeSessionSheet'
 import { nextSessionKind } from '@/lib/naale/next-session-kind'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { primeNaaleProfile } from '@/lib/naale/use-naale-profile'
@@ -77,6 +78,12 @@ export default function NaaleHome() {
   // (naale-topic-based-sessions) — same sheet, same confirm-before-clock-starts
   // job, just a different destination once confirmed.
   const [sheetTopic, setSheetTopic] = useState<string | null>(null)
+  // Set only when session/start reports an unfinished topic session instead of
+  // starting one. Null on the normal path, so a student with nothing pending
+  // never sees an extra step (naale-topic-session-resume).
+  const [resumable, setResumable] = useState<
+    { session_id: string; topic: string | null; seconds_remaining: number; answered_count: number } | null
+  >(null)
   // The element that opened the sheet, so keyboard focus returns to it —
   // whichever one that was, the main tile or a specific topic card.
   const startTileRef = useRef<HTMLButtonElement>(null)
@@ -178,6 +185,53 @@ export default function NaaleHome() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      // An unfinished topic session comes back as an offer rather than a
+      // session (naale-topic-session-resume) — Noam: a returning student
+      // "shouldn't be forced to finish that old session". The sheet closes and
+      // the choice takes its place; nothing has been started yet at this point.
+      if (data.resumable) {
+        setResumable(data.resumable)
+        setSheetOpen(false)
+        setSheetTopic(null)
+        setStarting(false)
+        return
+      }
+      router.push(`/naale/session?session_id=${data.session_id}`)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'שגיאה בפתיחת תרגול')
+      setStarting(false)
+    }
+  }
+
+  /** Answers the returning-student prompt. 'resume' picks the old session back
+   *  up with its banked time; 'start_over' abandons it and begins a fresh five
+   *  minutes on the same topic. Answers already given survive either way —
+   *  they live in naale_answers, which neither branch touches. */
+  async function answerResumable(action: 'resume' | 'start_over') {
+    if (!resumable) return
+
+    // Resume navigates straight there and lets the session page restart the
+    // clock once it has a question on screen. Un-pausing from HERE would start
+    // the timer and then spend the next few seconds on a navigation, a /status
+    // and a /next before the student could answer anything — billed to time
+    // they had banked. It also drops a whole round trip out of the path
+    // between tapping Continue and seeing a question.
+    if (action === 'resume') {
+      setStarting(true)
+      router.push(`/naale/session?session_id=${resumable.session_id}`)
+      return
+    }
+
+    setStarting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/naale/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, topic: resumable.topic }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
@@ -373,6 +427,25 @@ export default function NaaleHome() {
 
       {error && !sheetOpen && (
         <p className="text-red-500 dark:text-red-400 text-sm mt-4 text-center">{error}</p>
+      )}
+
+      {/* The returning-student choice (naale-topic-session-resume). Same
+          bottom-sheet-on-phone / centred-dialog-on-web treatment as
+          StartSessionSheet rather than a second modal pattern, but a separate
+          component: that sheet's job is "here are the terms, begin", and this
+          one's is "you left something unfinished" — folding two different
+          questions into one component would make both harder to read. */}
+      {resumable && (
+        <ResumeSessionSheet
+          topicName={resumable.topic}
+          secondsRemaining={resumable.seconds_remaining}
+          answeredCount={resumable.answered_count}
+          starting={starting}
+          error={error}
+          onResume={() => answerResumable('resume')}
+          onStartOver={() => answerResumable('start_over')}
+          onClose={() => { setResumable(null); setError(''); (lastTriggerRef.current ?? startTileRef.current)?.focus() }}
+        />
       )}
 
       {sheetOpen && (
