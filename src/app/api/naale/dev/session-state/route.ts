@@ -25,7 +25,7 @@ export async function GET() {
   const db = createServiceClient()
   const { data } = await db
     .from('naale_sessions')
-    .select('id, deadline_at, kind, answered_count')
+    .select('id, deadline_at, kind, answered_count, paused_remaining_ms')
     .eq('student_id', session.student.id)
     .is('ended_at', null)
     .order('started_at', { ascending: false })
@@ -40,6 +40,12 @@ export async function GET() {
       deadline_at: data.deadline_at,
       kind: data.kind,
       answered_count: data.answered_count,
+      // Otherwise invisible state, and the one that decides whether a topic
+      // session is paused (naale-topic-session-resume). Without it on screen
+      // there's no way to tell "the pause never fired" from "the pause fired
+      // and something downstream ate it" — a distinction that cost a live
+      // debugging session to establish once already.
+      paused_remaining_ms: data.paused_remaining_ms,
     },
   })
 }
