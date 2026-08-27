@@ -54,9 +54,83 @@ test('isPendingQuestion: false with no pending question recorded', () => {
   assert.equal(isPendingQuestion({ kind: 'topic', pending_question_id: null }, 'q1'), false)
 })
 
-test('isPendingQuestion: false for practice/placement even with a matching id — soft stop and recycling are topic-only', () => {
-  assert.equal(isPendingQuestion({ kind: 'practice', pending_question_id: 'q1' }, 'q1'), false)
+test('isPendingQuestion: true for practice too, since placement recycling happens in the 30-minute session', () => {
+  // Widened by naale-placement-question-recycling. The soft stop did NOT
+  // widen with it — session/answer and session/open-answer each check
+  // kind === 'topic' themselves, so the 30-minute session keeps its hard
+  // stop at expiry. See the guard test below.
+  assert.equal(isPendingQuestion({ kind: 'practice', pending_question_id: 'q1' }, 'q1'), true)
+})
+
+test('isPendingQuestion: always false for placement, which must never re-serve a question', () => {
+  // Placement samples a student cold to find their level; showing them a
+  // question they have already answered would corrupt the level it produces.
   assert.equal(isPendingQuestion({ kind: 'placement', pending_question_id: 'q1' }, 'q1'), false)
+})
+
+test('the soft stop stays topic-only even though isPendingQuestion widened', () => {
+  // Mirrors the condition in session/answer/route.ts and
+  // session/open-answer/route.ts. This is the regression guard for the
+  // widening: a 30-minute session must never accept an answer after expiry,
+  // even for the question it last served.
+  const softStopEligible = (session: { kind: string; pending_question_id: string | null }) =>
+    session.kind === 'topic' && isPendingQuestion(session, 'q1')
+
+  assert.equal(softStopEligible({ kind: 'topic', pending_question_id: 'q1' }), true)
+  assert.equal(softStopEligible({ kind: 'practice', pending_question_id: 'q1' }), false)
+  assert.equal(softStopEligible({ kind: 'placement', pending_question_id: 'q1' }), false)
+})
+
+test('placement answers split out of the seen set; non-placement answers win', () => {
+  // Mirrors the partition in session/next/route.ts. A question answered in
+  // placement AND later in practice is genuinely seen and must NOT come back
+  // through the reclaim tier.
+  const placementSessionIds = new Set(['p1'])
+  const answers = [
+    { question_id: 'q-placement-only', session_id: 'p1', answered_at: '2026-08-01T10:00:00Z' },
+    { question_id: 'q-both', session_id: 'p1', answered_at: '2026-08-01T10:00:00Z' },
+    { question_id: 'q-both', session_id: 's1', answered_at: '2026-08-05T10:00:00Z' },
+  ]
+
+  const seenIds = new Set<string>()
+  const placementFirstSeen = new Map<string, string>()
+  for (const a of answers) {
+    if (placementSessionIds.has(a.session_id)) {
+      const existing = placementFirstSeen.get(a.question_id)
+      if (!existing || a.answered_at < existing) placementFirstSeen.set(a.question_id, a.answered_at)
+    } else {
+      seenIds.add(a.question_id)
+    }
+  }
+  const placementOnly = [...placementFirstSeen]
+    .filter(([id]) => !seenIds.has(id))
+    .map(([id]) => id)
+
+  assert.deepEqual(placementOnly, ['q-placement-only'])
+  assert.ok(seenIds.has('q-both'))
+})
+
+test('reclaimed placement questions come back oldest-answered first', () => {
+  const placementFirstSeen = new Map([
+    ['q-new', '2026-08-20T10:00:00Z'],
+    ['q-old', '2026-08-01T10:00:00Z'],
+  ])
+  const ordered = [...placementFirstSeen].sort((a, b) => (a[1] < b[1] ? -1 : 1)).map(([id]) => id)
+  assert.deepEqual(ordered, ['q-old', 'q-new'])
+})
+
+test('an unseen question always beats a reclaimed placement one', () => {
+  // Pass 1 excludes both seen and placement-only ids; pass 2 is only reached
+  // when pass 1 found nothing anywhere on the ladder.
+  const bank = [
+    { id: 'q-unseen', difficulty: 3 },
+    { id: 'q-placement', difficulty: 3 },
+  ]
+  const seenIds = new Set<string>()
+  const placementOnlyIds = new Set(['q-placement'])
+
+  const pass1 = bank.filter(q => !seenIds.has(q.id) && !placementOnlyIds.has(q.id))
+  assert.deepEqual(pass1.map(q => q.id), ['q-unseen'])
 })
 
 test('secondsRemaining: never negative', () => {

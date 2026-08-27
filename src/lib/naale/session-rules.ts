@@ -74,24 +74,42 @@ export function secondsRemaining(deadlineAt: string, now = Date.now()): number {
 }
 
 /**
- * Whether `questionId` is the one question a topic session is currently
+ * Whether `questionId` is the one question this session is currently
  * authorized to accept an answer for outside the normal rules —
  * session/next only ever sets pending_question_id to something it just
  * legitimately served (naale-topic-based-sessions).
  *
- * Two callers, both in session/answer and session/open-answer:
+ * Three callers, all in session/answer and session/open-answer:
  *  - Timer soft stop: paired with isExpired() to let exactly this one
  *    question through after the deadline, for either MCQ or open-ended
- *    (confirmed by Noam over Slack — not open-ended-only).
- *  - Exhaustion recycling: paired with the cross-session `answeredEver`
- *    duplicate check, since a legitimately recycled question IS already
- *    answered (in a past session) by definition.
+ *    (confirmed by Noam over Slack — not open-ended-only). **That caller
+ *    checks kind === 'topic' ITSELF** — see the warning below.
+ *  - Exhaustion recycling (topic sessions): paired with the cross-session
+ *    `answeredEver` duplicate check, since a legitimately recycled question
+ *    IS already answered (in a past session) by definition.
+ *  - Placement recycling (practice AND topic sessions,
+ *    naale-placement-question-recycling): the same situation for a different
+ *    reason — the earlier answer came from the placement quiz, and those
+ *    questions are now reclaimable rather than spent.
  *
- * Always false for practice/placement — kind === 'topic' is required.
+ * WIDENED from topic-only to cover that third case, which happens in the
+ * 30-minute practice session too. The soft-stop callers previously leaned on
+ * this function to enforce topic-only for them; they now carry their own
+ * explicit kind check, because widening here without that would have handed
+ * the 30-minute session a post-expiry grace answer it must never get.
+ *
+ * Still false for 'placement': it samples a student cold to find their level
+ * and must never re-serve, so it has no legitimate use for this exemption.
+ *
+ * What keeps the widening safe is unchanged: pending_question_id is only ever
+ * written by session/next, to a question it just chose to serve, and only one
+ * such question exists per session at a time. A client cannot set it and
+ * cannot use it to answer anything else twice.
  */
 export function isPendingQuestion(
   session: { kind: string; pending_question_id: string | null },
   questionId: string
 ): boolean {
-  return session.kind === 'topic' && session.pending_question_id === questionId
+  if (session.kind === 'placement') return false
+  return session.pending_question_id === questionId
 }

@@ -46,6 +46,28 @@ type PublicQuestion = {
   fields?: Record<string, string>
 }
 
+/**
+ * Strips the grading-only fields before a question crosses the wire.
+ *
+ * `JSON.stringify` omits an explicit `undefined` value, so `correct_answer` is
+ * genuinely absent from the response rather than present-and-empty. For 'open'
+ * questions the same concern applies to grading-only fields (a model answer,
+ * anchors) — publicFields() is the allowlist that keeps those server-side.
+ *
+ * debugMode is a build-time env-var check, never client-controlled.
+ *
+ * One helper rather than three inline copies: this route now serves questions
+ * from three places (unseen, reclaimed placement, topic-session recycling) and
+ * a strip that has to be repeated is a strip that will eventually be forgotten
+ * at one of them.
+ */
+function forClient(q: PublicQuestion): PublicQuestion {
+  if (debugMode) return q
+  return q.kind === 'mcq'
+    ? { ...q, correct_answer: undefined }
+    : { ...q, fields: publicFields(q.topic, q.fields!) }
+}
+
 // Dev-only QA hint (src/components/dev/DevPanel.tsx lets a tester toggle
 // whether to actually display it). Gated on NEXT_PUBLIC_DEBUG_MODE alone,
 // never on anything client-supplied — a cookie/header can be forged, this
@@ -100,7 +122,7 @@ export async function GET(req: NextRequest) {
   // from — a student could be told a topic was finished while questions
   // remained. The answer lists grow for the life of the account.
   const studentId = session.student.id
-  const [{ data: levels }, mcqBank, openBank, answered, openAnswered] = await Promise.all([
+  const [{ data: levels }, mcqBank, openBank, answered, openAnswered, placementSessions] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<BankRow>('naale_questions', (from, to) =>
       db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer').range(from, to)),
@@ -112,6 +134,12 @@ export async function GET(req: NextRequest) {
       db.from('naale_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
     selectAll<AnsweredRow>('naale_open_answers', (from, to) =>
       db.from('naale_open_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
+    // Which of this student's sessions were the placement quiz — the answer
+    // rows above carry a session_id but not its kind, and placement answers
+    // are the ones this route now treats as reclaimable rather than spent
+    // (naale-placement-question-recycling).
+    selectAll<{ id: string }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('id').eq('student_id', studentId).eq('kind', 'placement').range(from, to)),
   ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
@@ -137,7 +165,42 @@ export async function GET(req: NextRequest) {
     if (!levelByTopic.has(topic)) levelByTopic.set(topic, MIN_LEVEL)
   }
 
-  const seenIds = new Set([...answered.map(a => a.question_id), ...openAnswered.map(a => a.question_id)])
+  // "Seen" used to mean every question ever answered, placement included, which
+  // permanently spent them: the 30-minute session has no recycling fallback, so
+  // a question the placement quiz used was gone for good — and placement serves
+  // ABOVE a student's level on purpose, so it was spending the hardest material
+  // before the student ever practised it. Noam (2026-08-27): "They should
+  // return. Treat them as 'seen' questions (so they go to the back of the queue
+  // and won't appear immediately), but don't permanently burn them."
+  //
+  // So the set splits in two. Answering a question outside placement still
+  // spends it exactly as before; answering it ONLY in placement moves it to a
+  // second tier that the selection loop reaches only once genuinely unseen
+  // material is gone.
+  const placementSessionIds = new Set(placementSessions.map(s => s.id))
+  const seenIds = new Set<string>()
+  const placementFirstSeen = new Map<string, string>()
+
+  for (const a of [...answered, ...openAnswered]) {
+    if (placementSessionIds.has(a.session_id)) {
+      // Keep the EARLIEST placement answer: the tier below is ordered
+      // oldest-first, matching the topic session's existing recycling order so
+      // the two read as one rule rather than two.
+      const existing = placementFirstSeen.get(a.question_id)
+      if (!existing || a.answered_at < existing) placementFirstSeen.set(a.question_id, a.answered_at)
+    } else {
+      seenIds.add(a.question_id)
+    }
+  }
+
+  // Answered in placement and never since. A question answered in placement AND
+  // later in practice is genuinely seen — this filter is what gives
+  // non-placement answers precedence, rather than relying on iteration order.
+  const placementOnly = [...placementFirstSeen]
+    .filter(([questionId]) => !seenIds.has(questionId))
+    .sort((a, b) => (a[1] < b[1] ? -1 : 1))
+    .map(([questionId]) => questionId)
+  const placementOnlyIds = new Set(placementOnly)
   // Whichever answer (mcq or open) is most recent overall decides prevTopic
   // — rotation shouldn't repeat the same topic regardless of which kind the
   // student's last answer happened to be.
@@ -166,31 +229,47 @@ export async function GET(req: NextRequest) {
     const level = levelByTopic.get(topic) ?? MIN_LEVEL
     const topicQuestions = bankByTopic.get(topic) ?? []
     let served: PublicQuestion | null = null
+    let servedIsRecycled = false
 
+    // Pass 1 — genuinely unseen, walking the whole ladder before anything
+    // reclaimed is considered.
     for (const difficulty of difficultyLadder(level)) {
-      const unseen = topicQuestions.filter(q => q.difficulty === difficulty && !seenIds.has(q.id))
+      const unseen = topicQuestions.filter(
+        q => q.difficulty === difficulty && !seenIds.has(q.id) && !placementOnlyIds.has(q.id)
+      )
       if (unseen.length > 0) {
-        const picked = unseen[Math.floor(Math.random() * unseen.length)]
-        // Stripped in production: JSON.stringify omits an explicit `undefined`
-        // value, so the key is genuinely absent from the response, not just
-        // empty. debugMode is a build-time env-var check, never client-controlled.
-        // For 'open' questions, the same concern applies to grading-only
-        // fields (a model answer, anchors) — publicFields() is the allowlist
-        // that keeps those server-side, same as correct_answer for 'mcq'.
-        served = debugMode
-          ? picked
-          : picked.kind === 'mcq'
-            ? { ...picked, correct_answer: undefined }
-            : { ...picked, fields: publicFields(picked.topic, picked.fields!) }
+        served = forClient(unseen[Math.floor(Math.random() * unseen.length)])
         break
       }
     }
 
+    // Pass 2 — placement leftovers, oldest first. A SECOND full walk of the
+    // ladder rather than a fallback inside pass 1: "back of the queue" has to
+    // mean behind every unseen question at any reachable difficulty, not just
+    // behind the unseen ones at whichever difficulty happened to be tried
+    // first. Deliberately not random, unlike pass 1 — oldest-first matches the
+    // topic session's existing recycling order.
+    //
+    // Never for placement itself: it samples a student cold to find their
+    // level, and re-serving a question they have already seen would corrupt
+    // the level it produces.
+    if (!served && owned.session.kind !== 'placement') {
+      const ladder = new Set(difficultyLadder(level))
+      const candidate = placementOnly
+        .map(id => topicQuestions.find(q => q.id === id))
+        .find((q): q is PublicQuestion => !!q && ladder.has(q.difficulty))
+      if (candidate) {
+        served = forClient(candidate)
+        servedIsRecycled = true
+      }
+    }
+
     if (served) {
-      // Recorded so session/answer and session/open-answer can authorize one
-      // late answer for exactly this question once the timer expires
-      // (topic sessions only — Timer: soft stop). Harmless to set
-      // unconditionally: unused for practice/placement.
+      // Recorded so session/answer and session/open-answer can authorize this
+      // exact question outside the normal rules — one late answer once a topic
+      // session's timer expires (Timer: soft stop), and an already-answered
+      // question re-served by pass 2 above, which the cross-session duplicate
+      // check would otherwise reject.
       await db.from('naale_sessions').update({ pending_question_id: served.id }).eq('id', sessionId)
 
       return NextResponse.json({
@@ -198,6 +277,10 @@ export async function GET(req: NextRequest) {
         // The level the answer will be judged against, captured now so the
         // answer route records what the question was actually served at.
         level_at_answer: level,
+        // Reported for consistency with the topic session's own recycling.
+        // Still deliberately unrendered — Noam (2026-08-27), asked whether a
+        // student should be told a question is a repeat: "No need to tell them".
+        ...(servedIsRecycled ? { is_recycled: true } : {}),
       })
     }
 
@@ -222,11 +305,7 @@ export async function GET(req: NextRequest) {
     const recycled = oldest ? bankByTopic.get(topic)?.find(q => q.id === oldest.question_id) : null
 
     if (recycled) {
-      const served: PublicQuestion = debugMode
-        ? recycled
-        : recycled.kind === 'mcq'
-          ? { ...recycled, correct_answer: undefined }
-          : { ...recycled, fields: publicFields(recycled.topic, recycled.fields!) }
+      const served = forClient(recycled)
 
       await db.from('naale_sessions').update({ pending_question_id: served.id }).eq('id', sessionId)
 
