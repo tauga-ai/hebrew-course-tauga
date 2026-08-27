@@ -105,14 +105,14 @@ function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2 rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+            className="flex-1 min-h-[44px] rounded-lg border border-card-border text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
           >
             {t('ביטול')}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:opacity-90 transition"
+            className="flex-1 min-h-[44px] rounded-lg bg-red-600 text-white text-sm font-semibold hover:opacity-90 transition"
           >
             {t('יציאה')}
           </button>
@@ -216,7 +216,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             onClick={toggleTheme}
             aria-label={t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}
             title={t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -225,7 +225,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             onClick={() => setShowLogoutDialog(true)}
             aria-label={t('יציאה')}
             title={t('יציאה')}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
           >
             <LogoutIcon />
           </button>
@@ -241,7 +241,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             href={item.route}
             aria-current={isActive(item) ? 'page' : undefined}
             aria-label={t(item.name)}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition ${isActive(item) ? 'text-highlight' : 'text-fg/50'
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-2 text-[11px] font-medium transition ${isActive(item) ? 'text-highlight' : 'text-fg/50'
               }`}
           >
             <span className="text-lg" aria-hidden>{item.emoji}</span>
@@ -263,7 +263,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             aria-label={t(collapsed ? 'הרחב סרגל' : 'כווץ סרגל')}
             aria-expanded={!collapsed}
             title={t(collapsed ? 'הרחב סרגל' : 'כווץ סרגל')}
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-fg/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-fg/80 transition shrink-0"
+            className="flex items-center justify-center w-11 h-11 -m-1.5 rounded-lg text-fg/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-fg/80 transition shrink-0"
           >
             ☰
           </button>
@@ -303,7 +303,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
                 aria-current={isActive(item) ? 'page' : undefined}
                 aria-label={t(item.name)}
                 title={t(item.name)}
-                className={`flex items-center ${justifyClass} gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition ${isActive(item) ? 'bg-highlight/10 text-highlight' : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
+                className={`flex items-center ${justifyClass} gap-2 px-3 min-h-[44px] rounded-lg text-sm whitespace-nowrap transition ${isActive(item) ? 'bg-highlight/10 text-highlight' : 'text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
               >
                 <span aria-hidden>{item.emoji}</span>
@@ -319,7 +319,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             onClick={toggleTheme}
             aria-label={t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}
             title={t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}
-            className={`flex items-center ${justifyClass} gap-2 px-3 py-2 rounded-lg text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition`}
+            className={`flex items-center ${justifyClass} gap-2 px-3 min-h-[44px] rounded-lg text-sm text-fg/70 hover:bg-black/5 dark:hover:bg-white/5 transition`}
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             <span className={hideOnCollapse}>{t(theme === 'dark' ? 'מצב בהיר' : 'מצב כהה')}</span>
@@ -330,7 +330,7 @@ export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
             onClick={() => setShowLogoutDialog(true)}
             aria-label={t('יציאה')}
             title={t('יציאה')}
-            className={`flex items-center ${justifyClass} gap-2 px-3 py-2 rounded-lg text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition`}
+            className={`flex items-center ${justifyClass} gap-2 px-3 min-h-[44px] rounded-lg text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition`}
           >
             <LogoutIcon />
             <span className={hideOnCollapse}>{t('יציאה')}</span>

@@ -215,12 +215,18 @@ export function MistakesHistory() {
 }
 
 function TopicChip({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+  // min-h-[44px] + items-center, not extra py: these wrap into rows, and
+  // growing them with padding alone left the row gap too tight to tell
+  // adjacent chips apart by touch. Measured at 27px tall in the mobile QA pass
+  // — seven of them side by side, so a mis-tap landed on a neighbouring filter
+  // rather than on nothing. items-baseline swapped for items-center because
+  // the label no longer fills the box.
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-baseline gap-1.5 text-[0.7rem] px-2.5 py-1 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-naale ${
+      className={`inline-flex items-center gap-1.5 min-h-[44px] text-[0.7rem] px-3 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-naale ${
         active
           ? 'bg-accent-naale border-accent-naale text-white'
           : 'bg-surface border-card-border text-fg/70 hover:bg-black/5 dark:hover:bg-white/5'

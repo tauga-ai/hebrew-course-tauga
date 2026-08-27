@@ -299,12 +299,17 @@ export default function NaaleHome() {
             /naale/stats, where the same numbers already lived — Noam's call
             (naale-topic-based-sessions). The link keeps that one tap away
             rather than leaving the levels with no route from here. */}
-        <div className="mt-6 mb-2 flex items-baseline justify-between gap-3">
+        <div className="mt-6 mb-2 flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-fg/70">{t('תרגל לפי נושא')}</h2>
+          {/* min-h + inline-flex rather than padding: the hit area grows to
+              44px around the label without the label itself moving, and the
+              negative margin keeps the text optically aligned with the
+              section edge despite the added horizontal padding. Measured at
+              48x16 in the mobile QA pass — the smallest control in the app. */}
           <button
             type="button"
             onClick={() => router.push('/naale/stats')}
-            className="text-xs font-medium text-accent-naale hover:underline shrink-0"
+            className="inline-flex items-center min-h-[44px] px-3 -me-3 text-xs font-medium text-accent-naale hover:underline shrink-0"
           >
             {t('כל הרמות')}
           </button>

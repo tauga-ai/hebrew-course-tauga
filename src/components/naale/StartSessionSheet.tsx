@@ -198,7 +198,7 @@ function LangChip({ label, active, onClick }: { label: string; active: boolean; 
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`text-xs px-3 py-1.5 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-naale ${
+      className={`inline-flex items-center min-h-[44px] text-xs px-4 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-naale ${
         active
           ? 'bg-accent-naale border-accent-naale text-white font-bold'
           : 'bg-surface border-card-border text-fg/65 hover:bg-black/5 dark:hover:bg-white/5'

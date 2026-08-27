@@ -1366,7 +1366,7 @@ function SessionRunner() {
           <button
             type="button"
             onClick={() => setReportingQuestionId(q.id)}
-            className="text-xs text-fg/50 transition-colors hover:text-fg/80"
+            className="inline-flex items-center min-h-[44px] px-4 text-xs text-fg/50 transition-colors hover:text-fg/80"
           >
             🚩 {t('מצאתם טעות בשאלה? דווחו לנו')}
           </button>

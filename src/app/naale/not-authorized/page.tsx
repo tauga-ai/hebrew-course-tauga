@@ -16,7 +16,7 @@ export default function NaaleNotAuthorizedPage() {
         <p className="text-fg/70 text-sm mb-6">
           {t('הכתובת שאיתה התחברת לא מופיעה ברשימת המשתתפים. פנה/י למדריך/ה כדי לבדוק את הפרטים.')}
         </p>
-        <a href="/naale/login" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+        <a href="/naale/login" className="inline-flex items-center min-h-[44px] px-4 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
           {t('נסה/י להתחבר עם חשבון אחר')}
         </a>
       </div>
