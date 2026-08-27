@@ -140,7 +140,15 @@ function SessionRunner() {
   const [deadlineMs, setDeadlineMs] = useState<number | null>(null)
   // Ticket 15: only practice sessions review; placement never does. Read
   // once at boot from /status and never changes for the life of a session.
-  const [kind, setKind] = useState<'placement' | 'practice' | null>(null)
+  // 'topic' added by naale-topic-based-sessions.
+  const [kind, setKind] = useState<'placement' | 'practice' | 'topic' | null>(null)
+  // Mirrors `kind` for finishSession to read without joining its dependency
+  // array — finishSession feeds loadNext feeds the boot effect (line ~481),
+  // whose comment above documents how carefully that chain's identity churn
+  // is already reasoned about; a ref sidesteps adding another variable to it
+  // rather than risking that reasoning.
+  const kindRef = useRef(kind)
+  useEffect(() => { kindRef.current = kind }, [kind])
   // Once /review-next reports nothing left, stop asking it every subsequent
   // "next question" click — a small optimization, not a correctness need
   // (it would just cheaply report done again).
@@ -260,16 +268,25 @@ function SessionRunner() {
         // calls it in the same tick as setKind() (the race kindOverride
         // exists to dodge) — the check would read null and fire anyway. The
         // route refuses placement server-side.
-        setNoteLoading(true)
-        fetch('/api/naale/session/summary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        })
-          .then(r => (r.ok ? r.json() : null))
-          .then(note => { if (note?.summary_text) setSummaryNote(note) })
-          .catch(() => {})
-          .finally(() => setNoteLoading(false))
+        //
+        // A topic session is different: unlike placement, it DOES reach this
+        // recap (finishSession runs well after boot, once kind has long
+        // settled), so gating here is safe and worthwhile — it skips a
+        // network request AND avoids the "מכינים לך סיכום אישי…" shimmer
+        // flashing on then immediately off once the (server-refused, see
+        // session/summary/route.ts) response comes back empty.
+        if (kindRef.current !== 'topic') {
+          setNoteLoading(true)
+          fetch('/api/naale/session/summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
+          })
+            .then(r => (r.ok ? r.json() : null))
+            .then(note => { if (note?.summary_text) setSummaryNote(note) })
+            .catch(() => {})
+            .finally(() => setNoteLoading(false))
+        }
       }
     } catch {
       // Best-effort — the summary falls back to the locally-tracked counts.
@@ -533,11 +550,20 @@ function SessionRunner() {
   // goes away, this guard needs a ceiling of its own.
   useEffect(() => {
     if (remaining === 0 && doneReason === null && !submitting) {
+      // Topic sessions get a grace window: don't force-close while the
+      // student still has an unanswered question on screen (Timer: soft
+      // stop, naale-topic-based-sessions) — the server (session/answer,
+      // session/open-answer) already accepts a late submission for exactly
+      // this question. Once it's answered (result/openResult lands) or
+      // there's no question in flight, this effect re-runs and closes
+      // normally — session/next already refuses to serve anything new past
+      // the deadline regardless of kind, so nothing new loads either way.
+      if (kind === 'topic' && question && !result && !openResult) return
       qaLog('countdown reached zero — ending session')
       const id = setTimeout(() => finishSession('time_up'), 0)
       return () => clearTimeout(id)
     }
-  }, [remaining, doneReason, submitting, finishSession])
+  }, [remaining, doneReason, submitting, finishSession, kind, question, result, openResult])
 
   // Takes the answer explicitly rather than reading `selected` internally —
   // selectAndSubmit() below calls this in the same tick it sets `selected`,
@@ -1055,6 +1081,12 @@ function SessionRunner() {
                       }}
                       wordLimit={OPEN_EXERCISE_DISPLAY[q.topic]?.wordLimit ?? 30}
                       loading={submitting}
+                      // Timer: soft stop (naale-topic-based-sessions) — this
+                      // block only ever renders the LIVE, unanswered question
+                      // (its parent ternary is `!openResult`), so remaining
+                      // === 0 here always means "the timer ran out on this
+                      // exact question," never a resolved history entry.
+                      submitLabel={kind === 'topic' && remaining === 0 ? t('סיום התרגול') : undefined}
                     />
                     {openValidationError && (
                       <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-right">{openValidationError}</p>
@@ -1260,7 +1292,10 @@ function SessionRunner() {
                 disabled={submitting || selected === ''}
                 className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
               >
-                {t('שלח תשובה')}
+                {/* Timer: soft stop (naale-topic-based-sessions) — same
+                    reasoning as OpenAnswerInput's submitLabel above: this
+                    button only renders for the live, unanswered question. */}
+                {kind === 'topic' && remaining === 0 ? t('סיום התרגול') : t('שלח תשובה')}
               </button>
             )}
 

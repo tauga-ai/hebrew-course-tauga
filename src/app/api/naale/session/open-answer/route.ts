@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isExpired } from '@/lib/naale/session'
+import { loadOwnedSession, isExpired, isPendingQuestion } from '@/lib/naale/session'
 import { applyGradedAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { gradeOpenAnswer } from '@/lib/naale/open-grading'
 import { wordLimitError } from '@/lib/naale/open-exercise-display'
@@ -34,7 +34,11 @@ export async function POST(req: NextRequest) {
 
   const owned = await loadOwnedSession(session_id, session.student.id)
   if (!owned.ok) return NextResponse.json({ error: 'תרגול לא נמצא' }, { status: 404 })
-  if (owned.session.ended_at || isExpired(owned.session.deadline_at)) {
+  // Same soft-stop carve-out as session/answer/route.ts — see that file's
+  // comment for the full reasoning. Topic sessions only.
+  const isLate = isExpired(owned.session.deadline_at)
+  const softStopEligible = isLate && isPendingQuestion(owned.session, question_id)
+  if (owned.session.ended_at || (isLate && !softStopEligible)) {
     return NextResponse.json({ error: 'הזמן נגמר', code: 'expired' }, { status: 409 })
   }
 
@@ -62,7 +66,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
   const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
-  if (answeredEver && !isSanctionedReview) {
+  // Same recycle exemption as session/answer/route.ts — see that file's
+  // comment for the full reasoning.
+  const isRecycledInThisSession = isPendingQuestion(owned.session, question_id)
+  if (answeredEver && !isSanctionedReview && !isRecycledInThisSession) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 

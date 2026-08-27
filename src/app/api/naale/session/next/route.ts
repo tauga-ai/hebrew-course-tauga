@@ -18,7 +18,11 @@ type BankRow = {
   correct_answer: string
 }
 type OpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
-type AnsweredRow = { question_id: string; topic: string; answered_at: string }
+// session_id is only used by topic-session recycling below, to avoid
+// re-picking a question already recycled earlier in THIS session (which
+// would violate naale_answers/naale_open_answers' one-row-per-session-question
+// uniqueness on the second submit) — unused for practice/placement.
+type AnsweredRow = { question_id: string; topic: string; answered_at: string; session_id: string }
 
 type PublicQuestion = {
   id: string
@@ -105,9 +109,9 @@ export async function GET(req: NextRequest) {
     // Every question this student has ever answered, in any session —
     // "unseen" is lifetime-scoped, not session-scoped.
     selectAll<AnsweredRow>('naale_answers', (from, to) =>
-      db.from('naale_answers').select('question_id, topic, answered_at').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
+      db.from('naale_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
     selectAll<AnsweredRow>('naale_open_answers', (from, to) =>
-      db.from('naale_open_answers').select('question_id, topic, answered_at').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
+      db.from('naale_open_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
   ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
@@ -148,6 +152,13 @@ export async function GET(req: NextRequest) {
   // early.
   let candidates = [...levelByTopic.keys()]
 
+  // A topic session is scoped to exactly one topic — no rotation at all.
+  // Recycling (below, once this narrowed pool is exhausted) is what replaces
+  // "try another topic" for this kind.
+  if (owned.session.kind === 'topic' && owned.session.topic) {
+    candidates = candidates.filter(t => t === owned.session.topic)
+  }
+
   while (candidates.length > 0) {
     const topic = pickNextTopic(candidates, prevTopic)
     if (!topic) break
@@ -176,6 +187,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (served) {
+      // Recorded so session/answer and session/open-answer can authorize one
+      // late answer for exactly this question once the timer expires
+      // (topic sessions only — Timer: soft stop). Harmless to set
+      // unconditionally: unused for practice/placement.
+      await db.from('naale_sessions').update({ pending_question_id: served.id }).eq('id', sessionId)
+
       return NextResponse.json({
         question: served,
         // The level the answer will be judged against, captured now so the
@@ -188,6 +205,37 @@ export async function GET(req: NextRequest) {
     // is what makes the loop terminate: candidates strictly shrinks each
     // pass.
     candidates = candidates.filter(t => t !== topic)
+  }
+
+  // A topic session's own exhaustion fallback: recycle rather than end.
+  // Doesn't apply to practice/placement — the spec is explicit for those
+  // that repeating a question is not an acceptable fallback; a topic session
+  // has nowhere else to rotate to once its one topic runs dry, so recycling
+  // is the fallback instead of ending after a handful of questions.
+  if (owned.session.kind === 'topic' && owned.session.topic) {
+    const topic = owned.session.topic
+    const topicAnswered = [...answered, ...openAnswered]
+      .filter(a => a.topic === topic && a.session_id !== sessionId)
+      .sort((a, b) => new Date(a.answered_at).getTime() - new Date(b.answered_at).getTime())
+
+    const oldest = topicAnswered[0]
+    const recycled = oldest ? bankByTopic.get(topic)?.find(q => q.id === oldest.question_id) : null
+
+    if (recycled) {
+      const served: PublicQuestion = debugMode
+        ? recycled
+        : recycled.kind === 'mcq'
+          ? { ...recycled, correct_answer: undefined }
+          : { ...recycled, fields: publicFields(recycled.topic, recycled.fields!) }
+
+      await db.from('naale_sessions').update({ pending_question_id: served.id }).eq('id', sessionId)
+
+      return NextResponse.json({
+        question: served,
+        level_at_answer: levelByTopic.get(topic) ?? MIN_LEVEL,
+        is_recycled: true,
+      })
+    }
   }
 
   return NextResponse.json({

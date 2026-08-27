@@ -1,5 +1,5 @@
 import type { NaaleTopicLevel } from '@/lib/types'
-import { COIN_SCORE_THRESHOLD, computeGradedRewards, computeRewards } from './rewards'
+import { COIN_SCORE_THRESHOLD, computeGradedRewards, computeRewards, countsAsTrackedSession } from './rewards'
 
 export interface NaaleTopicStat {
   topic: string
@@ -110,13 +110,19 @@ export function buildStudentProgress(input: NaaleProgressInput): NaaleProgress {
     ...openAnswers.map(a => ({ topic: a.topic, is_correct: a.score >= GRADED_CORRECT_SCORE })),
   ])
 
-  const practiceSessionIds = new Set(input.sessions.filter(s => s.kind === 'practice').map(s => s.id))
+  // Per-question XP/coins: topic sessions earn these exactly like practice
+  // sessions do (ticket.md, "Gamification and End Screen").
+  const rewardEligibleSessionIds = new Set(
+    input.sessions.filter(s => s.kind === 'practice' || s.kind === 'topic').map(s => s.id)
+  )
   const { xp: mcqXp, coins: mcqCoins } = computeRewards(
-    answers.filter(a => practiceSessionIds.has(a.session_id)),
-    input.sessions
+    answers.filter(a => rewardEligibleSessionIds.has(a.session_id)),
+    // The 50-XP completion bonus is a separate, pending decision — see
+    // countsAsTrackedSession's own doc comment.
+    input.sessions.filter(countsAsTrackedSession)
   )
   const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(
-    openAnswers.filter(a => practiceSessionIds.has(a.session_id))
+    openAnswers.filter(a => rewardEligibleSessionIds.has(a.session_id))
   )
 
   return {
@@ -127,7 +133,7 @@ export function buildStudentProgress(input: NaaleProgressInput): NaaleProgress {
         answers.filter(a => a.is_correct).length +
         openAnswers.filter(a => a.score >= GRADED_CORRECT_SCORE).length,
       sessions: input.sessions.length,
-      completed_sessions: input.sessions.filter(s => s.completed).length,
+      completed_sessions: input.sessions.filter(s => s.completed && countsAsTrackedSession(s)).length,
       xp: mcqXp + gradedXp,
       coins: mcqCoins + gradedCoins,
     },

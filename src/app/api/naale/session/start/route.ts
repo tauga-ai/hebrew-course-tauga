@@ -1,24 +1,40 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride } from '@/lib/naale/session'
+import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride } from '@/lib/naale/session'
 import { selectAll } from '@/lib/naale/paginate'
 
 /**
- * Starts (or resumes) the authenticated student's 30-minute session.
+ * Starts (or resumes) the authenticated student's session — the 30-minute
+ * mixed session by default, or a 5-minute single-topic session when the
+ * client posts a `topic` (naale-topic-based-sessions).
  *
  * Idempotent by design: if the student already has a live, un-ended session,
  * that one is returned instead of creating a second. Two overlapping sessions
  * would double-count answers toward the completion minimum and make "the
- * previous session" ambiguous for the review-opener later.
+ * previous session" ambiguous for the review-opener later. This applies
+ * regardless of kind — a student can't have a live topic session AND a live
+ * practice session at once; whichever is already live wins and `topic` is
+ * ignored for a resume.
  *
  * deadline_at is computed HERE, server-side, and never accepted from the
- * client — that's what makes the 30 minutes un-extendable by a reload.
+ * client — that's what makes the session length un-extendable by a reload.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getNaaleSession()
   if (session.status !== 'ok') {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  }
+
+  // Absent or empty body means the existing 30-minute mixed session — every
+  // call site that predates this ticket sends no body at all, so this must
+  // tolerate that rather than requiring JSON.
+  let topic: string | null = null
+  try {
+    const body = await req.json()
+    topic = typeof body?.topic === 'string' && body.topic.trim() ? body.topic.trim() : null
+  } catch {
+    // No body / invalid JSON — treat as the plain 30-minute start.
   }
 
   const db = createServiceClient()
@@ -59,7 +75,7 @@ export async function POST() {
   // Resume a still-live session rather than starting a second one.
   const { data: live } = await db
     .from('naale_sessions')
-    .select('id, kind, deadline_at, answered_count, started_at')
+    .select('id, kind, topic, deadline_at, answered_count, started_at')
     .eq('student_id', session.student.id)
     .is('ended_at', null)
     .order('started_at', { ascending: false })
@@ -85,6 +101,7 @@ export async function POST() {
     return NextResponse.json({
       session_id: existing.id,
       kind: existing.kind,
+      topic: existing.topic,
       deadline_at,
       seconds_remaining: secondsRemaining(deadline_at),
       answered_count: existing.answered_count,
@@ -100,15 +117,34 @@ export async function POST() {
     .select('id', { count: 'exact', head: true })
     .eq('student_id', session.student.id)
 
-  const kind = (levelCount ?? 0) === 0 ? 'placement' : 'practice'
+  // A topic session requires placement first, same precondition the 30-minute
+  // session already has — a topic's difficulty progression has nothing to key
+  // off before a student has been placed (resolved without asking Noam, see
+  // ticket.md's "Resolved without asking Noam" note: nextSessionKind() already
+  // gates the 30-minute session the same way).
+  if (topic && (levelCount ?? 0) === 0) {
+    return NextResponse.json({ error: 'יש להשלים מבחן התאמה לפני תרגול לפי נושא' }, { status: 400 })
+  }
 
-  const minutes = overrideMinutes ?? SESSION_MINUTES
+  if (topic) {
+    const [{ count: mcqCount }, { count: openCount }] = await Promise.all([
+      db.from('naale_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
+      db.from('naale_open_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
+    ])
+    if ((mcqCount ?? 0) === 0 && (openCount ?? 0) === 0) {
+      return NextResponse.json({ error: 'נושא לא נמצא' }, { status: 400 })
+    }
+  }
+
+  const kind = topic ? 'topic' : (levelCount ?? 0) === 0 ? 'placement' : 'practice'
+
+  const minutes = overrideMinutes ?? (topic ? TOPIC_SESSION_MINUTES : SESSION_MINUTES)
   const deadline = new Date(Date.now() + minutes * 60 * 1000).toISOString()
 
   const { data: created, error } = await db
     .from('naale_sessions')
-    .insert({ student_id: session.student.id, kind, deadline_at: deadline })
-    .select('id, kind, deadline_at, answered_count')
+    .insert({ student_id: session.student.id, kind, topic, deadline_at: deadline })
+    .select('id, kind, topic, deadline_at, answered_count')
     .single()
 
   if (error || !created) {
@@ -118,6 +154,7 @@ export async function POST() {
   return NextResponse.json({
     session_id: created.id,
     kind: created.kind,
+    topic: created.topic,
     deadline_at: created.deadline_at,
     seconds_remaining: secondsRemaining(created.deadline_at),
     answered_count: created.answered_count,

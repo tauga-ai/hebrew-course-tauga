@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_COMPLETION } from '@/lib/naale/session'
-import { computeRewards, computeGradedRewards, computeStreak } from '@/lib/naale/rewards'
+import { computeRewards, computeGradedRewards, computeStreak, countsAsTrackedSession, countsTowardStreak } from '@/lib/naale/rewards'
 import { selectAll } from '@/lib/naale/paginate'
 import { buildSessionProgress } from '@/lib/naale/stats'
 
@@ -84,14 +84,22 @@ export async function POST(req: NextRequest) {
       : db.from('naale_open_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Every session this account has ever had, for the weekly streak — one a
     // day crosses the row cap inside three years.
-    selectAll<{ completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
-      db.from('naale_sessions').select('completed, started_at').eq('student_id', session.student.id).range(from, to)),
+    selectAll<{ kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('kind, completed, started_at').eq('student_id', session.student.id).range(from, to)),
   ])
 
-  const { xp: mcqXp, coins: mcqCoins } = computeRewards(sessionAnswers ?? [], [{ completed }])
+  // This session's OWN xp_earned/coins_earned for the immediate recap —
+  // independent of buildStudentProgress()'s all-time totals, so it needs the
+  // same countsAsTrackedSession gate on the completion bonus or a topic
+  // session's own recap would show +50 XP while the all-time view (which IS
+  // gated) disagrees about the very same session.
+  const { xp: mcqXp, coins: mcqCoins } = computeRewards(
+    sessionAnswers ?? [],
+    countsAsTrackedSession(s) ? [{ completed }] : []
+  )
   const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(sessionOpenAnswers ?? [])
   const streak = computeStreak(
-    allSessions.filter(x => x.completed).map(x => new Date(x.started_at))
+    allSessions.filter(x => x.completed && countsTowardStreak(x)).map(x => new Date(x.started_at))
   )
   // Same "4-5 counts as correct" read as everywhere else a graded score needs
   // a pass/fail comparison (my-stats, placementLevel, applyGradedAnswer).

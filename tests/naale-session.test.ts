@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isSessionCompleted, isExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION } from '../src/lib/naale/session-rules'
+import { isSessionCompleted, isExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion } from '../src/lib/naale/session-rules'
 
 const NOW = 1_700_000_000_000
 const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString()
@@ -40,6 +40,23 @@ test('isExpired: true only once the deadline has passed', () => {
   assert.equal(isExpired(iso(1), NOW), false)
   assert.equal(isExpired(iso(0), NOW), true)
   assert.equal(isExpired(iso(-1), NOW), true)
+})
+
+test('isPendingQuestion: true only for a topic session asking about its own pending question', () => {
+  assert.equal(isPendingQuestion({ kind: 'topic', pending_question_id: 'q1' }, 'q1'), true)
+})
+
+test('isPendingQuestion: false for a different question id, even in a topic session', () => {
+  assert.equal(isPendingQuestion({ kind: 'topic', pending_question_id: 'q1' }, 'q2'), false)
+})
+
+test('isPendingQuestion: false with no pending question recorded', () => {
+  assert.equal(isPendingQuestion({ kind: 'topic', pending_question_id: null }, 'q1'), false)
+})
+
+test('isPendingQuestion: false for practice/placement even with a matching id — soft stop and recycling are topic-only', () => {
+  assert.equal(isPendingQuestion({ kind: 'practice', pending_question_id: 'q1' }, 'q1'), false)
+  assert.equal(isPendingQuestion({ kind: 'placement', pending_question_id: 'q1' }, 'q1'), false)
 })
 
 test('secondsRemaining: never negative', () => {

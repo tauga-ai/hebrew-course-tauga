@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isExpired } from '@/lib/naale/session'
+import { loadOwnedSession, isExpired, isPendingQuestion } from '@/lib/naale/session'
 import { applyAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { isAnswerCorrect } from '@/lib/naale/grading'
 import { getSessionReviewQueue } from '@/lib/naale/review-queue'
@@ -35,7 +35,15 @@ export async function POST(req: NextRequest) {
 
   // A late answer must not count. The deadline is server-authoritative, so a
   // paused tab or a tampered clock can't sneak one in.
-  if (owned.session.ended_at || isExpired(owned.session.deadline_at)) {
+  //
+  // Topic sessions get one exception (Timer: soft stop, naale-topic-based-sessions):
+  // the question that was already on screen when the timer hit zero — and
+  // ONLY that exact question, tracked via pending_question_id — is still
+  // answerable. The 30-minute session is untouched: this only ever relaxes
+  // anything for kind === 'topic'.
+  const isLate = isExpired(owned.session.deadline_at)
+  const softStopEligible = isLate && isPendingQuestion(owned.session, question_id)
+  if (owned.session.ended_at || (isLate && !softStopEligible)) {
     return NextResponse.json({ error: 'הזמן נגמר', code: 'expired' }, { status: 409 })
   }
 
@@ -65,7 +73,15 @@ export async function POST(req: NextRequest) {
   // ids are unique across both banks, so the kind tag is only needed for
   // deciding which table to READ from, not for this check.
   const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
-  if (answeredEver && !isSanctionedReview) {
+  // A topic session's exhaustion fallback (Question selection, ticket.md)
+  // deliberately RE-serves an already-answered question — /next only ever
+  // sets pending_question_id to something it just legitimately served, so a
+  // match here means this student's own recycled question, not a replay
+  // attempt. Unlike a sanctioned review, this does NOT feed into
+  // applyAnswer()/answered_count/reward suppression below — the spec has no
+  // carve-out for a recycled answer, it's graded and counted like any other.
+  const isRecycledInThisSession = isPendingQuestion(owned.session, question_id)
+  if (answeredEver && !isSanctionedReview && !isRecycledInThisSession) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 

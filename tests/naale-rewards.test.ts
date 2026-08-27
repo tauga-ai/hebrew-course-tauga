@@ -13,6 +13,8 @@ import {
   COINS_PER_CORRECT,
   XP_BY_SCORE,
   COIN_SCORE_THRESHOLD,
+  countsTowardStreak,
+  countsAsTrackedSession,
 } from '../src/lib/naale/rewards'
 
 test('computeRewards: XP and coins from correct answers plus completed sessions', () => {
@@ -27,6 +29,22 @@ test('computeRewards: no completed sessions means no bonus, only answer XP', () 
   const { xp, coins } = computeRewards([{ is_correct: true }], [{ completed: false }])
   assert.equal(xp, XP_PER_CORRECT)
   assert.equal(coins, COINS_PER_CORRECT)
+})
+
+// naale-topic-based-sessions: both default to excluding topic sessions —
+// streak's exclusion is confirmed by the spec, completed-session credit is
+// the ticket's one pending decision (see rewards.ts's own doc comments and
+// task.md §1 for the reasoning and how to flip it if Noam answers otherwise).
+test('countsTowardStreak: excludes topic sessions, includes everything else', () => {
+  assert.equal(countsTowardStreak({ kind: 'topic' }), false)
+  assert.equal(countsTowardStreak({ kind: 'practice' }), true)
+  assert.equal(countsTowardStreak({ kind: 'placement' }), true)
+})
+
+test('countsAsTrackedSession: excludes topic sessions, includes everything else', () => {
+  assert.equal(countsAsTrackedSession({ kind: 'topic' }), false)
+  assert.equal(countsAsTrackedSession({ kind: 'practice' }), true)
+  assert.equal(countsAsTrackedSession({ kind: 'placement' }), true)
 })
 
 // Real-calendar anchors, verified independently before writing this test:

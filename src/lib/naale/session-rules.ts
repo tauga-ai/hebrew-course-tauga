@@ -5,6 +5,9 @@
  *  side-effect-free constant so it can be imported from a bare `tsx --test`
  *  run with no debugMode/env-var wiring to worry about. */
 export const SESSION_MINUTES = 30
+/** The 5-minute topic-scoped session (naale-topic-based-sessions). Same file
+ *  as SESSION_MINUTES so both durations stay in one place. */
+export const TOPIC_SESSION_MINUTES = 5
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3
 
@@ -68,4 +71,27 @@ export function isExpired(deadlineAt: string, now = Date.now()): boolean {
 
 export function secondsRemaining(deadlineAt: string, now = Date.now()): number {
   return Math.max(0, Math.ceil((new Date(deadlineAt).getTime() - now) / 1000))
+}
+
+/**
+ * Whether `questionId` is the one question a topic session is currently
+ * authorized to accept an answer for outside the normal rules —
+ * session/next only ever sets pending_question_id to something it just
+ * legitimately served (naale-topic-based-sessions).
+ *
+ * Two callers, both in session/answer and session/open-answer:
+ *  - Timer soft stop: paired with isExpired() to let exactly this one
+ *    question through after the deadline, for either MCQ or open-ended
+ *    (confirmed by Noam over Slack — not open-ended-only).
+ *  - Exhaustion recycling: paired with the cross-session `answeredEver`
+ *    duplicate check, since a legitimately recycled question IS already
+ *    answered (in a past session) by definition.
+ *
+ * Always false for practice/placement — kind === 'topic' is required.
+ */
+export function isPendingQuestion(
+  session: { kind: string; pending_question_id: string | null },
+  questionId: string
+): boolean {
+  return session.kind === 'topic' && session.pending_question_id === questionId
 }

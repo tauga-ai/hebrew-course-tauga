@@ -53,7 +53,9 @@ export async function POST(req: NextRequest) {
   // still running has nothing to summarise yet. Placement also has its own
   // page and finish route, so in practice neither reaches here; this is the
   // server-side guarantee, not the only guard.
-  if (s.kind === 'placement' || !s.ended_at) {
+  // Topic sessions never get an AI summary — the spec's End Screen for a
+  // 5-minute session shows only raw stats (naale-topic-based-sessions).
+  if (s.kind === 'placement' || s.kind === 'topic' || !s.ended_at) {
     return NextResponse.json({ summary_text: null, ui_icon: null })
   }
 
