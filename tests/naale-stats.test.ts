@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildStudentProgress, buildTopicStats, buildSessionProgress, groupSessionsByDay, buildAttendanceWindow } from '../src/lib/naale/stats'
+import { buildStudentProgress, buildTopicStats, buildSessionProgress, groupSessionsByDay, buildAttendanceMonth, firstSessionMonth } from '../src/lib/naale/stats'
 import { XP_PER_CORRECT, COINS_PER_CORRECT } from '../src/lib/naale/rewards'
 
 test('buildTopicStats: includes topics the student has never touched', () => {
@@ -210,33 +210,74 @@ test('groupSessionsByDay: no sessions yields no rows', () => {
   assert.deepEqual(groupSessionsByDay([]), [])
 })
 
-test('buildAttendanceWindow: one cell per day, oldest first, today last', () => {
-  const now = new Date('2026-08-26T10:00:00.000Z')
-  const days = buildAttendanceWindow([], now, 7)
-  assert.equal(days.length, 7)
-  assert.equal(days[6].isToday, true, 'today is the last cell')
-  assert.ok(days.slice(0, 6).every(d => !d.isToday))
-  assert.ok(days.every(d => d.count === 0), 'no sessions means an empty strip, not a missing one')
+test('buildAttendanceMonth: one cell per day of the month, plus leading blanks', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const days = buildAttendanceMonth([], 2026, 7, now) // August 2026
+  assert.equal(days.filter(d => d.label !== null).length, 31, 'August has 31 days')
+  assert.ok(days.every(d => d.count === 0), 'no sessions means an empty grid, not a missing one')
 })
 
-test('buildAttendanceWindow: sessions land on their day and same-day sessions add up', () => {
-  const now = new Date('2026-08-26T10:00:00.000Z')
-  const days = buildAttendanceWindow(
+test('buildAttendanceMonth: leading blanks put the 1st under its real weekday', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  // 2026-08-01 is a Saturday. With a Sunday-start week that is 6 blank cells
+  // before it — this is the assertion that catches an off-by-one in the
+  // alignment, which is the whole reason the grid exists.
+  const days = buildAttendanceMonth([], 2026, 7, now)
+  assert.equal(days.findIndex(d => d.label !== null), 6)
+  assert.equal(days[6].dayOfMonth, 1)
+})
+
+test('buildAttendanceMonth: a leap February gets 29 days', () => {
+  const now = new Date('2028-02-10T10:00:00')
+  const days = buildAttendanceMonth([], 2028, 1, now)
+  assert.equal(days.filter(d => d.label !== null).length, 29)
+})
+
+test('buildAttendanceMonth: sessions land on their day and same-day sessions add up', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const days = buildAttendanceMonth(
     [
       { id: 'a', started_at: '2026-08-26T07:00:00.000Z' },
       { id: 'b', started_at: '2026-08-26T09:00:00.000Z' },
       { id: 'c', started_at: '2026-08-24T09:00:00.000Z' },
     ],
-    now,
-    7
+    2026,
+    7,
+    now
   )
-  assert.equal(days[6].count, 2, 'two sessions today')
-  assert.equal(days[4].count, 1, 'one session two days ago')
-  assert.equal(days.reduce((n, d) => n + d.count, 0), 3, 'every session is counted exactly once')
+  const byDay = (n: number) => days.find(d => d.dayOfMonth === n)!
+  assert.equal(byDay(26).count, 2, 'two sessions on the 26th')
+  assert.equal(byDay(24).count, 1, 'one session on the 24th')
+  assert.equal(days.reduce((n, d) => n + d.count, 0), 3, 'every session counted exactly once')
 })
 
-test('buildAttendanceWindow: sessions older than the window are dropped, not folded in', () => {
-  const now = new Date('2026-08-26T10:00:00.000Z')
-  const days = buildAttendanceWindow([{ id: 'old', started_at: '2026-01-01T09:00:00.000Z' }], now, 7)
+test('buildAttendanceMonth: sessions from another month are not folded in', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const days = buildAttendanceMonth([{ id: 'old', started_at: '2026-01-01T09:00:00.000Z' }], 2026, 7, now)
   assert.equal(days.reduce((n, d) => n + d.count, 0), 0)
+})
+
+test('buildAttendanceMonth: marks today only within the month containing it', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const august = buildAttendanceMonth([], 2026, 7, now)
+  assert.equal(august.filter(d => d.isToday).length, 1)
+  assert.equal(august.find(d => d.isToday)!.dayOfMonth, 27)
+
+  const july = buildAttendanceMonth([], 2026, 6, now)
+  assert.equal(july.filter(d => d.isToday).length, 0, 'a past month has no today cell')
+})
+
+test('firstSessionMonth: null for a student who has never practised', () => {
+  assert.equal(firstSessionMonth([]), null)
+})
+
+test('firstSessionMonth: the earliest session, not the first in the array', () => {
+  // The API sorts session_dates newest-first, so "earliest" cannot be
+  // sessions[0] — this is the guard against reading the wrong end.
+  const m = firstSessionMonth([
+    { started_at: '2026-08-20T10:00:00.000Z' },
+    { started_at: '2026-03-02T10:00:00.000Z' },
+    { started_at: '2026-05-11T10:00:00.000Z' },
+  ])
+  assert.deepEqual(m, { year: 2026, month: 2 }) // March
 })

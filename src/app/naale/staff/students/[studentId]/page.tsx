@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
-import { AttendanceStrip } from '@/components/naale/AttendanceStrip'
+import { AttendanceCalendar } from '@/components/naale/AttendanceCalendar'
 import { Avatar } from '@/components/naale/Avatar'
 import { useResource } from '@/lib/hooks/use-resource'
 import { scoreColor } from '@/lib/score-color'
@@ -90,7 +90,7 @@ export default function NaaleStaffStudentPage() {
             </div>
 
             <div className="space-y-4">
-              <AttendanceStrip sessions={s.session_dates} now={now} />
+              <AttendanceCalendar sessions={s.session_dates} now={now} />
 
               <section className="bg-surface rounded-2xl shadow-sm border border-card-border p-4">
                 <div className="flex items-baseline justify-between gap-3 mb-3">

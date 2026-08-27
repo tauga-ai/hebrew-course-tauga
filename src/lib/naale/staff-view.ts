@@ -32,7 +32,11 @@ export interface StaffStudentRow {
 /** The detail page's shape: a row plus the depth the roster doesn't carry. */
 export interface StaffStudentDetail extends StaffStudentRow {
   topics: NaaleTopicStat[]
-  session_dates: { id: string; started_at: string }[]
+  /** Both session kinds, tagged — the attendance calendar's type toggle
+   *  filters these client-side. `kind` added by naale-staff-attendance-calendar;
+   *  before that this was practice-only and 5-minute topic sessions never
+   *  reached the client at all. */
+  session_dates: { id: string; started_at: string; kind: string }[]
 }
 
 // Not a spec number — the "bad" threshold scoreColor() already uses everywhere
