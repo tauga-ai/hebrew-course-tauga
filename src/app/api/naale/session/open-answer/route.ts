@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isExpired, isPendingQuestion } from '@/lib/naale/session'
+import { loadOwnedSession, isSessionExpired, isPendingQuestion } from '@/lib/naale/session'
 import { applyGradedAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { gradeOpenAnswer } from '@/lib/naale/open-grading'
 import { wordLimitError } from '@/lib/naale/open-exercise-display'
@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
   if (!owned.ok) return NextResponse.json({ error: 'תרגול לא נמצא' }, { status: 404 })
   // Same soft-stop carve-out as session/answer/route.ts — see that file's
   // comment for the full reasoning. Topic sessions only.
-  const isLate = isExpired(owned.session.deadline_at)
+  // isSessionExpired, not isExpired(deadline_at): a paused session's deadline is
+  // frozen in the past, so the bare check marked every answer given after a
+  // resume as late and pushed it down the soft-stop path.
+  const isLate = isSessionExpired(owned.session)
   // Own kind check, not delegated to isPendingQuestion() — see
   // session/answer/route.ts for the full reasoning.
   const softStopEligible =

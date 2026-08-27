@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isExpired, isPendingQuestion } from '@/lib/naale/session'
+import { loadOwnedSession, isSessionExpired, isPendingQuestion } from '@/lib/naale/session'
 import { applyAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { isAnswerCorrect } from '@/lib/naale/grading'
 import { getSessionReviewQueue } from '@/lib/naale/review-queue'
@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
   // ONLY that exact question, tracked via pending_question_id — is still
   // answerable. The 30-minute session is untouched: this only ever relaxes
   // anything for kind === 'topic'.
-  const isLate = isExpired(owned.session.deadline_at)
+  // isSessionExpired, not isExpired(deadline_at): a paused session's deadline is
+  // frozen in the past, so the bare check marked every answer given after a
+  // resume as late and pushed it down the soft-stop path.
+  const isLate = isSessionExpired(owned.session)
   // kind === 'topic' is checked HERE, not inside isPendingQuestion() — that
   // function was widened to cover practice sessions for placement recycling
   // (naale-placement-question-recycling), and the soft stop must NOT widen

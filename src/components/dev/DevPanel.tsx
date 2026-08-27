@@ -21,6 +21,7 @@ interface ActiveSession {
   deadline_at: string
   kind: string
   answered_count: number
+  paused_remaining_ms: number | null
 }
 
 /**
@@ -240,7 +241,7 @@ export function DevPanel() {
               <div>
                 <div className="text-sm text-fg">Session length override</div>
                 <div className="text-xs text-fg/50">
-                  minutes — Save applies instantly to an open session; blank = real 30
+                  minutes — applies to new sessions of either length; blank = real 30 / 5
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -285,6 +286,11 @@ export function DevPanel() {
                     kind: {activeSession.kind}, answered: {activeSession.answered_count}
                     <br />
                     deadline: {activeSession.deadline_at}
+                    <br />
+                    paused:{' '}
+                    {activeSession.paused_remaining_ms === null
+                      ? 'no'
+                      : `${(activeSession.paused_remaining_ms / 1000).toFixed(0)}s banked`}
                   </>
                 )}
               </div>

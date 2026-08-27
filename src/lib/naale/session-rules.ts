@@ -113,3 +113,107 @@ export function isPendingQuestion(
   if (session.kind === 'placement') return false
   return session.pending_question_id === questionId
 }
+
+/**
+ * Whether this session kind is allowed to pause at all.
+ *
+ * The ONE place the 5-minute-only restriction lives. Every call site asks this
+ * rather than checking `kind` itself, because the time arithmetic below is
+ * kind-agnostic by nature — restricting it is the extra work, not the
+ * generality — and because a future decision to allow 30-minute pausing should
+ * be one function to change, with the original reasoning beside it, rather
+ * than a hunt through four files.
+ *
+ * Topic-only for now. The reasons are product ones, not technical:
+ *  - The weekly streak requires two COMPLETED 30-minute sessions, and
+ *    completion requires sitting through the timer. A pausable 30-minute
+ *    session could be spread across a whole day in fragments and still earn
+ *    streak credit, so "two sessions a week" would stop meaning two sustained
+ *    sittings.
+ *  - StartSessionSheet already promises 30-minute students
+ *    הישאר עד הסוף כדי שהתרגול ייחשב ("stay until the end so the practice
+ *    counts"). Pausing would make that untrue.
+ *  - Neither applies to topic sessions, which are excluded from the streak and
+ *    from completion credit entirely, so pausing one cannot distort anything.
+ *
+ * Noam ruled out Start Over for 30-minute sessions explicitly; he did not rule
+ * on pausing, which is a separate feature that arrived alongside it. Sequencing
+ * confirmed with the user 2026-08-27: ship the 5-minute session first, revisit
+ * 30-minute later. Same shape as countsAsTrackedSession() in rewards.ts — a
+ * deliberate one-line flip point for a decision made-for-now rather than
+ * settled.
+ */
+export function canPause(session: { kind: string }): boolean {
+  return session.kind === 'topic'
+}
+
+/**
+ * Whether a session's clock is currently stopped (naale-topic-session-resume).
+ *
+ * MUST be checked before any use of deadline_at on a session that could be
+ * paused: a paused row's deadline_at is frozen in the past by construction, so
+ * isExpired() reports true and session/start's stale sweep would close it.
+ *
+ * Explicitly `!== null` rather than a truthiness check — 0 is a legitimate
+ * remainder (paused with no time left) and must still count as paused.
+ */
+export function isPaused(session: { paused_remaining_ms: number | null }): boolean {
+  return session.paused_remaining_ms !== null
+}
+
+/**
+ * How much time to bank when pausing. Clamped at 0 so a session paused after
+ * its deadline resumes as immediately-over rather than with negative time.
+ */
+export function remainingToBank(deadlineAt: string, now = Date.now()): number {
+  return Math.max(0, new Date(deadlineAt).getTime() - now)
+}
+
+/**
+ * The deadline a resumed session should carry: whatever was left, starting now.
+ * This is what keeps the pause feature from touching the timer model — the
+ * deadline moves, rather than being replaced by accumulated elapsed time.
+ */
+export function resumedDeadline(remainingMs: number, now = Date.now()): string {
+  return new Date(now + Math.max(0, remainingMs)).toISOString()
+}
+
+/**
+ * The time a session has left, whether running or paused. Callers reporting
+ * remaining time to a client should use this rather than secondsRemaining()
+ * directly, which would read a paused session's stale deadline and report 0.
+ */
+/**
+ * Has this session's time genuinely run out?
+ *
+ * Use this, never `isExpired(session.deadline_at)`, anywhere a session object is
+ * in hand. A PAUSED session's deadline_at is frozen in the PAST by construction
+ * — that is how banking the remainder works — so the bare deadline check reads
+ * every paused session as expired and there is no way to tell the two apart
+ * from the timestamp alone.
+ *
+ * That mistake shipped to four call sites before being caught (2026-08-27):
+ * `session/status` reported a paused session as `expired` with 0 seconds left,
+ * and `session/next` answered `done: time_up`, so arriving from Continue with
+ * 277 seconds banked landed on "Time's up! You answered 0 exercises". None of
+ * it looked like a bug in pausing — the pause had worked perfectly and the
+ * banked time was sitting in the row.
+ *
+ * `isExpired` stays exported for the two callers that legitimately have only a
+ * timestamp (the stale sweep, which skips paused rows itself, and
+ * isSessionCompleted).
+ */
+export function isSessionExpired(
+  session: { deadline_at: string; paused_remaining_ms: number | null },
+  now = Date.now()
+): boolean {
+  if (isPaused(session)) return false
+  return isExpired(session.deadline_at, now)
+}
+
+export function remainingMs(
+  session: { deadline_at: string; paused_remaining_ms: number | null },
+  now = Date.now()
+): number {
+  return isPaused(session) ? session.paused_remaining_ms! : remainingToBank(session.deadline_at, now)
+}

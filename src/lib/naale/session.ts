@@ -11,7 +11,7 @@ import type { NaaleSession } from '@/lib/types'
 // alias Next substitutes), so a plain `tsx --test` run of this file would
 // crash before any test body ran. Re-exported here so route files can keep
 // importing everything from one place.
-export { SESSION_MINUTES, TOPIC_SESSION_MINUTES, MIN_ANSWERS_FOR_COMPLETION, isSessionCompleted, hasReachedTimer, isExpired, secondsRemaining, isPendingQuestion } from './session-rules'
+export { SESSION_MINUTES, TOPIC_SESSION_MINUTES, MIN_ANSWERS_FOR_COMPLETION, isSessionCompleted, hasReachedTimer, isExpired, isSessionExpired, secondsRemaining, isPendingQuestion, canPause, isPaused, remainingToBank, resumedDeadline, remainingMs } from './session-rules'
 
 export type OwnedSessionResult =
   | { ok: false }
@@ -42,7 +42,7 @@ export async function loadOwnedSession(sessionId: string, studentId: string): Pr
   const db = createServiceClient()
   const { data } = await db
     .from('naale_sessions')
-    .select('id, student_id, kind, topic, pending_question_id, started_at, deadline_at, ended_at, answered_count, completed, translations_used, translated_words')
+    .select('id, student_id, kind, topic, pending_question_id, started_at, deadline_at, ended_at, answered_count, completed, translations_used, translated_words, paused_remaining_ms')
     .eq('id', sessionId)
     .maybeSingle()
 

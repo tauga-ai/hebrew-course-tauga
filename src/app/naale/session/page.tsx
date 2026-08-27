@@ -131,6 +131,49 @@ function accuracyBarColor(pct: number | null) {
   return 'bg-red-500 dark:bg-red-400'
 }
 
+/**
+ * Turns the server's "seconds left" into a local deadline to count down to.
+ *
+ * Deliberately NOT `new Date(deadline_at)`. Every one of these routes returns
+ * both an absolute deadline_at and a seconds_remaining, and using the absolute
+ * one means subtracting the SERVER's clock from the BROWSER's — two clocks
+ * that are never exactly equal and can be minutes apart (a laptop resuming
+ * from sleep, a phone with automatic time off, a dev machine whose VM clock
+ * drifted from its host). The error lands squarely on the student: a browser
+ * running two minutes fast simply loses two minutes.
+ *
+ * A duration has no such problem. The server says "276 seconds left" and the
+ * browser measures 276 seconds with the same clock it will use to count them
+ * down, so the two can't disagree. The standard alternative — sync an offset
+ * once and correct every reading by it — is strictly more machinery for the
+ * same result, and this app never needs to know the server's wall time, only
+ * how much longer to wait.
+ */
+function deadlineFromSeconds(secondsRemaining: number): number {
+  return Date.now() + secondsRemaining * 1000
+}
+
+/**
+ * Urgency colour for the countdown.
+ *
+ * The thresholds were in MILLISECONDS while useCountdown() has always returned
+ * SECONDS, so every comparison won: a 30-minute session opened at 1800, which
+ * is under 120000, and the timer sat red for the full half hour. A permanently
+ * red clock says "hurry" so constantly that it stops saying anything.
+ *
+ * Scaled by kind, because a fixed threshold can't serve both. Five minutes is
+ * under the 30-minute session's amber mark from the moment it starts, so a
+ * topic session would open amber and spend its last two minutes red — nearly
+ * half of it in alarm. It gets proportionate marks instead: amber at one
+ * minute, red at thirty seconds.
+ */
+function countdownClass(seconds: number, kind: 'placement' | 'practice' | 'topic' | null): string {
+  const [red, amber] = kind === 'topic' ? [30, 60] : [120, 300]
+  if (seconds <= red) return 'text-red-500 dark:text-red-400 font-semibold'
+  if (seconds <= amber) return 'text-amber-500 dark:text-amber-400 font-semibold'
+  return ''
+}
+
 function SessionRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
@@ -236,6 +279,121 @@ function SessionRunner() {
   const prefetchPromise = useRef<Promise<void> | null>(null)
 
   const remaining = useCountdown(deadlineMs)
+
+  // True between banking the clock and getting it started again — i.e. while
+  // the student is away. Read by the force-close effect below, which must not
+  // fire during an absence: the countdown keeps draining off a deadline the
+  // server has already frozen, so without this a backgrounded tab ends the
+  // very session the pause exists to preserve, and the banked time is lost.
+  const awayRef = useRef(false)
+
+  // Banks the remaining time when the student leaves, so a phone call doesn't
+  // consume their five minutes (naale-topic-session-resume).
+  //
+  // sendBeacon rather than fetch: this fires during page teardown, where a
+  // normal request is not guaranteed to be sent at all. It is fire-and-forget
+  // by design — there is nobody left to handle a response — which is why the
+  // server treats every non-actionable case as a 200.
+  //
+  // Mirrors canPause() on the client. The server re-checks it, so this is a
+  // "don't bother asking" rather than a security boundary; the 30-minute
+  // session's clock is meant to run whether or not the student is watching.
+  const bankRemaining = useCallback(() => {
+    if (kind !== 'topic' || !sessionId) return
+    awayRef.current = true
+    qaLog('banking clock — student left', { sessionId })
+    navigator.sendBeacon(
+      '/api/naale/session/pause',
+      new Blob([JSON.stringify({ session_id: sessionId })], { type: 'application/json' })
+    )
+  }, [kind, sessionId])
+
+  // Restarts the server clock on a paused session. Until this lands,
+  // deadline_at is still frozen in the past and every answer would be refused
+  // as late, so nothing about the session is usable before it resolves.
+  //
+  // Called from two places, both meaning "the student is here and looking at a
+  // question": returning to a backgrounded tab, and finishing the load after
+  // arriving from the Continue prompt. Never called before a question is on
+  // screen — see the effect below for why that matters.
+  const resumeClock = useCallback(async () => {
+    if (!awayRef.current) return
+    qaLog('resuming clock — student back')
+    const res = await fetch('/api/naale/session/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resume' }),
+    })
+    // A failed resume deliberately leaves awayRef set, so the force-close
+    // effect stays parked rather than ending a session whose clock we know we
+    // haven't restarted. Sending them home is the recoverable path — the
+    // dashboard offers Continue / Start over against the same banked time.
+    if (!res.ok) { router.replace('/naale'); return }
+    const data = await res.json()
+    if (!data.deadline_at) { router.replace('/naale'); return }
+    // Order matters: the new deadline and the cleared flag must reach the same
+    // render, or the force-close effect sees remaining === 0 with nobody
+    // parking it and closes the session we just revived.
+    qaLog('clock resumed', { seconds_remaining: data.seconds_remaining })
+    setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
+    awayRef.current = false
+  }, [router])
+
+  // Start the clock when the student can actually see a question, not when the
+  // page began loading. Arriving from Continue means a POST, a navigation, a
+  // /status and a /next — several seconds against the remote project — and the
+  // clock used to be running through all of it. On a full five minutes that's
+  // invisible; on the 20 seconds someone banked, it eats a quarter of what
+  // they saved and makes a working pause look broken. That was the actual
+  // complaint behind "the timer starts while loading".
+  useEffect(() => {
+    if (question === null || !awayRef.current) return
+    resumeClock()
+  }, [question, resumeClock])
+
+  useEffect(() => {
+    if (kind !== 'topic' || !sessionId) return
+    // Nothing to bank or resume once the session is over — the student is
+    // looking at the summary. Without this, switching tabs on the summary
+    // screen posts a resume, gets the 409 that action now returns for a
+    // finished session, and bounces them to the dashboard mid-read.
+    if (doneReason !== null) return
+
+    function onVisibility() {
+      // visibilitychange fires in both directions — hidden banks the clock,
+      // visible starts it again. Returning to a tab that was merely
+      // backgrounded is a resume, not a decision: the student never left the
+      // practice screen, so there is nothing to ask them. (The Continue /
+      // Start over prompt is for returning to the DASHBOARD, where the session
+      // really was abandoned.)
+      if (document.visibilityState === 'visible') resumeClock()
+      else bankRemaining()
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', bankRemaining)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', bankRemaining)
+      // Unmounting IS leaving, whatever route got them there — and this is the
+      // only one of the three that catches an in-app navigation. Neither
+      // pagehide nor visibilitychange fires on a router push, so before this
+      // existed the sidebar's "Dashboard" link (NaaleShell renders it on this
+      // page too) walked out with the clock still running. Observed live: the
+      // Continue prompt counting down 3:34 → 3:26 → 3:13 across repeat visits.
+      //
+      // Listing the exits was the wrong model — there is always one more. This
+      // is the fact of leaving rather than a way of leaving, so a new exit
+      // added later is covered without anyone remembering to.
+      //
+      // Safe to fire on the effect's own teardown as well as a real unmount:
+      // the endpoint is idempotent (already-paused and already-ended both
+      // return early), and this effect can't even register until `kind` has
+      // resolved to 'topic', so React's dev-mode double-invoke at mount finds
+      // nothing to bank.
+      bankRemaining()
+    }
+  }, [kind, sessionId, bankRemaining, resumeClock, doneReason])
 
   // Closes the session out server-side (safe to call more than once — /end is
   // idempotent) and stores its verdict for the summary screen, so "completed"
@@ -483,7 +641,13 @@ function SessionRunner() {
       qaLog('/status on boot', data)
       setAnsweredCount(data.answered_count)
       setCorrectCount(data.correct_count)
-      setDeadlineMs(new Date(data.deadline_at).getTime())
+      // A paused session gets NO deadline yet: deadline_at is frozen in the
+      // past, and the banked remainder only becomes a real clock once
+      // resumeClock() runs — after the first question renders. Leaving this
+      // null means the header simply shows no timer while loading, rather than
+      // showing one that is already counting down time the student still has.
+      if (data.paused) awayRef.current = true
+      else setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
       setKind(data.kind)
       if (data.translation_lang) setTranslationLang(data.translation_lang)
       if (data.ended || data.expired) { completed = true; finishSession('time_up'); return }
@@ -515,7 +679,7 @@ function SessionRunner() {
       const data = await res.json()
       if (cancelled) return
       qaLog('/status on dev override save', data)
-      setDeadlineMs(new Date(data.deadline_at).getTime())
+      setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
       if (data.ended || data.expired) finishSession('time_up')
     }
     revalidate()
@@ -559,6 +723,11 @@ function SessionRunner() {
       // normally — session/next already refuses to serve anything new past
       // the deadline regardless of kind, so nothing new loads either way.
       if (kind === 'topic' && question && !result && !openResult) return
+      // Away with the clock banked: the countdown is draining off a deadline
+      // the server froze, so zero here means nothing (naale-topic-session-
+      // resume). The resume on return moves the deadline and re-runs this
+      // effect with time back on the clock.
+      if (awayRef.current) return
       qaLog('countdown reached zero — ending session')
       const id = setTimeout(() => finishSession('time_up'), 0)
       return () => clearTimeout(id)
@@ -684,10 +853,13 @@ function SessionRunner() {
 
   const phase: Phase = doneReason !== null ? 'done' : question === null ? 'loading' : result !== null ? 'feedback' : 'question'
 
-  // Warn before leaving mid-session — the timer keeps running either way (no
-  // pause exists), this is purely so an accidental tab-close/refresh doesn't
-  // silently cost the student minutes they didn't mean to give up.
+  // Warn before leaving mid-session — for a 30-minute session the timer keeps
+  // running either way, so this is purely so an accidental tab-close/refresh
+  // doesn't silently cost the student minutes they didn't mean to give up.
+  // Topic sessions are exempt: their clock banks on pagehide, so there is
+  // nothing to lose and nothing to warn about (naale-topic-session-resume).
   useEffect(() => {
+    if (kind === 'topic') return
     if (phase !== 'question' && phase !== 'feedback') return
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault()
@@ -695,11 +867,24 @@ function SessionRunner() {
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [phase])
+  }, [phase, kind])
 
   // beforeunload doesn't fire for in-app router navigation, so the "back to
-  // home" link needs its own confirm — same warning, different trigger.
+  // home" link needs its own handling — same intent, different trigger.
+  //
+  // A topic session banks its clock and leaves without asking: nothing is at
+  // risk, so a confirm would be warning about a loss that can't happen
+  // (naale-topic-session-resume). It's also the exit a student actually
+  // reaches for, and neither pagehide nor visibilitychange fires on a router
+  // push — so without this call, the one path most people take is the one
+  // path that doesn't pause.
   function handleBackClick() {
+    if (kind === 'topic') {
+      // No bank call here: leaving unmounts this page, and the effect above
+      // banks on unmount for every exit path rather than just this one.
+      router.push('/naale')
+      return
+    }
     if (window.confirm(t('אם תעזוב/י עכשיו יתכן שתאבד/י התקדמות בתרגול. לצאת בכל זאת?'))) {
       router.push('/naale')
     }
@@ -961,10 +1146,7 @@ function SessionRunner() {
           onBack={handleBackClick}
           title={t('תרגול')}
           right={remaining !== null ? (
-            <span className={
-              remaining <= 120000 ? 'text-red-500 dark:text-red-400 font-semibold' :
-              remaining <= 300000 ? 'text-amber-500 dark:text-amber-400 font-semibold' : ''
-            }>
+            <span className={countdownClass(remaining, kind)}>
               <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate>
             </span>
           ) : null}

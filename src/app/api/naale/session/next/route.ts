@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, isExpired } from '@/lib/naale/session'
+import { loadOwnedSession, isSessionExpired } from '@/lib/naale/session'
 import { pickNextTopic, difficultyLadder, MIN_LEVEL } from '@/lib/naale/leveling'
 import { publicFields } from '@/lib/naale/open-grading'
 import { selectAll } from '@/lib/naale/paginate'
@@ -103,7 +103,11 @@ export async function GET(req: NextRequest) {
 
   // Re-checked server-side: a client polling past its own timer must not get
   // another question.
-  if (owned.session.ended_at || isExpired(owned.session.deadline_at)) {
+  // isSessionExpired, not isExpired(deadline_at): a PAUSED session's deadline is
+  // frozen in the past, and answering `done: time_up` to it sent a student
+  // arriving from Continue with 277 seconds banked straight to "Time's up! You
+  // answered 0 exercises" (observed 2026-08-27).
+  if (owned.session.ended_at || isSessionExpired(owned.session)) {
     return NextResponse.json({ done: true, reason: 'time_up' })
   }
 
@@ -122,12 +126,34 @@ export async function GET(req: NextRequest) {
   // from — a student could be told a topic was finished while questions
   // remained. The answer lists grow for the life of the account.
   const studentId = session.student.id
+
+  // A topic session serves exactly ONE topic — see the candidate filter below,
+  // which discards every other topic before the selection loop runs. Fetching
+  // the whole bank first meant downloading four topics' worth of prompts,
+  // options and answers to use a quarter of one: 1306 rows to choose among 250.
+  // Scoping the query is the same reasoning as the batch fetch above, applied
+  // one level further in.
+  //
+  // Worth more than the row count suggests. The MCQ bank sits at exactly
+  // PostgREST's 1000-row page ceiling, so selectAll() pages TWICE — once for
+  // the rows, once to learn there is no third page — and each round trip is
+  // 250-1000ms against the remote project. A single topic fits in one page.
+  // This is felt hardest by exactly the session that can least afford it: three
+  // seconds is a tenth of a five-minute exercise.
+  //
+  // Null for practice/placement, which genuinely rotate across every topic.
+  const bankTopic = owned.session.kind === 'topic' ? owned.session.topic : null
+
   const [{ data: levels }, mcqBank, openBank, answered, openAnswered, placementSessions] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
-    selectAll<BankRow>('naale_questions', (from, to) =>
-      db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer').range(from, to)),
-    selectAll<OpenBankRow>('naale_open_questions', (from, to) =>
-      db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields').range(from, to)),
+    selectAll<BankRow>('naale_questions', (from, to) => {
+      const q = db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+      return (bankTopic ? q.eq('topic', bankTopic) : q).range(from, to)
+    }),
+    selectAll<OpenBankRow>('naale_open_questions', (from, to) => {
+      const q = db.from('naale_open_questions').select('id, topic, difficulty, prompt, fields')
+      return (bankTopic ? q.eq('topic', bankTopic) : q).range(from, to)
+    }),
     // Every question this student has ever answered, in any session —
     // "unseen" is lifetime-scoped, not session-scoped.
     selectAll<AnsweredRow>('naale_answers', (from, to) =>
