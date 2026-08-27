@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { CardGrid } from '@/components/ui/CardGrid'
@@ -8,7 +8,6 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { StartSessionSheet } from '@/components/naale/StartSessionSheet'
 import { nextSessionKind } from '@/lib/naale/next-session-kind'
-import { LevelSteps } from '@/components/naale/LevelSteps'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 import { primeNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { t } from '@/lib/dev-i18n'
@@ -28,14 +27,37 @@ interface MyStatsTotals {
   streak: number
 }
 
-// The real workbook's 6 not-yet-imported topics (naale-track-first-build/
-// CONTEXT.md's data audit, 2026-08-10) — shown honestly as locked rather
-// than hidden, since a student otherwise has no way to know 7 topics exist
-// at all. Static, not DB-sourced: naale_questions has no rows for these yet
-// (buildTopicStats()'s allTopics comes from the question bank, so a topic
-// with zero rows simply never appears there), and this list is real content
-// from the source spreadsheet, not invented placeholder text.
+// The real workbook's topics (naale-track-first-build/CONTEXT.md's data
+// audit, 2026-08-10) — shown honestly as locked rather than hidden, since a
+// student otherwise has no way to know these topics exist at all. Real
+// content from the source spreadsheet, not invented placeholder text.
+//
+// This list is a FALLBACK, not the source of truth: it was written when none
+// of these had rows in naale_questions, on the assumption that a topic with
+// zero rows never reaches buildTopicStats()'s allTopics and so could never
+// collide with a live card. Content has since been imported for all of them,
+// and because nobody updated the array every one rendered TWICE — once live,
+// once "coming soon". Hence lockedTopics below, which subtracts whatever the
+// question bank actually serves instead of trusting this array to be current.
 const LOCKED_TOPICS = ['נרדפות והופכיות', 'הבנת הנקרא', 'תיקון משפטים', 'סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר']
+
+// One emoji per topic, so the card grid can be scanned by shape rather than
+// by reading nine similar lines of Hebrew. Deliberately picked to be visually
+// distinct from each other — the whole point is telling cards apart at a
+// glance, so no two paper/pencil glyphs. Keyed by the topic's exact name as
+// it comes from the question bank; TOPIC_EMOJI_FALLBACK covers any topic
+// imported later that isn't listed here yet.
+const TOPIC_EMOJI: Record<string, string> = {
+  'השלמת משפטים': '✍️',      // sentence completion
+  'הבנת הנקרא': '📖',        // reading comprehension
+  'נרדפות והופכיות': '🔀',   // synonyms & antonyms
+  'תיקון משפטים': '🔧',      // sentence correction
+  'סיפור בהמשכים': '📚',     // story continuation
+  'ווטסאפ והודעות': '💬',    // WhatsApp & messages
+  'סיכום טקסט קצר': '📋',    // short text summary
+  'תיאור תמונה בקול': '🖼️',  // spoken picture description
+}
+const TOPIC_EMOJI_FALLBACK = '📄'
 
 /**
  * The Naale student home — a desktop-aware shell (NaaleSidebar + max-w-5xl
@@ -50,8 +72,15 @@ export default function NaaleHome() {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
   const [sheetOpen, setSheetOpen] = useState(false)
-  // The element that opened the sheet, so keyboard focus returns to it.
+  // null: the sheet is for the mixed 30-minute session (handleStart). A
+  // topic name: the sheet is for that topic's 5-minute session instead
+  // (naale-topic-based-sessions) — same sheet, same confirm-before-clock-starts
+  // job, just a different destination once confirmed.
+  const [sheetTopic, setSheetTopic] = useState<string | null>(null)
+  // The element that opened the sheet, so keyboard focus returns to it —
+  // whichever one that was, the main tile or a specific topic card.
   const startTileRef = useRef<HTMLButtonElement>(null)
+  const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -125,11 +154,50 @@ export default function NaaleHome() {
   function closeSheet() {
     setSheetOpen(false)
     setError('')
-    startTileRef.current?.focus()
+    setSheetTopic(null)
+    ;(lastTriggerRef.current ?? startTileRef.current)?.focus()
+  }
+
+  function openTopicSheet(topic: string, e: MouseEvent<HTMLButtonElement>) {
+    lastTriggerRef.current = e.currentTarget
+    setSheetTopic(topic)
+    setSheetOpen(true)
+  }
+
+  /**
+   * Starts a 5-minute session scoped to one topic (naale-topic-based-sessions),
+   * called from the (shared) sheet's Start button once the student has
+   * confirmed — same reasoning as handleStart() above for why this isn't
+   * called straight from the topic card.
+   */
+  async function handleStartTopicSession(topic: string) {
+    setStarting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/naale/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      router.push(`/naale/session?session_id=${data.session_id}`)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'שגיאה בפתיחת תרגול')
+      setStarting(false)
+    }
   }
 
   // Shared with the staff self-practice button — see nextSessionKind().
   const nextKind = nextSessionKind(topics)
+
+  // Only show a topic as "coming soon" if the question bank isn't already
+  // serving it — see LOCKED_TOPICS. Skipped entirely while topics is still
+  // null (mid-fetch), otherwise every locked card flashes on screen for a
+  // beat and then vanishes as the live list arrives.
+  const lockedTopics = topics
+    ? LOCKED_TOPICS.filter(name => !topics.some(topic => topic.topic === name))
+    : []
 
   if (error && !me) {
     return (
@@ -187,60 +255,113 @@ export default function NaaleHome() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 @[480px]:grid-cols-2 gap-3 mb-6">
+        {/* The @container is load-bearing, not decoration: @[480px] measures
+            the nearest container ancestor, and without one these two cards
+            silently stayed at grid-cols-1 at every width. CardGrid below
+            declares its own, which is why the topic grid was unaffected. */}
+        <div className="@container mb-6">
+        <div className="grid grid-cols-1 @[480px]:grid-cols-2 gap-3">
           <button
             type="button"
             ref={startTileRef}
-            onClick={() => setSheetOpen(true)}
-            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale"
+            onClick={() => { lastTriggerRef.current = null; setSheetTopic(null); setSheetOpen(true) }}
+            className="bg-accent-naale rounded-2xl p-5 text-right transition hover:brightness-110 flex flex-col gap-6"
           >
-            <span className="shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-2xl border border-accent-naale/30 bg-accent-naale/10 text-accent-naale">▶️</span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-extrabold text-fg text-xl">{t('תרגול')}</span>
-              <span className="block text-xs text-accent-naale mt-0.5">{t('30 דקות')}</span>
+            {/* justify-between rather than explicit sides: the icon sits on
+                the reading-start edge and the arrow on the reading-end edge
+                in both RTL Hebrew and the LTR dev-English toggle. */}
+            <span className="flex items-start justify-between">
+              <span className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-white/20">▶️</span>
+              <span className="text-white/70">←</span>
             </span>
-            <span className="text-fg/30 shrink-0">←</span>
+            <span className="block">
+              <span className="block font-extrabold text-white text-xl">{t('תרגול')}</span>
+              <span className="block text-xs text-white/70 mt-0.5">{t('30 דקות')}</span>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => router.push('/naale/stats')}
-            className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-4 text-right transition hover:shadow-sm hover:border-accent-naale"
+            className="bg-surface border border-card-border rounded-2xl p-5 text-right transition hover:shadow-sm hover:border-accent-naale flex flex-col gap-6"
           >
-            <span className="shrink-0 w-14 h-14 rounded-xl flex items-center justify-center text-2xl border border-accent-naale/30 bg-accent-naale/10 text-accent-naale">📊</span>
-            <span className="flex-1 min-w-0">
+            <span className="flex items-start justify-between">
+              <span className="w-11 h-11 rounded-full flex items-center justify-center text-xl border border-accent-naale/30 bg-accent-naale/10">📊</span>
+              <span className="text-fg/30">←</span>
+            </span>
+            <span className="block">
               <span className="block font-extrabold text-fg text-xl">{t('ההתקדמות שלי')}</span>
             </span>
-            <span className="text-fg/30 shrink-0">←</span>
           </button>
         </div>
+        </div>
 
-        <h2 className="text-sm font-semibold text-fg/70 mt-6 mb-2">{t('רמות לפי נושא')}</h2>
-        <CardGrid>
-          {topics?.map(topic => (
-            <div key={topic.topic} className="bg-surface rounded-2xl shadow-sm border border-card-border p-4">
-              <div className="text-sm text-fg/80 truncate mb-2">{topic.topic}</div>
-              {topic.started ? (
-                <div className="flex items-center gap-2">
-                  <LevelSteps level={topic.level ?? 1} />
-                  <span className="text-xs text-fg/50">
-                    {t('רמה')} <LtrIsolate>{String(topic.level ?? 1)}</LtrIsolate>
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <LevelSteps level={0} />
-                  <span className="text-xs text-fg/30">{t('לא התחיל')}</span>
-                </div>
-              )}
-            </div>
-          ))}
-          {LOCKED_TOPICS.map(name => (
-            <div key={name} className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 opacity-50">
-              <div className="text-sm text-fg/80 truncate mb-2">{name}</div>
-              <div className="flex items-center gap-2">
-                <LevelSteps level={0} locked />
-                <span className="text-xs text-fg/40">🔒 {t('בקרוב...')}</span>
+        {/* The per-topic level readout this section used to carry moved to
+            /naale/stats, where the same numbers already lived — Noam's call
+            (naale-topic-based-sessions). The link keeps that one tap away
+            rather than leaving the levels with no route from here. */}
+        <div className="mt-6 mb-2 flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-semibold text-fg/70">{t('תרגל לפי נושא')}</h2>
+          <button
+            type="button"
+            onClick={() => router.push('/naale/stats')}
+            className="text-xs font-medium text-accent-naale hover:underline shrink-0"
+          >
+            {t('כל הרמות')}
+          </button>
+        </div>
+        <CardGrid cols={4}>
+          {/* Same animate-pulse placeholder convention as the stat tiles
+              above and NaaleSidebar's profile row. Eight cards because that's
+              what the question bank currently serves — the exact count only
+              has to stop the grid collapsing to nothing and then reflowing,
+              and min-h matches a real card so the page doesn't jump when the
+              real ones arrive. */}
+          {topics === null &&
+            Array.from({ length: 8 }, (_, i) => (
+              <div
+                key={i}
+                className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 flex flex-col justify-between gap-6 min-h-[7.5rem] animate-pulse"
+              >
+                <div className="w-11 h-11 rounded-xl bg-gray-200 dark:bg-white/10" />
+                <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-white/10" />
               </div>
+            ))}
+          {topics?.map(topic => (
+            <button
+              key={topic.topic}
+              type="button"
+              disabled={starting}
+              onClick={e => openTopicSheet(topic.topic, e)}
+              className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-right transition hover:shadow-sm hover:border-accent-naale disabled:opacity-60 flex flex-col justify-between gap-6 min-h-[7.5rem]"
+            >
+              {/* Levels are gone from this card, so a dimmed icon is the only
+                  thing left distinguishing a topic the student has never
+                  opened from one they've answered 200 questions in. */}
+              <span
+                className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl border border-accent-naale/30 bg-accent-naale/10${
+                  topic.started ? '' : ' opacity-40'
+                }`}
+              >
+                {TOPIC_EMOJI[topic.topic] ?? TOPIC_EMOJI_FALLBACK}
+              </span>
+              <span className="block text-sm font-semibold text-fg/80 line-clamp-2">{t(topic.topic)}</span>
+            </button>
+          ))}
+          {lockedTopics.map(name => (
+            // Dashed border instead of a blanket opacity-50: dimming the whole
+            // card took the label down with it and left the topic name barely
+            // readable, which defeats the point of showing locked topics at all.
+            <div
+              key={name}
+              className="bg-surface/50 rounded-2xl border border-dashed border-card-border p-4 flex flex-col justify-between gap-6 min-h-[7.5rem]"
+            >
+              <span className="w-11 h-11 rounded-xl flex items-center justify-center text-xl border border-card-border bg-fg/5 opacity-40">
+                🔒
+              </span>
+              <span className="block">
+                <span className="block text-sm font-semibold text-fg/40 line-clamp-2">{t(name)}</span>
+                <span className="block text-xs text-fg/30 mt-0.5">{t('בקרוב...')}</span>
+              </span>
             </div>
           ))}
         </CardGrid>
@@ -251,11 +372,12 @@ export default function NaaleHome() {
 
       {sheetOpen && (
         <StartSessionSheet
-          kind={nextKind}
+          kind={sheetTopic ? 'topic' : nextKind}
+          topicName={sheetTopic ?? undefined}
           lang={me.student.translation_lang ?? 'ru'}
           starting={starting}
           error={error}
-          onStart={handleStart}
+          onStart={() => (sheetTopic ? handleStartTopicSession(sheetTopic) : handleStart())}
           onClose={closeSheet}
         />
       )}
