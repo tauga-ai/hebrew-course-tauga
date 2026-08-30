@@ -49,22 +49,53 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
 
-  // Settle any expired-but-unended sessions before anything else. A session
-  // abandoned by closing the tab keeps ended_at null and its `completed`
-  // value never gets evaluated — /session/end is the only other place that
-  // sets it, and an abandoned session never calls it. Left unsettled, ticket
-  // 14's XP-completion-bonus and weekly streak would silently undercount,
-  // since both only look at completed sessions. No cron job needed: this
-  // runs lazily, the next time the student starts anything.
-  const stale = await selectAll<{
-    id: string; deadline_at: string; answered_count: number; paused_remaining_ms: number | null; paused_at: string | null
-  }>('naale_sessions', (from, to) =>
-    db.from('naale_sessions')
-      .select('id, deadline_at, answered_count, paused_remaining_ms, paused_at')
-      .eq('student_id', session.student.id)
-      .is('ended_at', null)
-      .range(from, to))
+  // Five round trips used to happen here in sequence (the stale-sweep select,
+  // the live-session select, the topic-level count, the question-bank count,
+  // then the insert) — naale-aggregate-query-performance. The first two read
+  // the exact same rows (`naale_sessions where student_id = X and ended_at is
+  // null`), so they're now one select with `existing` derived from it below.
+  // The topic-level count and question-bank count don't depend on that select
+  // OR on each other — only on `session.student.id` / `topic`, both already
+  // known — so they run alongside it instead of waiting for it. No logic
+  // moved: every branch below still reads the exact same `existing` /
+  // `levelCount` / counts it always did.
+  const [stale, overrideMinutes, { count: levelCount }, questionCounts] = await Promise.all([
+    // Settle any expired-but-unended sessions before anything else. A session
+    // abandoned by closing the tab keeps ended_at null and its `completed`
+    // value never gets evaluated — /session/end is the only other place that
+    // sets it, and an abandoned session never calls it. Left unsettled, ticket
+    // 14's XP-completion-bonus and weekly streak would silently undercount,
+    // since both only look at completed sessions. No cron job needed: this
+    // runs lazily, the next time the student starts anything.
+    selectAll<{
+      id: string; kind: string; topic: string | null; deadline_at: string; answered_count: number
+      started_at: string; paused_remaining_ms: number | null; paused_at: string | null
+    }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions')
+        .select('id, kind, topic, deadline_at, answered_count, started_at, paused_remaining_ms, paused_at')
+        .eq('student_id', session.student.id)
+        .is('ended_at', null)
+        .range(from, to)),
+    // Dev-only QA convenience (DevPanel's "Session length override" field): a
+    // client cookie can ask for any length, and only takes effect when
+    // debugMode is true, server-side — NEXT_PUBLIC_DEBUG_MODE is baked in at
+    // build time, so this cookie has zero effect against a build where it's
+    // off, regardless of what a client sends.
+    readDevSessionMinutesOverride(),
+    // A student with no topic levels yet has never been placed — used further
+    // down to pick `kind` and to gate topic sessions on placement.
+    db.from('naale_topic_levels').select('id', { count: 'exact', head: true }).eq('student_id', session.student.id),
+    // Only relevant when a topic was requested; `null` otherwise so the plain
+    // 30-minute path never pays for it.
+    topic
+      ? Promise.all([
+          db.from('naale_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
+          db.from('naale_open_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
+        ])
+      : Promise.resolve(null),
+  ])
 
+  const closedStaleIds = new Set<string>()
   for (const s of stale) {
     // A PAUSED session's deadline_at is frozen in the past by construction
     // (naale-topic-session-resume) — that is how banking the remainder works.
@@ -84,6 +115,7 @@ export async function POST(req: NextRequest) {
             completed: isSessionCompleted(s.deadline_at, s.answered_count),
           })
           .eq('id', s.id)
+        closedStaleIds.add(s.id)
       }
       continue
     }
@@ -95,26 +127,15 @@ export async function POST(req: NextRequest) {
           completed: isSessionCompleted(s.deadline_at, s.answered_count),
         })
         .eq('id', s.id)
+      closedStaleIds.add(s.id)
     }
   }
 
-  // Dev-only QA convenience (DevPanel's "Session length override" field): a
-  // client cookie can ask for any length, and only takes effect when debugMode
-  // is true, server-side — NEXT_PUBLIC_DEBUG_MODE is baked in at build time,
-  // so this cookie has zero effect against a build where it's off, regardless
-  // of what a client sends.
-  const overrideMinutes = await readDevSessionMinutesOverride()
-
-  // Resume a still-live session rather than starting a second one.
-  const { data: live } = await db
-    .from('naale_sessions')
-    .select('id, kind, topic, deadline_at, answered_count, started_at, paused_remaining_ms')
-    .eq('student_id', session.student.id)
-    .is('ended_at', null)
-    .order('started_at', { ascending: false })
-    .limit(1)
-
-  const existing = live?.[0]
+  // Resume a still-live session rather than starting a second one — the most
+  // recent row the sweep above didn't just close.
+  const existing = stale
+    .filter(s => !closedStaleIds.has(s.id))
+    .sort((a, b) => (a.started_at < b.started_at ? 1 : -1))[0]
 
   // --- naale-topic-scoped-session-resume ------------------------------------
   // A plain topic tap that names a DIFFERENT topic than whatever's already
@@ -260,26 +281,20 @@ export async function POST(req: NextRequest) {
 
   // A student with no topic levels yet has never been placed. The placement
   // flow itself is ticket 11 — this only reports which kind is needed so the
-  // client knows which screen to show.
-  const { count: levelCount } = await db
-    .from('naale_topic_levels')
-    .select('id', { count: 'exact', head: true })
-    .eq('student_id', session.student.id)
+  // client knows which screen to show. `levelCount` was fetched in parallel
+  // with the sweep/existing-session select above, not queried again here.
+  if (topic && (levelCount ?? 0) === 0) {
+    return NextResponse.json({ error: 'יש להשלים מבחן התאמה לפני תרגול לפי נושא' }, { status: 400 })
+  }
 
   // A topic session requires placement first, same precondition the 30-minute
   // session already has — a topic's difficulty progression has nothing to key
   // off before a student has been placed (resolved without asking Noam, see
   // ticket.md's "Resolved without asking Noam" note: nextSessionKind() already
-  // gates the 30-minute session the same way).
-  if (topic && (levelCount ?? 0) === 0) {
-    return NextResponse.json({ error: 'יש להשלים מבחן התאמה לפני תרגול לפי נושא' }, { status: 400 })
-  }
-
+  // gates the 30-minute session the same way). `questionCounts` was likewise
+  // fetched in parallel above, only when a topic was actually requested.
   if (topic) {
-    const [{ count: mcqCount }, { count: openCount }] = await Promise.all([
-      db.from('naale_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
-      db.from('naale_open_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
-    ])
+    const [{ count: mcqCount }, { count: openCount }] = questionCounts!
     if ((mcqCount ?? 0) === 0 && (openCount ?? 0) === 0) {
       return NextResponse.json({ error: 'נושא לא נמצא' }, { status: 400 })
     }
