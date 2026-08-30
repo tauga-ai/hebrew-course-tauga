@@ -84,6 +84,13 @@ export default function NaaleHome() {
   const [resumable, setResumable] = useState<
     { session_id: string; topic: string | null; seconds_remaining: number; answered_count: number } | null
   >(null)
+  // Which topic (if any) has a paused session right now, for the "in
+  // progress · Xm left" badge on that one card (naale-topic-card-resume-badge).
+  // Best-effort like the rewards fetch below — a failed/empty read just means
+  // no badge shows, never a blocked dashboard.
+  const [pausedTopic, setPausedTopic] = useState<
+    { topic: string; seconds_remaining: number; total_seconds: number } | null
+  >(null)
   // The element that opened the sheet, so keyboard focus returns to it —
   // whichever one that was, the main tile or a specific topic card.
   const startTileRef = useRef<HTMLButtonElement>(null)
@@ -122,16 +129,31 @@ export default function NaaleHome() {
         is_admin: data.is_admin,
       })
 
-      // Best-effort: a failed rewards fetch shouldn't block the home screen
-      // itself from rendering, so it's fetched separately and just omitted
-      // (streak/xp/coins badge simply doesn't show) rather than surfaced as
-      // a page-blocking error.
-      const statsRes = await fetch('/api/naale/my-stats')
-      if (cancelled || !statsRes.ok) return
-      const statsData = await statsRes.json()
+      // Best-effort: a failed rewards/badge fetch shouldn't block the home
+      // screen itself from rendering, so each is just omitted on failure
+      // rather than surfaced as a page-blocking error. Fired together via
+      // Promise.all rather than one after another — sequential awaits meant
+      // the paused-topic badge/ring always arrived a full round trip after
+      // the topic grid itself, popping in visibly late instead of rendering
+      // with it.
+      const [statsRes, pausedRes] = await Promise.all([
+        fetch('/api/naale/my-stats'),
+        fetch('/api/naale/session/paused-topic'),
+      ])
       if (cancelled) return
-      setRewards(statsData.totals)
-      setTopics(statsData.topics)
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json()
+        if (!cancelled) {
+          setRewards(statsData.totals)
+          setTopics(statsData.topics)
+        }
+      }
+
+      if (!cancelled && pausedRes.ok) {
+        const pausedData = await pausedRes.json()
+        if (!cancelled) setPausedTopic(pausedData.topic ? pausedData : null)
+      }
     }
     load()
     return () => { cancelled = true }
@@ -391,7 +413,11 @@ export default function NaaleHome() {
               type="button"
               disabled={starting}
               onClick={e => openTopicSheet(topic.topic, e)}
-              className="bg-surface rounded-2xl shadow-sm border border-card-border p-4 text-right transition hover:shadow-sm hover:border-accent-naale disabled:opacity-60 flex flex-col justify-between gap-6 min-h-[7.5rem]"
+              className={`bg-surface rounded-2xl shadow-sm border p-4 text-right transition hover:shadow-sm disabled:opacity-60 flex flex-col justify-between gap-6 min-h-[7.5rem]${
+                pausedTopic?.topic === topic.topic
+                  ? ' border-accent-naale/50 ring-2 ring-accent-naale/20'
+                  : ' border-card-border hover:border-accent-naale'
+              }`}
             >
               {/* Levels are gone from this card, so a dimmed icon is the only
                   thing left distinguishing a topic the student has never
@@ -403,7 +429,32 @@ export default function NaaleHome() {
               >
                 {TOPIC_EMOJI[topic.topic] ?? TOPIC_EMOJI_FALLBACK}
               </span>
-              <span className="block text-sm font-semibold text-fg/80 line-clamp-2">{t(topic.topic)}</span>
+              <span className="block">
+                <span className="block text-sm font-semibold text-fg/80 line-clamp-2">{t(topic.topic)}</span>
+                {/* Only ever the one card matching pausedTopic — every other
+                    card is unchanged (naale-topic-card-resume-badge). Reads
+                    as part of the card's own description rather than a
+                    floating badge, and shows time left AGAINST the 5-minute
+                    max (not a bare countdown) so the bar's fill has a fraction
+                    to actually represent. mm:ss matches the clock format
+                    ResumeSessionSheet already uses for the same value. */}
+                {pausedTopic?.topic === topic.topic && (
+                  <span className="block mt-1">
+                    <span className="block text-[11px] font-medium text-accent-naale">
+                      <LtrIsolate>
+                        {t('בעיצומו')} · {Math.floor(pausedTopic.seconds_remaining / 60)}:{String(pausedTopic.seconds_remaining % 60).padStart(2, '0')}{' '}
+                        {t('מתוך')} {Math.floor(pausedTopic.total_seconds / 60)}:{String(pausedTopic.total_seconds % 60).padStart(2, '0')}
+                      </LtrIsolate>
+                    </span>
+                    <span className="block mt-1.5 h-1 rounded-full bg-card-border overflow-hidden">
+                      <span
+                        className="block h-full rounded-full bg-accent-naale"
+                        style={{ width: `${Math.min(100, (pausedTopic.seconds_remaining / pausedTopic.total_seconds) * 100)}%` }}
+                      />
+                    </span>
+                  </span>
+                )}
+              </span>
             </button>
           ))}
           {lockedTopics.map(name => (
