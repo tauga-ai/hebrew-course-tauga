@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
   const db = createServiceClient()
   const { error } = await db
     .from('naale_sessions')
-    .update({ paused_remaining_ms: remainingToBank(owned.session.deadline_at) })
+    .update({
+      paused_remaining_ms: remainingToBank(owned.session.deadline_at),
+      paused_at: new Date().toISOString(),
+    })
     .eq('id', owned.session.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

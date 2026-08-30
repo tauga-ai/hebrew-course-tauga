@@ -11,7 +11,7 @@ import type { NaaleSession } from '@/lib/types'
 // alias Next substitutes), so a plain `tsx --test` run of this file would
 // crash before any test body ran. Re-exported here so route files can keep
 // importing everything from one place.
-export { SESSION_MINUTES, TOPIC_SESSION_MINUTES, MIN_ANSWERS_FOR_COMPLETION, isSessionCompleted, hasReachedTimer, isExpired, isSessionExpired, secondsRemaining, isPendingQuestion, canPause, isPaused, remainingToBank, resumedDeadline, remainingMs } from './session-rules'
+export { SESSION_MINUTES, TOPIC_SESSION_MINUTES, MIN_ANSWERS_FOR_COMPLETION, isSessionCompleted, hasReachedTimer, isExpired, isSessionExpired, secondsRemaining, isPendingQuestion, canPause, isPaused, isPauseExpired, isTopicMismatch, remainingToBank, resumedDeadline, remainingMs } from './session-rules'
 
 export type OwnedSessionResult =
   | { ok: false }
