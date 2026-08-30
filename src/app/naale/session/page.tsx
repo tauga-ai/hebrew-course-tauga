@@ -8,6 +8,7 @@ import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
+import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang } from '@/lib/dev-i18n'
@@ -233,6 +234,7 @@ function SessionRunner() {
   // rather than a boolean so the modal reports the question that was on
   // screen when it opened, even if the session moves on underneath it.
   const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null)
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false)
   // Written every render rather than threaded through loadNext's dependencies:
   // loadNext deliberately does NOT depend on per-answer state (see the ref
   // comment above it), and adding these would give it a new identity on every
@@ -922,9 +924,7 @@ function SessionRunner() {
       router.push('/naale')
       return
     }
-    if (window.confirm(t('אם תעזוב/י עכשיו יתכן שתאבד/י התקדמות בתרגול. לצאת בכל זאת?'))) {
-      router.push('/naale')
-    }
+    setShowLeaveWarning(true)
   }
 
   // Aliased so the question/feedback block below can shadow `result`,
@@ -1606,6 +1606,12 @@ function SessionRunner() {
           questionId={reportingQuestionId}
           sessionId={sessionId}
           onClose={() => setReportingQuestionId(null)}
+        />
+      )}
+      {showLeaveWarning && (
+        <LeaveSessionModal
+          onConfirm={() => router.push('/naale')}
+          onCancel={() => setShowLeaveWarning(false)}
         />
       )}
     </NaaleShell>
