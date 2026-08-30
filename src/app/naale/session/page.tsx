@@ -240,6 +240,20 @@ function SessionRunner() {
   const currentSnapshot = useRef<HistoryEntry | null>(null)
 
   const [doneReason, setDoneReason] = useState<DoneReason | null>(null)
+  // Mirrors doneReason for the visibility-tracking effect's cleanup below,
+  // which closes over the OLD doneReason from when it was set up — checking
+  // this ref instead lets that cleanup see whether the session is STILL
+  // active at the moment it actually runs (naale-session-completion-redirect).
+  //
+  // Set directly in finishSession, NOT via its own `useEffect(() => {
+  // doneReasonRef.current = doneReason }, [doneReason])` — that was the first
+  // attempt at this fix, and live testing showed it doesn't work: React runs
+  // EVERY effect's cleanup for a commit before running ANY effect's setup, so
+  // a companion effect updating this ref is itself a "setup" that only runs
+  // AFTER the visibility-tracking effect's cleanup has already read the STALE
+  // value. Setting it synchronously at the actual state-change site sidesteps
+  // effect ordering entirely.
+  const doneReasonRef = useRef<DoneReason | null>(null)
   const [summary, setSummary] = useState<EndSummary | null>(null)
   // The done screen is a 2-step recap when there's a per-topic breakdown to
   // show (step 0: the celebratory/rewards moment — and eventually the AI
@@ -391,7 +405,17 @@ function SessionRunner() {
       // return early), and this effect can't even register until `kind` has
       // resolved to 'topic', so React's dev-mode double-invoke at mount finds
       // nothing to bank.
-      bankRemaining()
+      //
+      // EXCEPT when the session just finished — this cleanup also fires on
+      // the exact render where `doneReason` transitions from null to a real
+      // reason (it's one of this effect's own deps), which is a legitimate
+      // completion, not a departure. Confirmed live (naale-session-completion-
+      // redirect): banking here wrongly re-arms awayRef.current, which can
+      // then make a later question-load spuriously call resumeClock() against
+      // a session that's already ended, get a 409, and bounce the student off
+      // the results screen. doneReasonRef (not `doneReason` — this closure's
+      // own copy is stale) reflects the CURRENT value at the moment this runs.
+      if (doneReasonRef.current === null) bankRemaining()
     }
   }, [kind, sessionId, bankRemaining, resumeClock, doneReason])
 
@@ -402,8 +426,18 @@ function SessionRunner() {
   // synchronously in the caller's effect body, which this repo's stricter
   // react-hooks/set-state-in-effect lint rule disallows (see the matching
   // note in use-countdown.ts's Phase 1).
+  //
+  // Confirmed live (naale-session-completion-redirect): several re-renders in
+  // the answer-then-timeout window can each schedule a call to this before
+  // the first one's setDoneReason() has landed — logged as `session ended`
+  // firing three times for one completion. finishingRef makes every call
+  // after the first a no-op rather than re-running the network call and
+  // re-setting state that's already settled. Never reset: once a session has
+  // finished (or attempted to) in this mount, it never needs to finish again.
+  const finishingRef = useRef(false)
   const finishSession = useCallback(async (reason: DoneReason) => {
-    if (!sessionId) return
+    if (!sessionId || finishingRef.current) return
+    finishingRef.current = true
     try {
       const res = await fetch('/api/naale/session/end', {
         method: 'POST',
@@ -449,6 +483,9 @@ function SessionRunner() {
     } catch {
       // Best-effort — the summary falls back to the locally-tracked counts.
     } finally {
+      // Ref set BEFORE the state update — see doneReasonRef's own comment for
+      // why this can't be a separate effect mirroring doneReason.
+      doneReasonRef.current = reason
       setDoneReason(reason)
     }
   }, [sessionId])
