@@ -503,6 +503,9 @@ export default function NaaleHome() {
         <StartSessionSheet
           kind={sheetTopic ? 'topic' : nextKind}
           topicName={sheetTopic ?? undefined}
+          conflictingPausedTopic={
+            sheetTopic && pausedTopic?.topic && pausedTopic.topic !== sheetTopic ? pausedTopic.topic : null
+          }
           lang={me.student.translation_lang ?? 'ru'}
           starting={starting}
           error={error}

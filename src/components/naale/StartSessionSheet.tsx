@@ -34,6 +34,7 @@ const SHEET_MS = 220
 export function StartSessionSheet({
   kind,
   topicName,
+  conflictingPausedTopic,
   lang,
   starting,
   error,
@@ -47,6 +48,12 @@ export function StartSessionSheet({
   /** Required when kind === 'topic' — the topic this session will be scoped
    *  to, shown as the eyebrow label the same way 'placement' shows its own. */
   topicName?: string
+  /** Set when a DIFFERENT topic than this one currently has a paused session
+   *  (naale-session-exit-warnings) — starting this one will silently end that
+   *  one server-side (naale-topic-scoped-session-resume), so this warns about
+   *  it before the student commits. Undefined/null renders the sheet exactly
+   *  as before this ticket. */
+  conflictingPausedTopic?: string | null
   lang: TranslationLang
   starting: boolean
   error: string
@@ -156,6 +163,18 @@ export function StartSessionSheet({
               ? '5 דקות · שאלות מהנושא הזה בלבד'
               : '30 דקות · הישאר עד הסוף כדי שהתרגול ייחשב · 50 XP')}
         </p>
+
+        {/* Only ever renders for the mismatched-topic case — the matching-
+            topic case is naale-topic-scoped-session-resume's own Resume/Start
+            Over prompt, never this sheet (naale-session-exit-warnings). No
+            answers, XP or coins are lost either way; what ends is only the
+            OTHER topic's paused clock, which is the thing worth saying out
+            loud before the student taps Start. */}
+        {conflictingPausedTopic && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">
+            {t('התרגול שהשהית בנושא')} &quot;{t(conflictingPausedTopic)}&quot; {t('יסתיים אם תתחיל/י כאן. התשובות שכבר ענית עליהן שם נשמרות.')}
+          </p>
+        )}
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-fg/50">{t('תרגום')}</span>
