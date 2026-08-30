@@ -94,6 +94,7 @@ const SENTENCE_CORRECTION_COL = {
   answerC: 'תשובה C',
   answerD: 'תשובה D',
   correctLetter: 'תשובה נכונה',
+  explanation: 'הסבר לתשובה הנכונה',
   difficulty: 'רמת קושי (1-5)',
 } as const
 const SENTENCE_CORRECTION_REQUIRED = Object.values(SENTENCE_CORRECTION_COL)
@@ -113,6 +114,7 @@ const READING_COMPREHENSION_COL = {
   answerC: 'תשובה C',
   answerD: 'תשובה D',
   correctLetter: 'תשובה נכונה',
+  explanation: 'הסבר לתשובה הנכונה',
   difficulty: 'רמת קושי (1-5)',
 } as const
 const READING_COMPREHENSION_REQUIRED = Object.values(READING_COMPREHENSION_COL)
@@ -132,6 +134,7 @@ const SYNONYMS_ANTONYMS_COL = {
   answerC: 'תשובה C',
   answerD: 'תשובה D',
   correctLetter: 'תשובה נכונה',
+  explanation: 'הסבר לתשובה הנכונה',
   difficulty: 'רמת קושי (1-5)',
 } as const
 const SYNONYMS_ANTONYMS_REQUIRED = Object.values(SYNONYMS_ANTONYMS_COL)
@@ -256,7 +259,7 @@ function readSentenceCorrectionSheet(wb: XLSX.WorkBook, sheetName: string): Ques
         answer_kind: 'mcq',
         options,
         correct_answer: correctColumn ? cell(correctColumn) : '',
-        explanation: '',
+        explanation: cell(SENTENCE_CORRECTION_COL.explanation),
         source_row: sourceRow,
       }
     })
@@ -298,16 +301,18 @@ function readReadingComprehensionSheet(wb: XLSX.WorkBook, sheetName: string): Qu
         answer_kind: 'mcq',
         options,
         correct_answer: correctColumn ? cell(correctColumn) : '',
-        explanation: '',
+        explanation: cell(READING_COMPREHENSION_COL.explanation),
         source_row: sourceRow,
       }
     })
 }
 
-/** Each option is a (synonym, antonym) pair for `word`, not a single word —
- *  the workbook has no instructional sentence of its own, so one is
- *  synthesized here combining the word and its context sentence. Exact
- *  wording is a placeholder; confirm with Yuval (see task.md §1). */
+/** Levels 1-3: a single synonym to pick. Levels 4-5: a (synonym, antonym)
+ *  pair — v2's redesign of this topic (confirmed against the source
+ *  workbook: correct-answer letters are unchanged from v1 at every level,
+ *  only the answer-option shape and this instruction differ). The workbook
+ *  has no instructional sentence of its own for either case, so one is
+ *  synthesized here combining the word and its context sentence. */
 function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
   const ws = wb.Sheets[sheetName]
   const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
@@ -335,16 +340,19 @@ function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): Questi
 
       const word = cell(SYNONYMS_ANTONYMS_COL.word)
       const context = cell(SYNONYMS_ANTONYMS_COL.context)
+      const prompt = difficulty >= 4
+        ? `בחר את הזוג הנכון (מילה נרדפת, מילה הפכית) למילה "${word}" במשפט:\n"${context}"`
+        : `בחר את המילה הנרדפת למילה "${word}" במשפט:\n"${context}"` // draft copy — confirm wording, see naale-question-import-v2-fixes/task.md
 
       return {
         topic: sheetName,
         question_id,
         difficulty,
-        prompt: `בחר את הזוג הנכון (מילה נרדפת, מילה הפכית) למילה "${word}" במשפט:\n"${context}"`,
+        prompt,
         answer_kind: 'mcq',
         options,
         correct_answer: correctColumn ? cell(correctColumn) : '',
-        explanation: '',
+        explanation: cell(SYNONYMS_ANTONYMS_COL.explanation),
         source_row: sourceRow,
       }
     })
