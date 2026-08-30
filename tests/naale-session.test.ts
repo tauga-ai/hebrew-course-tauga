@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isSessionCompleted, isExpired, isSessionExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion, canPause, isPaused, remainingToBank, resumedDeadline, remainingMs } from '../src/lib/naale/session-rules'
+import { isSessionCompleted, isExpired, isSessionExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion, canPause, isPaused, isPauseExpired, PAUSE_EXPIRY_MS, isTopicMismatch, remainingToBank, resumedDeadline, remainingMs } from '../src/lib/naale/session-rules'
 
 const NOW = 1_700_000_000_000
 const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString()
@@ -150,6 +150,19 @@ test('canPause: topic sessions only — the 30-minute session must never pause',
   assert.equal(canPause({ kind: 'placement' }), false)
 })
 
+// --- naale-topic-scoped-session-resume ---------------------------------------
+
+test('isTopicMismatch: true only for a live pausable session, a different named topic, no action', () => {
+  const topicSession = { kind: 'topic', topic: 'הבנת הנקרא' }
+
+  assert.equal(isTopicMismatch(topicSession, 'השלמת משפטים', undefined), true, 'different topic requested')
+  assert.equal(isTopicMismatch(topicSession, 'הבנת הנקרא', undefined), false, 'same topic requested')
+  assert.equal(isTopicMismatch(topicSession, null, undefined), false, 'practice-button tap, no topic requested')
+  assert.equal(isTopicMismatch(topicSession, 'השלמת משפטים', 'start_over'), false, 'a resume/start-over follow-up, never a fresh tap')
+  assert.equal(isTopicMismatch({ kind: 'practice', topic: null }, 'השלמת משפטים', undefined), false, 'not pausable in the first place')
+  assert.equal(isTopicMismatch(undefined, 'השלמת משפטים', undefined), false, 'no live session at all')
+})
+
 test('isPaused: zero remaining still counts as paused', () => {
   // The obvious bug this guards: 0 is falsy, so a truthiness check would report
   // a session paused with no time left as running — and its stale deadline_at
@@ -157,6 +170,23 @@ test('isPaused: zero remaining still counts as paused', () => {
   assert.equal(isPaused({ paused_remaining_ms: 0 }), true)
   assert.equal(isPaused({ paused_remaining_ms: 1000 }), true)
   assert.equal(isPaused({ paused_remaining_ms: null }), false)
+})
+
+// --- naale-paused-session-expiry ---------------------------------------------
+
+test('isPauseExpired: true only once the bank is older than 3 hours', () => {
+  const paused = (pausedAt: string) => ({ paused_remaining_ms: 60_000, paused_at: pausedAt })
+
+  assert.equal(isPauseExpired(paused(iso(-PAUSE_EXPIRY_MS + 1000)), NOW), false, 'just inside the window')
+  assert.equal(isPauseExpired(paused(iso(-PAUSE_EXPIRY_MS - 1000)), NOW), true, 'just outside the window')
+})
+
+test('isPauseExpired: never expires when paused_at is null (paused before this column existed)', () => {
+  assert.equal(isPauseExpired({ paused_remaining_ms: 60_000, paused_at: null }, NOW), false)
+})
+
+test('isPauseExpired: false when not paused at all, regardless of paused_at', () => {
+  assert.equal(isPauseExpired({ paused_remaining_ms: null, paused_at: iso(-PAUSE_EXPIRY_MS - 1000) }, NOW), false)
 })
 
 test('remainingToBank: never negative', () => {

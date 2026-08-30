@@ -8,6 +8,11 @@ export const SESSION_MINUTES = 30
 /** The 5-minute topic-scoped session (naale-topic-based-sessions). Same file
  *  as SESSION_MINUTES so both durations stay in one place. */
 export const TOPIC_SESSION_MINUTES = 5
+/** How long banked/paused time stays resumable (naale-paused-session-expiry).
+ *  Noam, asked what should happen to a student who closes the browser and
+ *  comes back much later rather than being genuinely interrupted: keep it
+ *  tight, since this is already a 5-minute session. */
+export const PAUSE_EXPIRY_MS = 3 * 60 * 60 * 1000
 /** "Completed session" = reached the timer AND answered at least this many. */
 export const MIN_ANSWERS_FOR_COMPLETION = 3
 
@@ -148,6 +153,28 @@ export function canPause(session: { kind: string }): boolean {
 }
 
 /**
+ * Whether a plain topic request (no resume/start-over action attached) should
+ * treat the already-live session as abandoned, rather than offering to
+ * resume it (naale-topic-scoped-session-resume). True only when there IS a
+ * live pausable session, the request named a DIFFERENT topic, and this isn't
+ * itself a resume/start-over follow-up — those never carry a topic that
+ * could mismatch in the first place (resumeClock() always omits topic;
+ * Start Over always echoes back the offered session's own topic), but the
+ * `action` check is kept explicit here rather than assumed.
+ *
+ * `requestedTopic: null` (the plain 30-minute Practice button) deliberately
+ * never counts as a mismatch — that path is untouched by this feature; see
+ * naale-topic-scoped-session-resume/task.md's Open Questions for why.
+ */
+export function isTopicMismatch(
+  existing: { kind: string; topic: string | null } | undefined,
+  requestedTopic: string | null,
+  action: 'resume' | 'start_over' | undefined
+): boolean {
+  return !!existing && canPause(existing) && requestedTopic !== null && requestedTopic !== existing.topic && action === undefined
+}
+
+/**
  * Whether a session's clock is currently stopped (naale-topic-session-resume).
  *
  * MUST be checked before any use of deadline_at on a session that could be
@@ -159,6 +186,23 @@ export function canPause(session: { kind: string }): boolean {
  */
 export function isPaused(session: { paused_remaining_ms: number | null }): boolean {
   return session.paused_remaining_ms !== null
+}
+
+/**
+ * Whether a paused session's bank is too old to still count
+ * (naale-paused-session-expiry). False for anything not currently paused —
+ * callers that already gate on isPaused() can call this unconditionally.
+ *
+ * `paused_at` can be null on a row paused before this column existed; treated
+ * as "never expires" rather than thrown on, matching this migration's own
+ * no-backfill choice.
+ */
+export function isPauseExpired(
+  session: { paused_remaining_ms: number | null; paused_at: string | null },
+  now = Date.now()
+): boolean {
+  if (!isPaused(session) || session.paused_at === null) return false
+  return now - new Date(session.paused_at).getTime() > PAUSE_EXPIRY_MS
 }
 
 /**

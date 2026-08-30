@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride, canPause, remainingMs, resumedDeadline } from '@/lib/naale/session'
+import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride, canPause, isPauseExpired, isTopicMismatch, remainingMs, resumedDeadline } from '@/lib/naale/session'
 import { selectAll } from '@/lib/naale/paginate'
 
 /**
@@ -14,8 +14,12 @@ import { selectAll } from '@/lib/naale/paginate'
  * would double-count answers toward the completion minimum and make "the
  * previous session" ambiguous for the review-opener later. This applies
  * regardless of kind — a student can't have a live topic session AND a live
- * practice session at once; whichever is already live wins and `topic` is
- * ignored for a resume.
+ * practice session at once; whichever is already live wins.
+ *
+ * Exception (naale-topic-scoped-session-resume): a topic tap naming a
+ * DIFFERENT topic than whatever's live doesn't "win" silently — it treats
+ * the old one as abandoned and starts the newly-requested topic instead. See
+ * isTopicMismatch()'s own comment.
  *
  * deadline_at is computed HERE, server-side, and never accepted from the
  * client — that's what makes the session length un-extendable by a reload.
@@ -53,10 +57,10 @@ export async function POST(req: NextRequest) {
   // since both only look at completed sessions. No cron job needed: this
   // runs lazily, the next time the student starts anything.
   const stale = await selectAll<{
-    id: string; deadline_at: string; answered_count: number; paused_remaining_ms: number | null
+    id: string; deadline_at: string; answered_count: number; paused_remaining_ms: number | null; paused_at: string | null
   }>('naale_sessions', (from, to) =>
     db.from('naale_sessions')
-      .select('id, deadline_at, answered_count, paused_remaining_ms')
+      .select('id, deadline_at, answered_count, paused_remaining_ms, paused_at')
       .eq('student_id', session.student.id)
       .is('ended_at', null)
       .range(from, to))
@@ -67,7 +71,22 @@ export async function POST(req: NextRequest) {
     // Without this guard the sweep would close exactly the sessions the resume
     // flow exists to preserve, and the failure would be silent: no error, no
     // log, just "resume does nothing". Highest-risk line in that ticket.
-    if (s.paused_remaining_ms !== null) continue
+    if (s.paused_remaining_ms !== null) {
+      // Only a bank old enough to have expired gets closed here
+      // (naale-paused-session-expiry) — anything still inside the window is
+      // left alone for session/start's resumable-offer branch to find further
+      // down.
+      if (isPauseExpired(s)) {
+        await db
+          .from('naale_sessions')
+          .update({
+            ended_at: new Date().toISOString(),
+            completed: isSessionCompleted(s.deadline_at, s.answered_count),
+          })
+          .eq('id', s.id)
+      }
+      continue
+    }
     if (isExpired(s.deadline_at)) {
       await db
         .from('naale_sessions')
@@ -97,6 +116,36 @@ export async function POST(req: NextRequest) {
 
   const existing = live?.[0]
 
+  // --- naale-topic-scoped-session-resume ------------------------------------
+  // A plain topic tap that names a DIFFERENT topic than whatever's already
+  // live treats the old session as abandoned instead of offering to resume
+  // it — Noam: Resume should only ever be offered for the exact topic left
+  // unfinished. Computed before the resumable-offer branch below (it gates
+  // that branch) AND excluded from the "hand existing back" branch further
+  // down (~line 185, alongside the existing action === 'start_over'
+  // exclusion) — closing a session here only updates the database, not the
+  // `existing` object already read into memory, so without that second
+  // exclusion a student could still be handed back a session just closed a
+  // few lines above.
+  const topicMismatch = isTopicMismatch(existing, topic, action)
+
+  if (topicMismatch && existing) {
+    // Same close-out the explicit start_over branch below uses — this IS an
+    // implicit start-over, just one nobody had to choose.
+    const { error } = await db
+      .from('naale_sessions')
+      .update({
+        ended_at: new Date().toISOString(),
+        completed: isSessionCompleted(existing.deadline_at, existing.answered_count),
+        paused_remaining_ms: null,
+      })
+      .eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Falls through to the normal creation path below, which starts a fresh
+    // session on the topic requested in this same request body.
+  }
+  // --------------------------------------------------------------------------
+
   // --- naale-topic-session-resume -------------------------------------------
   // An unfinished PAUSABLE session is offered back rather than silently
   // resumed: Noam asked for an explicit Resume / Start Over choice ("they
@@ -108,7 +157,7 @@ export async function POST(req: NextRequest) {
   // Note this branch sits BEFORE the isExpired() check below on purpose: a
   // paused session's deadline_at is frozen in the past, so it would otherwise
   // fall through and be treated as expired.
-  if (existing && canPause(existing) && action === undefined) {
+  if (existing && canPause(existing) && action === undefined && !topicMismatch) {
     return NextResponse.json({
       resumable: {
         session_id: existing.id,
@@ -182,7 +231,7 @@ export async function POST(req: NextRequest) {
   }
   // --------------------------------------------------------------------------
 
-  if (existing && !isExpired(existing.deadline_at) && !(canPause(existing) && action === 'start_over')) {
+  if (existing && !isExpired(existing.deadline_at) && !(canPause(existing) && (action === 'start_over' || topicMismatch))) {
     // Dev-only: if the QA override changed since this session was created
     // (or was set for the first time after it), make the resumed session
     // reflect it instead of always keeping whatever deadline was computed at
