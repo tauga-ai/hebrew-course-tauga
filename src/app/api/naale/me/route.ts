@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { createServiceClient } from '@/lib/supabase/service'
+import { hasPasswordIdentity } from '@/lib/naale/auth-admin'
 
 /**
  * Who the caller is on the Naale track, and where the client should send them.
@@ -39,6 +40,7 @@ export async function GET() {
 
   return NextResponse.json({
     role: session.role,
+    email: session.user.email,
     student: {
       id: session.student.id,
       full_name: session.student.full_name,
@@ -46,5 +48,6 @@ export async function GET() {
     },
     avatar_url: avatarUrl,
     is_admin: !!adminRow,
+    has_password: hasPasswordIdentity(session.user),
   })
 }

@@ -223,10 +223,10 @@ export function NaaleSidebar({ role, showAdminLink, alsoRole }: NaaleSidebarProp
           nav moves to the bottom tab bar below; this keeps account identity
           and the two controls that don't fit a tab bar reachable. */}
       <div className="flex md:hidden items-center justify-between px-4 py-3 border-b border-card-border bg-surface">
-        <div className="flex items-center gap-2 min-w-0">
+        <Link href="/naale/profile" className="flex items-center gap-2 min-w-0">
           {fullName && <Avatar name={fullName} avatarUrl={avatarUrl} sizeClass="w-7 h-7 text-xs" />}
           <span className="font-bold text-fg whitespace-nowrap">{t('נעלה')}</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
@@ -299,13 +299,16 @@ export function NaaleSidebar({ role, showAdminLink, alsoRole }: NaaleSidebarProp
             </div>
           ) : (
             fullName && (
-              <div className="flex items-center gap-2 px-3 py-2">
+              <Link
+                href="/naale/profile"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
                 <Avatar name={fullName} avatarUrl={avatarUrl} />
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-fg truncate">{fullName.split(' ')[0]}</div>
                   <div className="text-xs text-fg/50">{t(role === 'admin' ? 'מנהל' : role === 'staff' ? 'צוות' : 'תלמיד')}</div>
                 </div>
-              </div>
+              </Link>
             )
           )}
         </div>

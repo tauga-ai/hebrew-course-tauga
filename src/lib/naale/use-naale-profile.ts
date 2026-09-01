@@ -13,6 +13,9 @@ export interface NaaleProfile {
   // Same — /api/naale/admin/me has no equivalent flag, since an admin caller
   // is already known to be an admin by virtue of that endpoint accepting them.
   is_admin?: boolean
+  // Whether this account has a password identity (vs. Google-only) — gates
+  // the change-password section on /naale/profile.
+  has_password?: boolean
 }
 
 /**
@@ -40,12 +43,13 @@ async function load(role: NaaleProfileRole): Promise<NaaleProfile | null> {
     if (!res.ok) return null
     const data = await res.json()
     return role === 'admin'
-      ? { full_name: data.full_name, avatar_url: data.avatar_url }
+      ? { full_name: data.full_name, avatar_url: data.avatar_url, has_password: data.has_password }
       : {
           full_name: data.student.full_name,
           avatar_url: data.avatar_url,
           translation_lang: data.student.translation_lang,
           is_admin: data.is_admin,
+          has_password: data.has_password,
         }
   } catch {
     return null

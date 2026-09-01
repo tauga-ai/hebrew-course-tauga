@@ -62,6 +62,66 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
   )
 }
 
+/** Same modal shape as ConfirmDialog, for the one-time password reveal — a
+ *  dialog forces the admin to consciously dismiss it, unlike an inline
+ *  banner that could scroll out of view still unread. No Escape-to-dismiss
+ *  shortcut here on purpose: closing this one should be a deliberate click,
+ *  not a reflexive keypress, since it can never be reopened. */
+function PasswordDialog({
+  result,
+  onClose,
+}: {
+  result: { email: string; role: 'student' | 'staff'; password: string; action: 'created' | 'reset' }
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+
+  async function copyPassword() {
+    try {
+      await navigator.clipboard.writeText(result.password)
+      setCopied(true)
+    } catch {
+      // Clipboard API can be blocked (permissions, non-HTTPS context) — the
+      // password is still select-all in the field above, so this is a
+      // convenience, not the only way to copy it.
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/90" />
+      <div className="relative w-full max-w-xs bg-surface rounded-2xl shadow-xl p-5 text-center">
+        <p className="text-sm font-semibold text-fg mb-1">
+          {result.email} — {result.action === 'reset' ? t('הסיסמה אופסה') : t('המשתמש נוצר')}
+        </p>
+        <div className="flex items-center gap-2 my-3">
+          <p className="flex-1 font-mono text-lg text-fg select-all bg-black/5 dark:bg-white/5 rounded-lg py-2">
+            {result.password}
+          </p>
+          <button
+            type="button"
+            onClick={copyPassword}
+            title={t('העתק')}
+            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border border-card-border text-fg/60 hover:text-fg hover:bg-black/5 dark:hover:bg-white/5 transition"
+          >
+            {copied ? '✓' : '📋'}
+          </button>
+        </div>
+        <p className="text-amber-600 dark:text-amber-400 text-xs mb-5">
+          {copied ? t('הועתק') : t('העתק עכשיו — הסיסמה לא תוצג שוב')}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition"
+        >
+          {t('סגור')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function NaaleAdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
@@ -105,6 +165,18 @@ export default function NaaleAdminPage() {
   const [rosterSearch, setRosterSearch] = useState('')
   const [rosterError, setRosterError] = useState('')
 
+  const [customEmail, setCustomEmail] = useState('')
+  const [customRole, setCustomRole] = useState<'student' | 'staff'>('student')
+  const [creatingCustom, setCreatingCustom] = useState(false)
+  const [customError, setCustomError] = useState('')
+  const [customResult, setCustomResult] = useState<
+    { email: string; role: 'student' | 'staff'; password: string; action: 'created' | 'reset' } | null
+  >(null)
+  // Set when the typed email already matches a roster row (case-insensitive),
+  // so submitting has to be confirmed instead of silently overwriting
+  // someone's role/resetting their password. Cleared once confirmed or
+  // cancelled.
+
   const [confirmTarget, setConfirmTarget] = useState<{ kind: 'roster' | 'admin'; email: string } | null>(null)
 
   function confirmDelete() {
@@ -141,6 +213,22 @@ export default function NaaleAdminPage() {
   async function loadRoster() {
     const res = await fetch('/api/naale/admin/roster')
     if (res.ok) setRoster((await res.json()).roster)
+  }
+
+  async function createCustomAccount(e: React.FormEvent) {
+    e.preventDefault()
+    setCustomError('')
+    setCreatingCustom(true)
+    const res = await fetch('/api/naale/admin/roster/custom-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: customEmail, role: customRole }),
+    })
+    setCreatingCustom(false)
+    if (!res.ok) { setCustomError((await res.json()).error ?? 'שגיאה'); return }
+    setCustomResult(await res.json())
+    setCustomEmail('')
+    loadRoster()
   }
 
   async function removeRosterEntry(email: string) {
@@ -468,6 +556,36 @@ export default function NaaleAdminPage() {
           )}
           {rosterError && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{rosterError}</p>}
 
+          <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">
+            {t('הוספת משתמש בודד')}
+          </h3>
+          <form onSubmit={createCustomAccount} className="flex flex-col sm:flex-row gap-2 mb-3">
+            <input
+              type="email"
+              required
+              value={customEmail}
+              onChange={e => setCustomEmail(e.target.value)}
+              placeholder={t('כתובת אימייל')}
+              className="flex-1 border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <select
+              value={customRole}
+              onChange={e => setCustomRole(e.target.value as 'student' | 'staff')}
+              className="border border-card-border rounded-lg px-3 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="student">{t('תלמיד')}</option>
+              <option value="staff">{t('צוות')}</option>
+            </select>
+            <button
+              type="submit"
+              disabled={creatingCustom}
+              className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+            >
+              {creatingCustom ? t('יוצר...') : t('צור משתמש')}
+            </button>
+          </form>
+          {customError && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{customError}</p>}
+
           <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">{t('ייבוא רשימת נרשמים')}</h3>
 
           <input
@@ -584,6 +702,7 @@ export default function NaaleAdminPage() {
           onCancel={() => setConfirmTarget(null)}
         />
       )}
+      {customResult && <PasswordDialog result={customResult} onClose={() => setCustomResult(null)} />}
     </NaaleShell>
   )
 }
