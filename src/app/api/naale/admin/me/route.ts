@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleAdmin } from '@/lib/naale/auth'
+import { hasPasswordIdentity } from '@/lib/naale/auth-admin'
 
 /**
  * Who the caller is as a Naale admin — deliberately separate from
@@ -36,5 +37,6 @@ export async function GET() {
     full_name: fullName,
     avatar_url: avatarUrl,
     roster_role: rosterRow?.role ?? null,
+    has_password: hasPasswordIdentity(admin.user),
   })
 }
