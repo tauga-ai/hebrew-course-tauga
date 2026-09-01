@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
@@ -120,7 +120,16 @@ function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean })
  */
 export default function NaaleStaffPage() {
   const router = useRouter()
-  const { data, loading, error } = useResource<StaffStudents>('/api/naale/staff/students')
+  // Gates both the page shell (see the `!authorized` return below) and the
+  // students fetch — neither is safe to show/fire until this resolves.
+  // Mirrors naale/admin/page.tsx's `ready` gate; naale/page.tsx has the same
+  // shape too (naale-staff-page-auth-redirect: this page was the one
+  // outlier missing it, which let an off-roster/non-staff visitor see the
+  // dashboard shell with no data instead of being redirected).
+  const [authorized, setAuthorized] = useState(false)
+  const { data, loading, error } = useResource<StaffStudents>(
+    authorized ? '/api/naale/staff/students' : null
+  )
   // Only for the sidebar's admin nav item — staff themselves are gated by
   // requireNaaleStaff() above via /api/naale/staff/students, not this call.
   // Shared with NaaleSidebar (mounted below via NaaleShell), which reads the
@@ -133,6 +142,24 @@ export default function NaaleStaffPage() {
   const [sheetKind, setSheetKind] = useState<SessionKind>('practice')
   const [myLang, setMyLang] = useState<'ru' | 'ar'>('ru')
   const practiceButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function checkAccess() {
+      const res = await fetch('/api/naale/me')
+      if (cancelled) return
+      if (res.status === 401) { router.replace('/naale/login'); return }
+      if (res.status === 403) { router.replace('/naale/not-authorized'); return }
+      const data = await res.json()
+      if (cancelled) return
+      // A roster student (not staff) has no business on this page either —
+      // same forbidden outcome requireNaaleStaff() already gives the API.
+      if (data.role !== 'staff') { router.replace('/naale/not-authorized'); return }
+      setAuthorized(true)
+    }
+    checkAccess()
+    return () => { cancelled = true }
+  }, [router])
 
   const students = useMemo(() => data?.students ?? [], [data])
 
@@ -195,6 +222,8 @@ export default function NaaleStaffPage() {
       setStarting(false)
     }
   }
+
+  if (!authorized) return <LoadingSpinner />
 
   return (
     <NaaleShell role="staff" showAdminLink={me?.is_admin ?? false}>
