@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
@@ -178,6 +179,8 @@ function countdownClass(seconds: number, kind: 'placement' | 'practice' | 'topic
 function SessionRunner() {
   const router = useRouter()
   const sessionId = useSearchParams().get('session_id')
+  // Shared with NaaleSidebar/naale/page.tsx — same cache, no extra fetch.
+  const { profile: me } = useNaaleProfile('student')
   const [translationLang, setTranslationLang] = useState<'ru' | 'ar'>('ru')
   const { renderText, consumeJustTranslated, popoverElement, hintElement, debugUsage: debugTranslations } = useHoldToTranslate(sessionId, translationLang)
 
@@ -1595,7 +1598,7 @@ function SessionRunner() {
   }
 
   return (
-    <NaaleShell role="student" contentClassName="max-w-2xl">
+    <NaaleShell role="student" contentClassName="max-w-2xl" showAdminLink={me?.is_admin ?? false}>
       {content}
       {popoverElement}
       {/* Rendered here rather than inside the question container so the

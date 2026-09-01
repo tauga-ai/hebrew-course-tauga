@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { useResource } from '@/lib/hooks/use-resource'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { t } from '@/lib/dev-i18n'
 
 interface QuestionReport {
@@ -42,6 +43,8 @@ export default function NaaleStaffReportsPage() {
   // on URL change only, which is the whole reason the counter is in the URL —
   // the route ignores the param.
   const [version, setVersion] = useState(0)
+  // Shared with NaaleSidebar/staff/page.tsx — same cache, no extra fetch.
+  const { profile: me } = useNaaleProfile('staff')
 
   const { data, loading, error } = useResource<{ reports: QuestionReport[] }>(
     `/api/naale/staff/reports?v=${version}`
@@ -66,7 +69,7 @@ export default function NaaleStaffReportsPage() {
   const openCount = (reports ?? []).filter(r => r.status === 'open').length
 
   return (
-    <NaaleShell role="staff" contentClassName="max-w-4xl">
+    <NaaleShell role="staff" contentClassName="max-w-4xl" showAdminLink={me?.is_admin ?? false}>
       <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           {/* "Reported questions" */}
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">

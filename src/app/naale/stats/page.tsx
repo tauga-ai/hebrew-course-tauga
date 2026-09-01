@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { NaaleShell } from '@/components/naale/NaaleShell'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
 import { SessionHistory } from '@/components/naale/SessionHistory'
 import { MistakesHistory } from '@/components/naale/MistakesHistory'
@@ -41,6 +42,8 @@ const ARC_C = 2 * Math.PI * ARC_R
  */
 export default function NaaleStatsPage() {
   const { data, loading, error } = useResource<MyStats>('/api/naale/my-stats')
+  // Shared with NaaleSidebar/naale/page.tsx — same cache, no extra fetch.
+  const { profile: me } = useNaaleProfile('student')
 
   let content
   if (loading) {
@@ -207,6 +210,6 @@ export default function NaaleStatsPage() {
   }
 
   return (
-    <NaaleShell role="student">{content}</NaaleShell>
+    <NaaleShell role="student" showAdminLink={me?.is_admin ?? false}>{content}</NaaleShell>
   )
 }

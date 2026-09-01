@@ -10,6 +10,7 @@ import { LevelSteps, topicTone } from '@/components/naale/LevelSteps'
 import { AttendanceCalendar } from '@/components/naale/AttendanceCalendar'
 import { Avatar } from '@/components/naale/Avatar'
 import { useResource } from '@/lib/hooks/use-resource'
+import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { scoreColor } from '@/lib/score-color'
 import { MAX_LEVEL } from '@/lib/naale/leveling'
 import { overallAccuracy, statusLabel, type StaffStudentDetail } from '@/lib/naale/staff-view'
@@ -38,6 +39,8 @@ export default function NaaleStaffStudentPage() {
   const { data, loading, error } = useResource<{ student: StaffStudentDetail }>(
     studentId ? `/api/naale/staff/students/${studentId}` : null
   )
+  // Shared with NaaleSidebar/staff/page.tsx — same cache, no extra fetch.
+  const { profile: me } = useNaaleProfile('staff')
 
   const s = data?.student ?? null
   const acc = s ? overallAccuracy(s.totals) : null
@@ -52,7 +55,7 @@ export default function NaaleStaffStudentPage() {
   const now = useMemo(() => new Date(), [])
 
   return (
-    <NaaleShell role="staff" contentClassName="max-w-4xl">
+    <NaaleShell role="staff" contentClassName="max-w-4xl" showAdminLink={me?.is_admin ?? false}>
       <PageHeader backHref="/naale/staff" />
 
         {loading && <LoadingSpinner />}
