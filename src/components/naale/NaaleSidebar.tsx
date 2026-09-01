@@ -41,10 +41,18 @@ function LogoutIcon() {
 
 export interface NaaleSidebarProps {
   role: 'student' | 'staff' | 'admin'
-  /** Shown as an extra nav item for a student/staff account that's ALSO a
-   *  Naale admin — separate from role='admin', which is for someone who
-   *  visits /naale/admin directly and may have no roster row at all. */
+  /** Set by a student/staff page when this account is ALSO a Naale admin —
+   *  appends the admin nav item. Ignored when role='admin' (isAdmin is
+   *  already implied there). */
   showAdminLink?: boolean
+  /** Set by the admin page when this account is ALSO on naale_roster — names
+   *  its roster role so the matching practice/staff nav items appear.
+   *  Ignored outside role='admin' (the roster role there is just `role`
+   *  itself). Together with showAdminLink, this means "admin" is always
+   *  treated as one flag layered on top of a roster role, never a second
+   *  competing role — see the ordering comment in NaaleSidebar below
+   *  (naale-admin-staff-nav-link). */
+  alsoRole?: 'student' | 'staff'
 }
 
 interface NavItem {
@@ -154,12 +162,21 @@ function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
  * with no opinion on text direction — the rail sits wherever the document's
  * real `dir` puts it, right-side in the app's actual Hebrew/RTL mode.
  */
-export function NaaleSidebar({ role, showAdminLink }: NaaleSidebarProps) {
+export function NaaleSidebar({ role, showAdminLink, alsoRole }: NaaleSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
-  const baseItems = role === 'staff' ? STAFF_ITEMS : role === 'admin' ? ADMIN_ITEMS : STUDENT_ITEMS
-  const items = showAdminLink && role !== 'admin' ? [...baseItems, ...ADMIN_ITEMS] : baseItems
+
+  // One fixed order — practice items, then the admin item — regardless of
+  // which page rendered the sidebar. An account that's both a Naale admin
+  // and roster staff/student sees the exact same nav, in the exact same
+  // order, whether it's currently on /naale/staff or /naale/admin
+  // (naale-admin-staff-nav-link). "Admin" is treated as one additional flag
+  // layered on top of the roster role, never a competing base role.
+  const rosterRole = role === 'admin' ? alsoRole : role
+  const isAdmin = role === 'admin' || !!showAdminLink
+  const practiceItems = rosterRole === 'staff' ? STAFF_ITEMS : rosterRole === 'student' ? STUDENT_ITEMS : []
+  const items = isAdmin ? [...practiceItems, ...ADMIN_ITEMS] : practiceItems
 
   const { profile, loading: profileLoading } = useNaaleProfile(role)
   const fullName = profile?.full_name ?? null

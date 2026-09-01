@@ -66,6 +66,7 @@ export default function NaaleAdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [admins, setAdmins] = useState<AdminRow[] | null>(null)
+  const [rosterRole, setRosterRole] = useState<'student' | 'staff' | null>(null)
   const [newEmail, setNewEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
@@ -121,6 +122,9 @@ export default function NaaleAdminPage() {
       if (cancelled) return
       if (res.status === 401) { router.replace('/naale/login'); return }
       if (res.status === 403) { router.replace('/naale/not-authorized'); return }
+      const data = await res.json()
+      if (cancelled) return
+      setRosterRole(data.roster_role ?? null)
       setReady(true)
       loadAdmins()
       loadRoster()
@@ -223,7 +227,7 @@ export default function NaaleAdminPage() {
   if (!ready) return <LoadingSpinner />
 
   return (
-    <NaaleShell role="admin">
+    <NaaleShell role="admin" alsoRole={rosterRole ?? undefined}>
         <div className="flex justify-between items-center mt-4 mb-6 gap-3">
           <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl">{t('ניהול')}</h1>
         </div>
