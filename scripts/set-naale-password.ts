@@ -25,7 +25,7 @@
  */
 import { writeFileSync } from 'fs'
 import { createServiceClient } from '../src/lib/supabase/service'
-import { findAuthUserByEmail, hasPasswordIdentity } from '../src/lib/naale/auth-admin'
+import { findAuthUserByEmail, hasPasswordIdentity, issuePassword } from '../src/lib/naale/auth-admin'
 
 type Db = ReturnType<typeof createServiceClient>
 type RosterRow = { email: string; role: 'student' | 'staff' }
@@ -84,25 +84,14 @@ async function rosterEntry(db: Db, email: string): Promise<RosterRow | null> {
 }
 
 async function issue(db: Db, email: string, password: string, dryRun: boolean): Promise<Action> {
-  const existing = await findAuthUserByEmail(db, email)
-  if (dryRun) return existing ? 'would-reset' : 'would-create'
-
-  if (existing) {
-    // Setting a password on an existing user keeps any Google identity already
-    // on it, so the student reaches the same students row — and therefore the
-    // same level, XP and history — whichever way they sign in.
-    const { error } = await db.auth.admin.updateUserById(existing.id, { password })
-    if (error) throw error
-    return 'reset'
+  if (dryRun) {
+    const existing = await findAuthUserByEmail(db, email)
+    return existing ? 'would-reset' : 'would-create'
   }
-
-  // email_confirm: true is required, not cosmetic. Without it Supabase tries to
-  // send a confirmation email, and this project has no production SMTP — the
-  // account would be created and unusable, with nothing surfaced to whoever ran
-  // this. It also marks the address verified.
-  const { error } = await db.auth.admin.createUser({ email, password, email_confirm: true })
-  if (error) throw error
-  return 'created'
+  // Setting a password on an existing user keeps any Google identity already
+  // on it, so the student reaches the same students row — and therefore the
+  // same level, XP and history — whichever way they sign in.
+  return issuePassword(db, email, password)
 }
 
 function resolvePassword(row: RosterRow, explicit: string | undefined, forceDefault: boolean): string {
@@ -208,8 +197,18 @@ async function main() {
     }
 
     const action = await issue(db, email, password, dryRun)
-    console.log(`${email} (${row.role}) — ${action}.`)
+    console.log(`${email} (${row.role}) — ${action}. password: ${password}`)
     issued.push({ email, role: row.role, password, action })
+  }
+
+  // Printed regardless of --out, not just written to a file — --out is a
+  // convenience for handing a CSV to a counselor, but the terminal log is
+  // what's actually guaranteed to exist after the run (a forgotten --out
+  // flag on a bulk run shouldn't mean the passwords are gone).
+  if (issued.length > 0) {
+    console.log('\nCredentials issued this run:')
+    console.log('email,role,password,action')
+    for (const r of issued) console.log(`${r.email},${r.role},${r.password},${r.action}`)
   }
 
   if (outPath && issued.length > 0) {
@@ -218,7 +217,7 @@ async function main() {
       ...issued.map(r => `${r.email},${r.role},${r.password},${r.action}`),
     ].join('\n')
     writeFileSync(outPath, csv + '\n')
-    console.log(`\nCredentials written to ${outPath} — hand it to the counselor, then delete it.`)
+    console.log(`\nCredentials also written to ${outPath} — hand it to the counselor, then delete it.`)
   }
 
   const tally = [`${issued.length} issued`]
