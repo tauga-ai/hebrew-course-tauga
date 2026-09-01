@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleAdmin } from '@/lib/naale/auth'
 
 /**
@@ -20,5 +21,20 @@ export async function GET() {
     (admin.user.user_metadata?.picture as string | undefined) ??
     null
 
-  return NextResponse.json({ email: admin.user.email, full_name: fullName, avatar_url: avatarUrl })
+  // Only checked here, not inside requireNaaleAdmin() itself, so the common
+  // admin-only case pays no extra cost — this only matters for the rarer
+  // account that's also on naale_roster (naale-admin-staff-nav-link), same
+  // case-insensitive pattern getNaaleSession() already uses for this table.
+  const { data: rosterRow } = await createServiceClient()
+    .from('naale_roster')
+    .select('role')
+    .ilike('email', admin.user.email ?? '')
+    .maybeSingle()
+
+  return NextResponse.json({
+    email: admin.user.email,
+    full_name: fullName,
+    avatar_url: avatarUrl,
+    roster_role: rosterRow?.role ?? null,
+  })
 }
