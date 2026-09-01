@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import type { createServiceClient } from '@/lib/supabase/service'
 import type { User } from '@supabase/supabase-js'
 
@@ -51,4 +52,32 @@ export async function findAuthUserByEmail(db: Db, email: string): Promise<User |
 export function hasPasswordIdentity(user: User): boolean {
   const providers = user.app_metadata?.providers
   return Array.isArray(providers) && providers.includes('email')
+}
+
+/**
+ * Creates the Supabase Auth user for `email` if none exists, or resets the
+ * password on the existing one — same account either way, since Auth is
+ * keyed by email. Shared by scripts/set-naale-password.ts and
+ * /api/naale/admin/roster/custom-account so the create-or-reset logic lives
+ * in one place, not two that can drift.
+ */
+export async function issuePassword(db: Db, email: string, password: string): Promise<'created' | 'reset'> {
+  const existing = await findAuthUserByEmail(db, email)
+  if (existing) {
+    const { error } = await db.auth.admin.updateUserById(existing.id, { password })
+    if (error) throw error
+    return 'reset'
+  }
+
+  const { error } = await db.auth.admin.createUser({ email, password, email_confirm: true })
+  if (error) throw error
+  return 'created'
+}
+
+// Excludes visually ambiguous characters (0/O, 1/l/I) — this password gets
+// read aloud or handwritten to a student, not copy-pasted from a manager.
+const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+
+export function generateRandomPassword(length = 10): string {
+  return Array.from(randomBytes(length), b => PASSWORD_ALPHABET[b % PASSWORD_ALPHABET.length]).join('')
 }
