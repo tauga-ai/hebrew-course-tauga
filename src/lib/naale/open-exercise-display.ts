@@ -91,6 +91,7 @@ export const OPEN_PUBLIC_FIELD_KEYS: Record<string, string[]> = {
   'סיפור בהמשכים': ['student_task', 'mandatory_word'],
   'ווטסאפ והודעות': ['recipient'],
   'סיכום טקסט קצר': ['student_task'],
+  'תיאור תמונה בקול': ['picture_number'],
 }
 
 /** Drops every key the given topic does not display. Unknown topic → nothing. */
@@ -166,6 +167,22 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
       // of which question this fills.
       weak: () => 'חתול. שולחן. אתמול היה.',
     },
+  },
+  'תיאור תמונה בקול': {
+    // Spoken, not typed — Noam's spec sets no length cap for this exercise,
+    // unlike the other 3 topics' 20/25/30-word limits. Infinity means
+    // wordLimitError() (checked both client- and server-side) never fires.
+    wordLimit: Infinity,
+    blocks: prompt => [
+      { label: 'המשימה', text: prompt },
+    ],
+    // Noam's exact §7 string — session/page.tsx and placement/page.tsx already
+    // show this before ever calling the AI when the transcript is empty.
+    emptyErrorMessage: 'לא הצלחנו לשמוע, אנא נסה שוב.',
+    // No devSampleAnswers: filling a plausible spoken description from field
+    // data alone (unlike WhatsApp/Text Summary's literal model-answer fields)
+    // isn't meaningful here, and image_description is grading-only precisely
+    // so a QA shortcut can't leak it into a dev tool.
   },
 }
 

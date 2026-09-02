@@ -1,10 +1,16 @@
 /**
  * Uploads Noam's 30 picture-description images to the private `naale-pictures` Supabase Storage
- * bucket, keyed by position: local `q{n}.{ext}` -> stored `12/{n}.{ext}` (12 is the topic number
- * `naale-picture-description-stt` will register for "תיאור תמונה בקול" / picture description,
- * spoken — each topic gets its own folder within the bucket, so future topics/content don't pile
- * up flat at the bucket root alongside this one). Positional mapping to spreadsheet rows was
+ * bucket, keyed by position: local `q{n}.{ext}` -> stored `12/{n}` (12 is the topic number
+ * `naale-picture-description-stt` registers for "תיאור תמונה בקול" / picture description, spoken
+ * — each topic gets its own folder within the bucket, so future topics/content don't pile up
+ * flat at the bucket root alongside this one). Positional mapping to spreadsheet rows was
  * confirmed with Noam — see .claude/ai-docs/docs/naale-content-update-8-18/answers.md.
+ *
+ * Stored extension-less on purpose: the serving route (/api/naale/pictures/[number]) used to
+ * need a list() call to discover which extension a given picture actually had (source images
+ * are a mix of .jpg/.png); dropping the extension from the stored key means the route can build
+ * the exact path directly with zero lookup, and the browser still gets the right image type from
+ * the `contentType` set on upload below, not from the key name.
  *
  * Source images are gitignored and local-only (`.claude/requirements/...`), not in the repo.
  *
@@ -43,7 +49,7 @@ async function main() {
   for (let n = 1; n <= TOTAL_IMAGES; n++) {
     const sourceName = findSourceFile(files, n)
     const ext = path.extname(sourceName)
-    const destPath = `${TOPIC_NUMBER}/${n}${ext}`
+    const destPath = `${TOPIC_NUMBER}/${n}`
 
     if (dryRun) {
       console.log(`[dry-run] ${sourceName} -> ${destPath}`)

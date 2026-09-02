@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { t } from '@/lib/dev-i18n'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { t, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { wordCount } from '@/lib/naale/open-exercise-display'
 
 interface OpenAnswerInputProps {
@@ -37,6 +37,10 @@ export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading,
   const overLimit = count > wordLimit
   const [messageIndex, setMessageIndex] = useState(0)
   const [wasLoading, setWasLoading] = useState(loading)
+  // Real answers are always Hebrew, so this only ever matters in Dev Panel
+  // English mode — a dictated/typed English test answer reads backwards in
+  // an RTL box otherwise.
+  const devLang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
 
   // Reset to the first message whenever a new grading call starts, following
   // React's "adjust state during render" pattern instead of an effect — an
@@ -59,7 +63,7 @@ export function OpenAnswerInput({ value, onChange, onSubmit, wordLimit, loading,
         value={value}
         onChange={e => onChange(e.target.value)}
         disabled={disabled || loading}
-        dir="rtl"
+        dir={devLang === 'en' ? 'ltr' : 'rtl'}
         rows={4}
         className="w-full rounded-xl border border-card-border bg-surface p-3 text-fg resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 disabled:opacity-70"
       />

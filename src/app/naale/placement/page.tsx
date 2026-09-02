@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
-import { t, debugMode } from '@/lib/dev-i18n'
+import { t, debugMode, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
+import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
 interface ServedQuestion {
@@ -71,6 +73,15 @@ function PlacementRunner() {
   const [openAnswerText, setOpenAnswerText] = useState('')
   const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
   const [openValidationError, setOpenValidationError] = useState('')
+  // Same mic-into-openAnswerText wiring as session/page.tsx — see that file's
+  // matching state for why, including following the Dev Panel language
+  // toggle for recognition language.
+  const devLang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    continuous: false,
+    lang: devLang === 'en' ? 'en-US' : 'he-IL',
+    onTranscript: text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') },
+  })
   const [submitting, setSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
   const showHint = useSyncExternalStore(subscribeShowHint, getShowHint, getShowHint)
@@ -391,6 +402,14 @@ function PlacementRunner() {
 
           {q.kind === 'open' ? (
             <>
+              {q.topic === 'תיאור תמונה בקול' && q.fields?.picture_number && (
+                // eslint-disable-next-line @next/next/no-img-element -- source image dimensions vary per picture; same rationale as makbatzim's image questions.
+                <img
+                  src={`/api/naale/pictures/${q.fields.picture_number}`}
+                  alt=""
+                  className="w-full max-w-sm mx-auto aspect-[4/3] object-contain bg-black/5 dark:bg-white/5 rounded-xl mb-4 border border-card-border"
+                />
+              )}
               {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
                 <div key={block.label} className="mb-3 text-right">
                   <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
@@ -419,6 +438,19 @@ function PlacementRunner() {
             <>
               {!openResult ? (
                 <>
+                  {q.topic === 'תיאור תמונה בקול' && (
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-fg/80">{t('התשובה שלי')}</label>
+                      <SpeechToTextToggle
+                        isListening={isListening}
+                        supported={speechSupported}
+                        onToggle={() => (isListening ? stopListening() : startListening())}
+                      />
+                    </div>
+                  )}
+                  {q.topic === 'תיאור תמונה בקול' && isListening && (
+                    <p className="text-xs text-red-500 dark:text-red-400 mb-1 animate-pulse text-right">{t('🎤 מקליט... דבר בעברית')}</p>
+                  )}
                   <OpenAnswerInput
                     value={openAnswerText}
                     onChange={text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') }}

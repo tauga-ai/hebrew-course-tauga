@@ -37,6 +37,10 @@ interface UseSpeechToTextOptions {
   continuous?: boolean
   /** If true, new speech is appended to the text passed into `start()` instead of replacing it. */
   appendMode?: boolean
+  /** BCP-47 recognition language. Defaults to 'he-IL' — every real exercise grades Hebrew
+   *  speech, so this should only ever be overridden for QA (e.g. a developer testing in English
+   *  without speaking Hebrew), never for a real student's session. */
+  lang?: string
 }
 
 /**
@@ -45,7 +49,7 @@ interface UseSpeechToTextOptions {
  * after stopping (e.g. right after navigating to the next question) can't overwrite state that
  * was already reset — see `acceptRef`.
  */
-export function useSpeechToText({ onTranscript, continuous = true, appendMode = false }: UseSpeechToTextOptions) {
+export function useSpeechToText({ onTranscript, continuous = true, appendMode = false, lang = 'he-IL' }: UseSpeechToTextOptions) {
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const baseTextRef = useRef('')
@@ -61,7 +65,7 @@ export function useSpeechToText({ onTranscript, continuous = true, appendMode = 
     baseTextRef.current = appendMode ? currentText.trim() : ''
 
     const rec = new SR()
-    rec.lang = 'he-IL'
+    rec.lang = lang
     rec.continuous = continuous
     rec.interimResults = true
     recognitionRef.current = rec
