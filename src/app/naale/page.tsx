@@ -80,9 +80,12 @@ export default function NaaleHome() {
   const [sheetTopic, setSheetTopic] = useState<string | null>(null)
   // Set only when session/start reports an unfinished topic session instead of
   // starting one. Null on the normal path, so a student with nothing pending
-  // never sees an extra step (naale-topic-session-resume).
+  // never sees an extra step (naale-topic-session-resume). `origin` distinguishes
+  // which button produced this offer, since resumable.topic is always the PAUSED
+  // topic's name either way and can't tell them apart on its own — it decides
+  // what "Start Over" should actually start (naale-practice-button-resumable-crash).
   const [resumable, setResumable] = useState<
-    { session_id: string; topic: string | null; seconds_remaining: number; answered_count: number } | null
+    { session_id: string; topic: string | null; seconds_remaining: number; answered_count: number; origin: 'topic' | 'practice' } | null
   >(null)
   // Which topic (if any) has a paused session right now, for the "in
   // progress · Xm left" badge on that one card (naale-topic-card-resume-badge).
@@ -172,6 +175,19 @@ export default function NaaleHome() {
       const res = await fetch('/api/naale/session/start', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
+      // A topic session left paused answers even a plain Practice tap with an
+      // offer to resume it instead (session/start, naale-topic-scoped-session-
+      // resume's deliberate `requestedTopic: null` behavior) — previously
+      // unhandled here, so `data.session_id` was undefined and this crashed
+      // (naale-practice-button-resumable-crash). Mirrors handleStartTopicSession's
+      // existing handling below — including closing the StartSessionSheet this
+      // was called from, or it stays stacked underneath the resume prompt.
+      if (data.resumable) {
+        setResumable({ ...data.resumable, origin: 'practice' })
+        setSheetOpen(false)
+        setStarting(false)
+        return
+      }
       const destination = data.kind === 'placement' ? '/naale/placement' : '/naale/session'
       router.push(`${destination}?session_id=${data.session_id}`)
     } catch (err: unknown) {
@@ -215,7 +231,7 @@ export default function NaaleHome() {
       // "shouldn't be forced to finish that old session". The sheet closes and
       // the choice takes its place; nothing has been started yet at this point.
       if (data.resumable) {
-        setResumable(data.resumable)
+        setResumable({ ...data.resumable, origin: 'topic' })
         setSheetOpen(false)
         setSheetTopic(null)
         setStarting(false)
@@ -257,7 +273,14 @@ export default function NaaleHome() {
       const res = await fetch('/api/naale/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, topic: resumable.topic }),
+        // Only echo the paused topic back when THIS resumable came from that
+        // topic's own tile — Start Over there means "restart this topic." From
+        // the plain Practice button it means "start the normal 30-minute session
+        // instead," so topic is omitted entirely (JSON.stringify drops an
+        // `undefined` value), letting session/start fall through to its usual
+        // kind-selection logic exactly as a fresh Practice tap would
+        // (naale-practice-button-resumable-crash).
+        body: JSON.stringify({ action, topic: resumable.origin === 'topic' ? resumable.topic : undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
