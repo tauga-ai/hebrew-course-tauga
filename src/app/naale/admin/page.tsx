@@ -126,6 +126,13 @@ export default function NaaleAdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [admins, setAdmins] = useState<AdminRow[] | null>(null)
+  const [topics, setTopics] = useState<{ topic: string; enabled: boolean }[] | null>(null)
+  // The last-saved shape, kept separate from the (possibly edited but not yet
+  // saved) `topics` state above — diffing the two is how the Save button
+  // knows whether there's anything to send, and what to send.
+  const [savedTopics, setSavedTopics] = useState<{ topic: string; enabled: boolean }[] | null>(null)
+  const [savingTopics, setSavingTopics] = useState(false)
+  const [topicsError, setTopicsError] = useState('')
   const [rosterRole, setRosterRole] = useState<'student' | 'staff' | null>(null)
   const [newEmail, setNewEmail] = useState('')
   const [adding, setAdding] = useState(false)
@@ -200,6 +207,7 @@ export default function NaaleAdminPage() {
       setReady(true)
       loadAdmins()
       loadRoster()
+      loadTopics()
     }
     load()
     return () => { cancelled = true }
@@ -208,6 +216,59 @@ export default function NaaleAdminPage() {
   async function loadAdmins() {
     const res = await fetch('/api/naale/admin/admins')
     if (res.ok) setAdmins((await res.json()).admins)
+  }
+
+  async function loadTopics() {
+    const res = await fetch('/api/naale/admin/topics')
+    if (res.ok) {
+      const data = (await res.json()).topics
+      setTopics(data)
+      setSavedTopics(data)
+    }
+  }
+
+  const MIN_ENABLED_TOPICS = 3
+
+  // Local-only: no PATCH here. A toggle just edits the pending `topics` state;
+  // saveTopics() below is what actually persists it, once the admin hits Save.
+  function toggleTopic(topic: string, enabled: boolean) {
+    setTopicsError('')
+    if (!enabled && topics && topics.filter(row => row.enabled).length <= MIN_ENABLED_TOPICS) {
+      setTopicsError(t('חובה להשאיר לפחות 3 נושאים פעילים'))
+      return
+    }
+    setTopics(T => T && T.map(row => (row.topic === topic ? { ...row, enabled } : row)))
+  }
+
+  const topicsDirty = !!topics && !!savedTopics && topics.some(row => {
+    const saved = savedTopics.find(s => s.topic === row.topic)
+    return saved !== undefined && saved.enabled !== row.enabled
+  })
+
+  async function saveTopics() {
+    if (!topics || !savedTopics) return
+    const changed = topics.filter(row => {
+      const saved = savedTopics.find(s => s.topic === row.topic)
+      return saved !== undefined && saved.enabled !== row.enabled
+    })
+    if (changed.length === 0) return
+
+    setTopicsError('')
+    setSavingTopics(true)
+    const results = await Promise.all(changed.map(row =>
+      fetch('/api/naale/admin/topics', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: row.topic, enabled: row.enabled }),
+      })
+    ))
+    setSavingTopics(false)
+    if (results.some(r => !r.ok)) {
+      setTopicsError(t('שמירה נכשלה, נסה שוב'))
+      await loadTopics()
+      return
+    }
+    setSavedTopics(topics)
   }
 
   async function loadRoster() {
@@ -379,6 +440,60 @@ export default function NaaleAdminPage() {
             </button>
           </form>
           {error && <p className="text-red-500 dark:text-red-400 text-sm mt-2">{error}</p>}
+        </div>
+
+        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-fg/70">{t('נושאים')}</h2>
+            {topics && (
+              <span className="text-xs text-fg/40">
+                {topics.length} {t('סה"כ')}
+              </span>
+            )}
+          </div>
+
+          {topics === null ? (
+            <ul className="flex flex-col divide-y divide-card-border">
+              {[0, 1, 2].map(i => (
+                <li key={i} className="flex items-center gap-3 py-2.5 animate-pulse">
+                  <span className="h-3 w-40 rounded bg-gray-200 dark:bg-white/10" />
+                </li>
+              ))}
+            </ul>
+          ) : topics.length === 0 ? (
+            <p className="text-fg/50 text-sm text-center py-4">{t('אין נושאים עדיין')}</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-card-border">
+              {topics.map(row => (
+                <li key={row.topic} className="flex items-center gap-3 py-2.5">
+                  <span className="flex-1 min-w-0 text-sm text-fg truncate">{t(row.topic)}</span>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={row.enabled}
+                      disabled={savingTopics}
+                      onChange={e => toggleTopic(row.topic, e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <span className="w-9 h-5 rounded-full bg-gray-300 dark:bg-white/10 peer-checked:bg-primary-600 transition relative after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4" />
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          {topicsError && <p className="text-red-500 dark:text-red-400 text-sm mt-2">{topicsError}</p>}
+          {topics && topics.length > 0 && (
+            <div className="flex justify-end pt-3 mt-1 border-t border-card-border">
+              <button
+                type="button"
+                disabled={!topicsDirty || savingTopics}
+                onClick={saveTopics}
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+              >
+                {savingTopics ? t('שומר...') : t('שמור')}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-5">

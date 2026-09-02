@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { buildStudentProgress } from '@/lib/naale/stats'
-import { loadAllTopics } from '@/lib/naale/topics'
+import { loadEnabledTopics } from '@/lib/naale/topics'
 import { selectAll } from '@/lib/naale/paginate'
 import { computeStreak, countsTowardStreak } from '@/lib/naale/rewards'
 
@@ -28,7 +28,7 @@ export async function GET() {
   // inside a school year. Levels stay at one row per topic, so they don't.
   const studentId = session.student.id
   const [allTopics, { data: levels }, answers, openAnswers, sessions] = await Promise.all([
-    loadAllTopics(db),
+    loadEnabledTopics(db),
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<{ topic: string; is_correct: boolean; session_id: string; is_review: boolean }>('naale_answers', (from, to) =>
       db.from('naale_answers').select('topic, is_correct, session_id, is_review').eq('student_id', studentId).range(from, to)),

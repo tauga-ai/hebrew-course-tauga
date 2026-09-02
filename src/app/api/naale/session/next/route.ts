@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { loadOwnedSession, isSessionExpired } from '@/lib/naale/session'
+import { loadDisabledTopics } from '@/lib/naale/topics'
 import { pickNextTopic, difficultyLadder, MIN_LEVEL } from '@/lib/naale/leveling'
 import { publicFields } from '@/lib/naale/open-grading'
 import { selectAll } from '@/lib/naale/paginate'
@@ -144,7 +145,7 @@ export async function GET(req: NextRequest) {
   // Null for practice/placement, which genuinely rotate across every topic.
   const bankTopic = owned.session.kind === 'topic' ? owned.session.topic : null
 
-  const [{ data: levels }, mcqBank, openBank, answered, openAnswered, placementSessions] = await Promise.all([
+  const [{ data: levels }, mcqBank, openBank, answered, openAnswered, placementSessions, disabledTopics] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<BankRow>('naale_questions', (from, to) => {
       const q = db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
@@ -166,6 +167,7 @@ export async function GET(req: NextRequest) {
     // (naale-placement-question-recycling).
     selectAll<{ id: string }>('naale_sessions', (from, to) =>
       db.from('naale_sessions').select('id').eq('student_id', studentId).eq('kind', 'placement').range(from, to)),
+    loadDisabledTopics(db),
   ])
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
@@ -182,7 +184,13 @@ export async function GET(req: NextRequest) {
     if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
     bankByTopic.get(row.topic)!.push({ id: row.id, topic: row.topic, difficulty: row.difficulty, kind: 'open', prompt: row.prompt, fields: row.fields as Record<string, string> })
   }
-  const allTopics = [...bankByTopic.keys()]
+  // A disabled topic (naale-topic-toggle) is excluded from the multi-topic
+  // rotation, but a single-topic (bankTopic) session is left untouched — it
+  // was already validated at session/start, and a student mid-session when a
+  // topic gets disabled is explicitly out of scope for this feature.
+  const allTopics = bankTopic
+    ? [...bankByTopic.keys()]
+    : [...bankByTopic.keys()].filter(topic => !disabledTopics.has(topic))
 
   // A topic the student has no level row for yet (added to the bank after
   // they were placed, or before placement ever ran) starts at MIN_LEVEL

@@ -25,3 +25,29 @@ export async function loadAllTopics(db: SupabaseClient): Promise<string[]> {
   ])
   return [...new Set([...mcq, ...open].map(r => r.topic))].sort()
 }
+
+/**
+ * Topics an admin has explicitly disabled (naale-topic-toggle) — a topic
+ * absent from naale_topic_flags, or present with enabled: true, is not in
+ * this set. Tiny table by construction (only touched topics get a row), so
+ * fetching the whole set is cheap enough to call from every check site
+ * rather than querying one topic at a time.
+ */
+export async function loadDisabledTopics(db: SupabaseClient): Promise<Set<string>> {
+  const { data } = await db.from('naale_topic_flags').select('topic').eq('enabled', false)
+  return new Set((data ?? []).map(r => r.topic))
+}
+
+/**
+ * Same topics loadAllTopics() finds, minus anything currently disabled —
+ * this is the student-facing view: what shows up as a tile, what can be
+ * started, what gets rotated into a practice/placement session. Callers that
+ * need the FULL list regardless of the toggle (placement/finish's leveling
+ * step, staff's view of a student's history) keep using loadAllTopics()
+ * directly — this only replaces it where students themselves are the
+ * audience.
+ */
+export async function loadEnabledTopics(db: SupabaseClient): Promise<string[]> {
+  const [all, disabled] = await Promise.all([loadAllTopics(db), loadDisabledTopics(db)])
+  return all.filter(topic => !disabled.has(topic))
+}

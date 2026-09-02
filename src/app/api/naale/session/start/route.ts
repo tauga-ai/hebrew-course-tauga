@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   // known — so they run alongside it instead of waiting for it. No logic
   // moved: every branch below still reads the exact same `existing` /
   // `levelCount` / counts it always did.
-  const [stale, overrideMinutes, { count: levelCount }, questionCounts] = await Promise.all([
+  const [stale, overrideMinutes, { count: levelCount }, questionCounts, topicFlag] = await Promise.all([
     // Settle any expired-but-unended sessions before anything else. A session
     // abandoned by closing the tab keeps ended_at null and its `completed`
     // value never gets evaluated — /session/end is the only other place that
@@ -92,6 +92,11 @@ export async function POST(req: NextRequest) {
           db.from('naale_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
           db.from('naale_open_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
         ])
+      : Promise.resolve(null),
+    // Only relevant when a topic was requested, same reasoning as
+    // questionCounts above (naale-topic-toggle).
+    topic
+      ? db.from('naale_topic_flags').select('enabled').eq('topic', topic).maybeSingle()
       : Promise.resolve(null),
   ])
 
@@ -297,6 +302,12 @@ export async function POST(req: NextRequest) {
     const [{ count: mcqCount }, { count: openCount }] = questionCounts!
     if ((mcqCount ?? 0) === 0 && (openCount ?? 0) === 0) {
       return NextResponse.json({ error: 'נושא לא נמצא' }, { status: 400 })
+    }
+    // An admin-disabled topic (naale-topic-toggle) is refused the same way an
+    // unknown one is — direct-starting it isn't possible even with a stale
+    // link/client bug.
+    if (topicFlag?.data?.enabled === false) {
+      return NextResponse.json({ error: 'נושא לא זמין' }, { status: 400 })
     }
   }
 
