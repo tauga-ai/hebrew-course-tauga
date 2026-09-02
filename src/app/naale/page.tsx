@@ -243,7 +243,11 @@ export default function NaaleHome() {
     // between tapping Continue and seeing a question.
     if (action === 'resume') {
       setStarting(true)
-      router.push(`/naale/session?session_id=${resumable.session_id}`)
+      // resumed=1 tells the session page the student already confirmed
+      // resuming right here — it should restart the clock itself once a
+      // question is on screen (same as before naale-explicit-pause-resume),
+      // not show its own PausedSessionSheet on top of the choice just made.
+      router.push(`/naale/session?session_id=${resumable.session_id}&resumed=1`)
       return
     }
 

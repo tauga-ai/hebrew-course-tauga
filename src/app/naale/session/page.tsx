@@ -10,6 +10,7 @@ import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { ConfettiBurst } from '@/components/naale/ConfettiBurst'
 import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
+import { PausedSessionSheet } from '@/components/naale/PausedSessionSheet'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
@@ -180,7 +181,25 @@ function countdownClass(seconds: number, kind: 'placement' | 'practice' | 'topic
 
 function SessionRunner() {
   const router = useRouter()
-  const sessionId = useSearchParams().get('session_id')
+  const searchParams = useSearchParams()
+  const sessionId = searchParams.get('session_id')
+  // Set only by naale/page.tsx's cross-session Resume button — that sheet
+  // already asked "resume or start over" and got its answer, so landing here
+  // must not ask again with PausedSessionSheet.
+  //
+  // Captured via a ref initializer, NOT a plain `const` recomputed on every
+  // render: boot() strips this from the URL with router.replace once it's
+  // consumed, and this component re-renders several times before that (kind/
+  // paused/question all land as separate state updates). A plain `const`
+  // reads searchParams fresh each of those renders — if the strip commits
+  // between two of them, whichever render's closure boot()'s effect actually
+  // captured could see `resumed` already gone and silently skip auto-resume,
+  // even though the very first render, and the network request that got us
+  // here, both genuinely had it. A ref's initializer runs exactly once for
+  // this component instance, immune to that race. Observed live: three
+  // near-simultaneous /status calls at boot and no session/start POST ever
+  // firing — auto-resume silently never triggered.
+  const resumeConfirmedRef = useRef(searchParams.get('resumed') === '1')
   // Shared with NaaleSidebar/naale/page.tsx — same cache, no extra fetch.
   const { profile: me } = useNaaleProfile('student')
   const [translationLang, setTranslationLang] = useState<'ru' | 'ar'>('ru')
@@ -324,6 +343,24 @@ function SessionRunner() {
   // very session the pause exists to preserve, and the banked time is lost.
   const awayRef = useRef(false)
 
+  // State mirrors of awayRef, purely for rendering — a ref can't drive a
+  // re-render. Always written alongside awayRef, never independently
+  // (naale-explicit-pause-resume).
+  const [paused, setPaused] = useState(false)
+  const [pausedSecondsRemaining, setPausedSecondsRemaining] = useState<number | null>(null)
+  // True only for the cross-session autoResume boot path (arrived here via
+  // naale/page.tsx's Resume button) — `paused` is still true so the header
+  // freezes at the banked time exactly like a real pause, but this suppresses
+  // PausedSessionSheet, since the student already confirmed resuming on the
+  // previous page. Cleared the moment resumeClock() actually lands.
+  const [autoResuming, setAutoResuming] = useState(false)
+
+  // Lets bankRemaining() read the freshest countdown value without needing
+  // `remaining` in its own dependency array — that would recreate the
+  // callback (and re-run the listener-registration effect) every second.
+  const remainingRef = useRef<number | null>(null)
+  useEffect(() => { remainingRef.current = remaining }, [remaining])
+
   // Banks the remaining time when the student leaves, so a phone call doesn't
   // consume their five minutes (naale-topic-session-resume).
   //
@@ -337,56 +374,75 @@ function SessionRunner() {
   // session's clock is meant to run whether or not the student is watching.
   const bankRemaining = useCallback(() => {
     if (kind !== 'topic' || !sessionId) return
+    // Already away — a repeat hide from more tab-flickering. session/pause
+    // already no-ops server-side on an already-paused row; this stops the
+    // client from re-firing the request (or recapturing a slightly-drifted
+    // frozen value) on every single flicker, not just the first
+    // (naale-explicit-pause-resume).
+    if (awayRef.current) return
     awayRef.current = true
+    setPaused(true)
+    setPausedSecondsRemaining(remainingRef.current)
     qaLog('banking clock — student left', { sessionId })
     navigator.sendBeacon(
       '/api/naale/session/pause',
       new Blob([JSON.stringify({ session_id: sessionId })], { type: 'application/json' })
     )
-  }, [kind, sessionId])
+  }, [kind, sessionId, setPaused, setPausedSecondsRemaining])
+
+  // Pure fetch — no state changes, just resolves the new deadline (or null on
+  // any failure, network throw included). Split out of resumeClock so boot()'s
+  // cross-session autoResume path can run this alongside fetchNextQuestion and
+  // reveal the question and a live timer in the same render, instead of the
+  // question appearing first with resumeClock trailing behind it a beat later.
+  //
+  // Never lets an exception escape: a thrown fetch (aborted mid-flight by an
+  // unmount, a dev Fast Refresh landing between the request and its response,
+  // a network blip) used to leave the caller's promise rejected and unhandled
+  // — paused/autoResuming stuck true forever with no PausedSessionSheet ever
+  // shown to retry from, since nothing downstream of the throw ever ran.
+  // Observed live: header frozen on the banked time with the question already
+  // interactive underneath and no way to unstick it short of a reload.
+  const fetchResumedDeadlineMs = useCallback(async (): Promise<number | null> => {
+    try {
+      const res = await fetch('/api/naale/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resume' }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!data.deadline_at) return null
+      qaLog('clock resumed', { seconds_remaining: data.seconds_remaining })
+      return deadlineFromSeconds(data.seconds_remaining)
+    } catch {
+      return null
+    }
+  }, [])
 
   // Restarts the server clock on a paused session. Until this lands,
   // deadline_at is still frozen in the past and every answer would be refused
   // as late, so nothing about the session is usable before it resolves.
   //
-  // Called from two places, both meaning "the student is here and looking at a
-  // question": returning to a backgrounded tab, and finishing the load after
-  // arriving from the Continue prompt. Never called before a question is on
-  // screen — see the effect below for why that matters.
+  // Called from PausedSessionSheet's Continue button, and from boot()'s
+  // cross-session autoResume path once the question is on screen (naale-
+  // explicit-pause-resume) — either way, a question is already up by the time
+  // this runs, so there's nothing left to wait on before restarting the clock.
   const resumeClock = useCallback(async () => {
     if (!awayRef.current) return
     qaLog('resuming clock — student back')
-    const res = await fetch('/api/naale/session/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resume' }),
-    })
+    const deadlineMs = await fetchResumedDeadlineMs()
     // A failed resume deliberately leaves awayRef set, so the force-close
     // effect stays parked rather than ending a session whose clock we know we
     // haven't restarted. Sending them home is the recoverable path — the
     // dashboard offers Continue / Start over against the same banked time.
-    if (!res.ok) { router.replace('/naale'); return }
-    const data = await res.json()
-    if (!data.deadline_at) { router.replace('/naale'); return }
+    if (deadlineMs === null) { router.replace('/naale'); return }
     // Order matters: the new deadline and the cleared flag must reach the same
     // render, or the force-close effect sees remaining === 0 with nobody
     // parking it and closes the session we just revived.
-    qaLog('clock resumed', { seconds_remaining: data.seconds_remaining })
-    setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
+    setDeadlineMs(deadlineMs)
     awayRef.current = false
-  }, [router])
-
-  // Start the clock when the student can actually see a question, not when the
-  // page began loading. Arriving from Continue means a POST, a navigation, a
-  // /status and a /next — several seconds against the remote project — and the
-  // clock used to be running through all of it. On a full five minutes that's
-  // invisible; on the 20 seconds someone banked, it eats a quarter of what
-  // they saved and makes a working pause look broken. That was the actual
-  // complaint behind "the timer starts while loading".
-  useEffect(() => {
-    if (question === null || !awayRef.current) return
-    resumeClock()
-  }, [question, resumeClock])
+  }, [router, fetchResumedDeadlineMs])
 
   useEffect(() => {
     if (kind !== 'topic' || !sessionId) return
@@ -397,14 +453,12 @@ function SessionRunner() {
     if (doneReason !== null) return
 
     function onVisibility() {
-      // visibilitychange fires in both directions — hidden banks the clock,
-      // visible starts it again. Returning to a tab that was merely
-      // backgrounded is a resume, not a decision: the student never left the
-      // practice screen, so there is nothing to ask them. (The Continue /
-      // Start over prompt is for returning to the DASHBOARD, where the session
-      // really was abandoned.)
-      if (document.visibilityState === 'visible') resumeClock()
-      else bankRemaining()
+      // visibilitychange fires in both directions. Hidden banks the clock,
+      // same as before. Visible used to auto-resume — now it does nothing:
+      // `paused` is already true from the earlier hide, the PausedSessionSheet
+      // is already showing, and the student decides when the clock actually
+      // restarts (naale-explicit-pause-resume).
+      if (document.visibilityState !== 'visible') bankRemaining()
     }
 
     document.addEventListener('visibilitychange', onVisibility)
@@ -440,7 +494,7 @@ function SessionRunner() {
       // own copy is stale) reflects the CURRENT value at the moment this runs.
       if (doneReasonRef.current === null) bankRemaining()
     }
-  }, [kind, sessionId, bankRemaining, resumeClock, doneReason])
+  }, [kind, sessionId, bankRemaining, doneReason])
 
   // Closes the session out server-side (safe to call more than once — /end is
   // idempotent) and stores its verdict for the summary screen, so "completed"
@@ -554,7 +608,7 @@ function SessionRunner() {
       }
 
       const { res, data } = nextOutcome
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       if (data.done) {
         qaLog(`/next: done (${data.reason})`)
         return { done: true, reason: data.reason as DoneReason }
@@ -562,7 +616,7 @@ function SessionRunner() {
       qaLog('/next: question served', data.question)
       return { question: data.question }
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err.message : 'שגיאה בטעינת השאלה' }
+      return { error: err instanceof Error ? err.message : t('שגיאה בטעינת השאלה') }
     }
   }, [sessionId, kind, reviewExhausted])
 
@@ -673,6 +727,33 @@ function SessionRunner() {
   // freshly-randomized question: visible as one question card flashing in
   // and being replaced by another right after starting a session.
   const bootedSessionId = useRef<string | null>(null)
+  // True only once this component instance has actually unmounted — unlike
+  // the effect-local `cancelled` below, this is NOT set by the effect's own
+  // dependency-driven re-runs, only by a real teardown. Needed because
+  // `cancelled` flips true on every re-run of the boot effect, including a
+  // spurious one: setKind(data.kind) inside boot() changes `kind`, which
+  // changes fetchNextQuestion's (and so loadNext's) identity, re-triggering
+  // this effect and running the PREVIOUS invocation's cleanup — even though
+  // `completed` is already true and this exact invocation is the one still
+  // legitimately finishing up. Before autoResume existed nothing ran after
+  // that point, so the stale `cancelled` never mattered; autoResume's
+  // resumeClock() call does run after it, and checking `!cancelled` there
+  // silently skipped it every time (naale-explicit-pause-resume — observed
+  // live: boot correctly detected autoResume, /next succeeded, but no
+  // session/start POST ever fired and the header stayed frozen forever).
+  const hardUnmountedRef = useRef(false)
+  useEffect(() => {
+    // Resetting on mount (not just setting true in cleanup) matters because
+    // dev Strict Mode double-invokes every effect on mount — mount, synthetic
+    // cleanup, mount again — without a real unmount in between. Without this
+    // reset, that synthetic cleanup latches the ref true on the first pass
+    // and nothing ever clears it, permanently blocking resumeClock() below
+    // even though the page never actually unmounted (observed live: fixed
+    // the stale-`cancelled` race this ref replaces, but the timer stayed
+    // frozen anyway, for this reason, until this reset was added).
+    hardUnmountedRef.current = false
+    return () => { hardUnmountedRef.current = true }
+  }, [])
   useEffect(() => {
     if (!sessionId) { router.replace('/naale'); return }
     if (bootedSessionId.current === sessionId) return
@@ -701,25 +782,51 @@ function SessionRunner() {
       qaLog('/status on boot', data)
       setAnsweredCount(data.answered_count)
       setCorrectCount(data.correct_count)
+      // resumeConfirmedRef means the student already said "continue" on the
+      // cross-session Resume/Start Over sheet before ever reaching this page
+      // — auto-resuming here (once a question is up) mirrors that, instead of
+      // asking a second time via PausedSessionSheet.
+      const autoResume = data.paused && resumeConfirmedRef.current
+      qaLog('boot: resume state', { paused: data.paused, resumeConfirmed: resumeConfirmedRef.current, autoResume })
+      if (resumeConfirmedRef.current) router.replace(`/naale/session?session_id=${sessionId}`)
       // A paused session gets NO deadline yet: deadline_at is frozen in the
-      // past, and the banked remainder only becomes a real clock once
-      // resumeClock() runs — after the first question renders. Leaving this
-      // null means the header simply shows no timer while loading, rather than
-      // showing one that is already counting down time the student still has.
-      if (data.paused) awayRef.current = true
-      else setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
+      // past, and the banked remainder only becomes a real clock once the
+      // clock actually restarts. Leaving deadlineMs null and freezing the
+      // header on pausedSecondsRemaining instead covers both cases the same
+      // way: the manual PausedSessionSheet wait AND autoResume's own gap
+      // while resumeClock's separate round trip (session/start is a heavier
+      // call than session/next — several queries, not one) is still in
+      // flight. Showing the frozen time immediately, rather than leaving the
+      // header blank until that call resolves, is what lets the question
+      // render as soon as IT is ready instead of waiting on both together.
+      if (data.paused) {
+        awayRef.current = true
+        setPaused(true)
+        setPausedSecondsRemaining(data.seconds_remaining)
+        if (autoResume) setAutoResuming(true)
+      } else {
+        setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
+      }
       setKind(data.kind)
       if (data.translation_lang) setTranslationLang(data.translation_lang)
       if (data.ended || data.expired) { completed = true; finishSession('time_up'); return }
       completed = true
-      loadNext(data.kind)
+      await loadNext(data.kind)
+      // `bootedSessionId.current === sessionId` (rather than `!cancelled`,
+      // which is stale-prone here — see hardUnmountedRef's comment above)
+      // still correctly bails if a genuinely different session has since
+      // taken over this same component instance.
+      if (autoResume && !hardUnmountedRef.current && bootedSessionId.current === sessionId) {
+        await resumeClock()
+        if (!hardUnmountedRef.current && bootedSessionId.current === sessionId) { setPaused(false); setAutoResuming(false) }
+      }
     }
     boot()
     return () => {
       cancelled = true
       if (!completed) bootedSessionId.current = null
     }
-  }, [sessionId, router, loadNext, finishSession])
+  }, [sessionId, router, loadNext, finishSession, resumeClock])
 
   // Dev-only: DevPanel's session-length override notifies subscribers only
   // when a value is actually committed (Save, or the "1 min" preset) — never
@@ -739,7 +846,13 @@ function SessionRunner() {
       const data = await res.json()
       if (cancelled) return
       qaLog('/status on dev override save', data)
-      setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
+      // A paused session's seconds_remaining is the frozen bank, not a live
+      // countdown (session/status computes it from paused_remaining_ms) —
+      // setting deadlineMs from it anyway would hand useCountdown a deadline
+      // that ticks in real time while the server still considers the clock
+      // stopped, a client/server split the header's `paused` gate was never
+      // meant to paper over. Only meaningful for a genuinely running session.
+      if (!data.paused) setDeadlineMs(deadlineFromSeconds(data.seconds_remaining))
       if (data.ended || data.expired) finishSession('time_up')
     }
     revalidate()
@@ -821,13 +934,13 @@ function SessionRunner() {
         loadNext()
         return
       }
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       qaLog('/answer: result', data)
       setResult(data)
       setAnsweredCount(c => c + 1)
       if (data.is_correct) setCorrectCount(c => c + 1)
     } catch (err: unknown) {
-      setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
+      setLoadError(err instanceof Error ? err.message : t('שגיאה בשליחת התשובה'))
     } finally {
       setSubmitting(false)
     }
@@ -857,12 +970,12 @@ function SessionRunner() {
         loadNext()
         return
       }
-      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
       qaLog('/open-answer: result', data)
       setOpenResult(data)
       setAnsweredCount(c => c + 1)
     } catch (err: unknown) {
-      setLoadError(err instanceof Error ? err.message : 'שגיאה בשליחת התשובה')
+      setLoadError(err instanceof Error ? err.message : t('שגיאה בשליחת התשובה'))
     } finally {
       setSubmitting(false)
     }
@@ -1203,9 +1316,9 @@ function SessionRunner() {
         <PageHeader
           onBack={handleBackClick}
           title={t('תרגול')}
-          right={remaining !== null ? (
-            <span className={countdownClass(remaining, kind)}>
-              <LtrIsolate>{formatCountdown(remaining)}</LtrIsolate>
+          right={(paused || remaining !== null) ? (
+            <span className={countdownClass(paused ? (pausedSecondsRemaining ?? 0) : remaining!, kind)}>
+              <LtrIsolate>{formatCountdown(paused ? (pausedSecondsRemaining ?? 0) : remaining!)}</LtrIsolate>
             </span>
           ) : null}
         />
@@ -1654,6 +1767,15 @@ function SessionRunner() {
         <LeaveSessionModal
           onConfirm={() => router.push('/naale')}
           onCancel={() => setShowLeaveWarning(false)}
+        />
+      )}
+      {paused && !autoResuming && (
+        <PausedSessionSheet
+          secondsRemaining={pausedSecondsRemaining ?? 0}
+          onConfirm={async () => {
+            await resumeClock()
+            setPaused(false)
+          }}
         />
       )}
     </NaaleShell>
