@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { loadOwnedSession, canPause, isPaused, remainingToBank } from '@/lib/naale/session'
+import { loadOwnedSession, canPause, isPaused, isExpired, remainingToBank } from '@/lib/naale/session'
 
 /**
  * Banks a topic session's remaining time so the clock stops while the student
@@ -53,6 +53,18 @@ export async function POST(req: NextRequest) {
   // absence, and re-banking would overwrite a good remainder with a smaller
   // one computed from an already-frozen deadline.
   if (isPaused(owned.session) || owned.session.ended_at) {
+    return NextResponse.json({ ok: true })
+  }
+
+  // The tab hid AFTER the timer already ran out — not a genuine pause of a still-running
+  // session. Without this, remainingToBank() below clamps to 0 and this "successfully" pauses
+  // with a fresh paused_at, so session/start's resume branch hands the session back with
+  // deadline_at = now (resumed, but instantly dead) instead of ending it. A repeated tab
+  // hide/show right at the deadline then loops indefinitely: each pause re-banks 0ms with a new
+  // paused_at (which also keeps resetting the unrelated 3-hour pause-expiry window), and each
+  // resume hands back another instantly-dead session — the frozen "0:00, never ends" bug. Left
+  // as a no-op here, the ordinary isExpired() sweep in session/start closes it for real instead.
+  if (isExpired(owned.session.deadline_at)) {
     return NextResponse.json({ ok: true })
   }
 
