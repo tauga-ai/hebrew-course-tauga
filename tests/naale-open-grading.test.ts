@@ -6,8 +6,8 @@ import { OPEN_EXERCISE_DISPLAY } from '../src/lib/naale/open-exercise-display'
 
 const TOPICS = Object.keys(OPEN_GRADING_BUILDERS)
 
-test('OPEN_GRADING_BUILDERS has all 3 built AI-graded topics registered', () => {
-  assert.deepEqual(new Set(TOPICS), new Set(['סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר']))
+test('OPEN_GRADING_BUILDERS has all 4 built AI-graded topics registered', () => {
+  assert.deepEqual(new Set(TOPICS), new Set(['סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר', 'תיאור תמונה בקול']))
 })
 
 test('registry consistency: OPEN_GRADING_BUILDERS and OPEN_EXERCISE_DISPLAY use the exact same topic keys', () => {
@@ -54,7 +54,12 @@ for (const topic of TOPICS) {
 
     const instruction = builder.buildSystemInstruction('__prompt__', fields)
     assert.match(instruction, /__prompt__/)
+    // picture_number (תיאור תמונה בקול) is public for a different reason than every other
+    // public field here: it's how the client builds the image URL, not grading content — the
+    // model is never told which picture number it's looking at. Every other public field IS
+    // grading-relevant content, so it's still expected to appear in the instruction.
     for (const key of builder.publicFieldKeys) {
+      if (key === 'picture_number') continue
       assert.match(instruction, new RegExp(`__${key}__`))
     }
   })
