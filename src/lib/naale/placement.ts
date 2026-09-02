@@ -1,6 +1,7 @@
 import 'server-only'
 import { createServiceClient } from '@/lib/supabase/service'
 import { selectAll } from '@/lib/naale/paginate'
+import { loadDisabledTopics } from '@/lib/naale/topics'
 
 /**
  * One placement question per topic.
@@ -35,7 +36,7 @@ export async function getPlacementQuestions() {
   // Paginated: this reads both banks whole, and the MCQ bank is at the 1000-row
   // ceiling. A trimmed read here would drop a topic out of the placement test
   // entirely, leaving the student unplaced in it.
-  const [mcq, open] = await Promise.all([
+  const [mcq, open, disabledTopics] = await Promise.all([
     selectAll<PlacementBankRow>('naale_questions', (from, to) =>
       db.from('naale_questions')
         .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
@@ -48,13 +49,14 @@ export async function getPlacementQuestions() {
         .order('difficulty', { ascending: true })
         .order('id', { ascending: true })
         .range(from, to)),
+    loadDisabledTopics(db),
   ])
 
   // A topic name only ever exists in one of the two tables (see the infra
   // ticket's task.md), so tagging `kind` per source and merging by topic
   // can't collide two different question kinds under one key.
   const byTopic = new Map<string, { id: string; topic: string; difficulty: number; kind: 'mcq' | 'open' } & Record<string, unknown>>()
-  for (const q of mcq ?? []) if (!byTopic.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'mcq' })
-  for (const q of open ?? []) if (!byTopic.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'open' })
+  for (const q of mcq ?? []) if (!byTopic.has(q.topic) && !disabledTopics.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'mcq' })
+  for (const q of open ?? []) if (!byTopic.has(q.topic) && !disabledTopics.has(q.topic)) byTopic.set(q.topic, { ...q, kind: 'open' })
   return [...byTopic.values()]
 }

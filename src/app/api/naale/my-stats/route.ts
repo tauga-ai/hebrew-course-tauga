@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
 import { buildStudentProgress } from '@/lib/naale/stats'
-import { loadAllTopics } from '@/lib/naale/topics'
+import { loadAllTopics, loadEnabledTopics } from '@/lib/naale/topics'
 import { selectAll } from '@/lib/naale/paginate'
 import { computeStreak, countsTowardStreak } from '@/lib/naale/rewards'
 
@@ -27,7 +27,13 @@ export async function GET() {
   // course: ~25 answers a session, several sessions a week, passes 1000 well
   // inside a school year. Levels stay at one row per topic, so they don't.
   const studentId = session.student.id
-  const [allTopics, { data: levels }, answers, openAnswers, sessions] = await Promise.all([
+  const [allTopics, allTopicsUnfiltered, { data: levels }, answers, openAnswers, sessions] = await Promise.all([
+    loadEnabledTopics(db),
+    // Unfiltered by naale_topic_flags — the page's own LOCKED_TOPICS overlay
+    // (real content never imported yet) needs to tell "never imported" apart
+    // from "admin disabled", since both are absent from `topics` above but
+    // only the former should render as a "coming soon" card rather than
+    // vanishing (naale-topic-toggle).
     loadAllTopics(db),
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<{ topic: string; is_correct: boolean; session_id: string; is_review: boolean }>('naale_answers', (from, to) =>
@@ -60,5 +66,6 @@ export async function GET() {
   return NextResponse.json({
     topics: progress.topics,
     totals: { ...progress.totals, streak },
+    allTopics: allTopicsUnfiltered,
   })
 }
