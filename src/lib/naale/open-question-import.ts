@@ -163,6 +163,59 @@ function readTextSummarySheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestio
 
 OPEN_SHEET_READERS['סיכום טקסט קצר'] = readTextSummarySheet
 
+// The spoken instruction (`משימה קולית`) is this row's PUBLIC main text — unlike every other
+// open topic, the obvious "main content" column (תיאור התמונה, the official description) must
+// stay grading-only, since showing it would hand the student the answer. See task.md's Safety &
+// Rollout Guidelines for the full reasoning.
+const PICTURE_DESCRIPTION_COL = {
+  num: NUMBER_COL,
+  imageDescription: 'תיאור התמונה',
+  spokenTask: 'משימה קולית',
+  difficulty: 'רמת קושי (1-5)',
+  mandatoryAnchors: 'MANDATORY_ANCHORS',
+  optionalAnchors: 'OPTIONAL_ANCHORS',
+} as const
+const PICTURE_DESCRIPTION_REQUIRED = Object.values(PICTURE_DESCRIPTION_COL)
+
+function readPictureDescriptionSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, PICTURE_DESCRIPTION_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[PICTURE_DESCRIPTION_COL.imageDescription]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const numberCell = cell(PICTURE_DESCRIPTION_COL.num)
+      const question_id = questionIdFor(sheetName, numberCell, sourceRow)
+      const difficulty = parseInt(cell(PICTURE_DESCRIPTION_COL.difficulty), 10)
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+        throw new Error(`${sheetName} row ${sourceRow}: difficulty must be 1-5, got ${JSON.stringify(cell(PICTURE_DESCRIPTION_COL.difficulty))}`)
+      }
+      return {
+        topic: sheetName,
+        question_id,
+        difficulty,
+        prompt: cell(PICTURE_DESCRIPTION_COL.spokenTask),
+        fields: {
+          image_description: cell(PICTURE_DESCRIPTION_COL.imageDescription),
+          mandatory_anchors: cell(PICTURE_DESCRIPTION_COL.mandatoryAnchors),
+          optional_anchors: cell(PICTURE_DESCRIPTION_COL.optionalAnchors),
+          // Same numeric value questionIdFor() already parsed from this row's
+          // "#" column — kept as a plain field so the client can build
+          // /api/naale/pictures/{n} without decoding question_id itself.
+          picture_number: String(parseInt(numberCell, 10)),
+        },
+        source_row: sourceRow,
+      }
+    })
+}
+
+OPEN_SHEET_READERS['תיאור תמונה בקול'] = readPictureDescriptionSheet
+
 export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]

@@ -37,6 +37,7 @@ export const TOPIC_NUMBERS: Record<string, number> = {
   'סיפור בהמשכים': 9,
   'ווטסאפ והודעות': 10,
   'סיכום טקסט קצר': 11,
+  'תיאור תמונה בקול': 12,
 }
 
 /** "<TopicNumber>_<QuestionNumber>" for one row, e.g. `9_13`.

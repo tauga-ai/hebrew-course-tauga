@@ -4,7 +4,10 @@ import { getNaaleSession } from '@/lib/naale/auth'
 
 const BUCKET = 'naale-pictures'
 const TOPIC_NUMBER = 12
-const SIGNED_URL_TTL_SECONDS = 60
+// Long enough that a cached redirect (see Cache-Control below) stays valid
+// for a full practice session, short enough that a leaked signed URL doesn't
+// stay live for long.
+const SIGNED_URL_TTL_SECONDS = 3600
 
 export async function GET(_request: Request, { params }: { params: Promise<{ number: string }> }) {
   const session = await getNaaleSession()
@@ -23,22 +26,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
 
   const db = createServiceClient()
 
-  // Extension isn't known ahead of time (source images are a mix of .jpg/.png), so resolve
-  // the actual stored filename by prefix rather than guessing. Each topic gets its own folder
-  // in the bucket (e.g. `12/`), so the search is scoped to that folder, not the whole bucket.
-  const { data: matches, error: listError } = await db.storage.from(BUCKET).list(String(TOPIC_NUMBER), {
-    search: `${n}.`,
-  })
-  if (listError || !matches?.length) {
+  // Stored extension-less (upload-naale-pictures.ts uploads to `{topic}/{n}`, no extension) —
+  // Content-Type comes from the object's stored metadata, not its key, so the exact path is
+  // known upfront. This used to require a list() call first to discover the real extension
+  // (.jpg vs .png); removing that cut a full extra Storage round-trip off every image load.
+  const { data: signed, error: signError } = await db.storage
+    .from(BUCKET)
+    .createSignedUrl(`${TOPIC_NUMBER}/${n}`, SIGNED_URL_TTL_SECONDS)
+  if (signError || !signed) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const { data: signed, error: signError } = await db.storage
-    .from(BUCKET)
-    .createSignedUrl(`${TOPIC_NUMBER}/${matches[0].name}`, SIGNED_URL_TTL_SECONDS)
-  if (signError || !signed) {
-    return NextResponse.json({ error: 'sign_failed' }, { status: 500 })
-  }
-
-  return NextResponse.redirect(signed.signedUrl)
+  return NextResponse.redirect(signed.signedUrl, {
+    // Lets the browser skip re-hitting this route (auth check + a Storage API call) on every
+    // repeat view of the same picture within a session — it reuses the cached redirect target
+    // directly. Capped just under the signed URL's own TTL so a cached redirect never points at
+    // an already-expired URL.
+    headers: { 'Cache-Control': `private, max-age=${SIGNED_URL_TTL_SECONDS - 60}` },
+  })
 }

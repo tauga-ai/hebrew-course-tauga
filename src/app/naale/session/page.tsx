@@ -12,7 +12,7 @@ import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
-import { t, debugMode, getDevLang } from '@/lib/dev-i18n'
+import { t, debugMode, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { scoreColor } from '@/lib/score-color'
 import { getShowHint, subscribeShowHint } from '@/lib/dev-hint'
 import { getShowQuestionBadge, subscribeShowQuestionBadge } from '@/lib/dev-question-badge'
@@ -21,6 +21,8 @@ import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 import { canGoBack, goBack, goForward, isResolved } from '@/lib/naale/session-history'
 import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
+import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
+import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
 
@@ -215,6 +217,22 @@ function SessionRunner() {
   const [openAnswerText, setOpenAnswerText] = useState('')
   const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
   const [openValidationError, setOpenValidationError] = useState('')
+  // Picture-description (תיאור תמונה בקול) is the one open-response topic
+  // answered by voice — the mic writes straight into the same openAnswerText
+  // state OpenAnswerInput already reads, so the rest of the open-answer flow
+  // (submit, validation, loading) is untouched.
+  //
+  // Recognition language follows the existing Dev Panel language toggle
+  // (getDevLang(), the same "Language / RTL" control every other dev-facing
+  // string in this app already uses) rather than a new bespoke control — a
+  // real student is always in Hebrew mode, so this only ever matters when a
+  // developer has already switched the panel to English to QA the app.
+  const devLang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
+  const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
+    continuous: false,
+    lang: devLang === 'en' ? 'en-US' : 'he-IL',
+    onTranscript: text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') },
+  })
   // Same score-card pattern as sentence practice's THRESHOLDS/scoreLabel
   // (src/app/sentence/[setId]/page.tsx) — 4-5 is "advance", 3 is "neutral"
   // per the AI-graded leveling rule (naale-story-continuation/task.md).
@@ -1248,6 +1266,14 @@ function SessionRunner() {
 
             {q.kind === 'open' ? (
               <>
+                {q.topic === 'תיאור תמונה בקול' && q.fields?.picture_number && (
+                  // eslint-disable-next-line @next/next/no-img-element -- source image dimensions vary per picture; same rationale as makbatzim's image questions.
+                  <img
+                    src={`/api/naale/pictures/${q.fields.picture_number}`}
+                    alt=""
+                    className="w-full max-w-sm mx-auto aspect-[4/3] object-contain bg-black/5 dark:bg-white/5 rounded-xl mb-4 border border-card-border"
+                  />
+                )}
                 {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
                   <div key={block.label} className="mb-3 text-right">
                     <p className="text-xs font-semibold text-fg/50 mb-1">{block.label}</p>
@@ -1291,6 +1317,19 @@ function SessionRunner() {
               <>
                 {!openResult ? (
                   <>
+                    {q.topic === 'תיאור תמונה בקול' && (
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-fg/80">{t('התשובה שלי')}</label>
+                        <SpeechToTextToggle
+                          isListening={isListening}
+                          supported={speechSupported}
+                          onToggle={() => (isListening ? stopListening() : startListening())}
+                        />
+                      </div>
+                    )}
+                    {q.topic === 'תיאור תמונה בקול' && isListening && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mb-1 animate-pulse text-right">{t('🎤 מקליט... דבר בעברית')}</p>
+                    )}
                     <OpenAnswerInput
                       value={openAnswerText}
                       onChange={text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') }}
