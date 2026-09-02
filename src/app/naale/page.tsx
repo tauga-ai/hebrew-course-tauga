@@ -70,6 +70,11 @@ export default function NaaleHome() {
   const [me, setMe] = useState<NaaleMe | null>(null)
   const [rewards, setRewards] = useState<MyStatsTotals | null>(null)
   const [topics, setTopics] = useState<NaaleTopicStat[] | null>(null)
+  // Every topic with real content, regardless of the admin toggle — separate
+  // from `topics` above (enabled-only) so LOCKED_TOPICS below can tell "never
+  // imported" apart from "admin disabled" (naale-topic-toggle). Both are
+  // absent from `topics`, but only the former should render as "coming soon."
+  const [allTopics, setAllTopics] = useState<string[] | null>(null)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -150,6 +155,7 @@ export default function NaaleHome() {
         if (!cancelled) {
           setRewards(statsData.totals)
           setTopics(statsData.topics)
+          setAllTopics(statsData.allTopics)
         }
       }
 
@@ -294,12 +300,16 @@ export default function NaaleHome() {
   // Shared with the staff self-practice button — see nextSessionKind().
   const nextKind = nextSessionKind(topics)
 
-  // Only show a topic as "coming soon" if the question bank isn't already
-  // serving it — see LOCKED_TOPICS. Skipped entirely while topics is still
-  // null (mid-fetch), otherwise every locked card flashes on screen for a
-  // beat and then vanishes as the live list arrives.
-  const lockedTopics = topics
-    ? LOCKED_TOPICS.filter(name => !topics.some(topic => topic.topic === name))
+  // Only show a topic as "coming soon" if it has no real content at all yet —
+  // see LOCKED_TOPICS. Checked against allTopics (every topic with content,
+  // admin-disabled or not), not the enabled-only `topics` list: a topic an
+  // admin has disabled is also absent from `topics`, but it has real content
+  // and should vanish rather than show as "coming soon" (naale-topic-toggle).
+  // Skipped entirely while allTopics is still null (mid-fetch), otherwise
+  // every locked card flashes on screen for a beat and then vanishes as the
+  // live list arrives.
+  const lockedTopics = allTopics
+    ? LOCKED_TOPICS.filter(name => !allTopics.includes(name))
     : []
 
   if (error && !me) {
