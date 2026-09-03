@@ -179,10 +179,13 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
     // Noam's exact §7 string — session/page.tsx and placement/page.tsx already
     // show this before ever calling the AI when the transcript is empty.
     emptyErrorMessage: 'לא הצלחנו לשמוע, אנא נסה שוב.',
-    // No devSampleAnswers: filling a plausible spoken description from field
-    // data alone (unlike WhatsApp/Text Summary's literal model-answer fields)
-    // isn't meaningful here, and image_description is grading-only precisely
-    // so a QA shortcut can't leak it into a dev tool.
+    // No devSampleAnswers here: unlike WhatsApp/Text Summary, this topic's
+    // model answer (image_description) is grading-only and never reaches the
+    // client as `fields` — see OPEN_PUBLIC_FIELD_KEYS above — so a synchronous
+    // fields => string template can't get at it. session/page.tsx and
+    // placement/page.tsx instead special-case this topic's QA buttons to hit
+    // /api/naale/dev/picture-description-sample, the one debug-gated route
+    // that's allowed to cross that boundary.
   },
 }
 
