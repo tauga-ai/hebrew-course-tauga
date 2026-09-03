@@ -32,3 +32,13 @@ test('wordLimitError: one word over the limit is rejected with the limit named',
 test('wordLimitError: an unregistered topic is never blocked', () => {
   assert.equal(wordLimitError('נושא שלא קיים', 'מילה '.repeat(500).trim()), null)
 })
+
+test('wordLimitError: picture-description allows up to 35 words', () => {
+  assert.equal(wordLimitError('תיאור תמונה בקול', 'מילה '.repeat(35).trim()), null)
+})
+
+test('wordLimitError: picture-description rejects one word over 35', () => {
+  const err = wordLimitError('תיאור תמונה בקול', 'מילה '.repeat(36).trim())
+  assert.notEqual(err, null)
+  assert.match(err as string, /35/)
+})

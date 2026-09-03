@@ -169,10 +169,13 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
     },
   },
   'תיאור תמונה בקול': {
-    // Spoken, not typed — Noam's spec sets no length cap for this exercise,
-    // unlike the other 3 topics' 20/25/30-word limits. Infinity means
-    // wordLimitError() (checked both client- and server-side) never fires.
-    wordLimit: Infinity,
+    // Spoken, not typed, but Noam confirmed (2026-09-03) the missing cap was
+    // an oversight, not deliberate: 35 words, same enforcement as every
+    // other open topic. Over the limit, the student edits the transcribed
+    // text down rather than being forced to re-record — this already falls
+    // out of the shared OpenAnswerInput/wordLimitError machinery below with
+    // no extra logic.
+    wordLimit: 35,
     blocks: prompt => [
       { label: 'המשימה', text: prompt },
     ],
