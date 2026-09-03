@@ -1,0 +1,18 @@
+-- Corrects the original naale_topic_flags migration (20260902121123), which disabled RLS —
+-- flagged by Supabase's advisor as "RLS Disabled in Public" (a table in the public schema is
+-- exposed to PostgREST by default, so with RLS off it's readable/writable via the anon key
+-- directly, bypassing requireNaaleAdmin() entirely).
+--
+-- Every read/write to this table in the app goes through createServiceClient() (service-role,
+-- always bypasses RLS regardless of this setting) — src/lib/naale/topics.ts, src/app/api/naale/
+-- admin/topics/route.ts, src/app/api/naale/session/start/route.ts. Nothing uses the anon/
+-- authenticated client for this table, so enabling RLS with zero policies is safe and changes no
+-- app behavior — same convention as most other tables in this project (see CLAUDE.md's "Server-
+-- authoritative DB access": RLS as defense-in-depth, actual authorization lives in the auth
+-- helpers, not in policies).
+--
+-- Already applied directly against production via the Dashboard's advisor UI; this migration
+-- exists so supabase/migrations/ (and any fresh/local environment built from it) reflects that
+-- reality instead of silently regressing back to RLS-disabled. ENABLE ROW LEVEL SECURITY is
+-- idempotent, so re-applying it here against the already-fixed remote is a no-op.
+alter table public.naale_topic_flags enable row level security;
