@@ -73,6 +73,10 @@ function PlacementRunner() {
   const [openAnswerText, setOpenAnswerText] = useState('')
   const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
   const [openValidationError, setOpenValidationError] = useState('')
+  // QA-only: loading flag for the picture-description "fill good answer"
+  // button's fetch to /api/naale/dev/picture-description-sample — see
+  // session/page.tsx's matching buttons for the full reasoning.
+  const [fetchingPictureSample, setFetchingPictureSample] = useState(false)
   // Same mic-into-openAnswerText wiring as session/page.tsx — see that file's
   // matching state for why, including following the Dev Panel language
   // toggle for recognition language.
@@ -482,6 +486,40 @@ function PlacementRunner() {
                       <button
                         type="button"
                         onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.weak(q.fields ?? {})); setOpenValidationError('') }}
+                        className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                      >
+                        💡 QA: fill weak answer
+                      </button>
+                    </div>
+                  )}
+                  {/* QA-only, picture-description special case — see
+                      session/page.tsx's matching buttons for the full
+                      reasoning. */}
+                  {debugMode && showHint && q.topic === 'תיאור תמונה בקול' && (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={fetchingPictureSample}
+                        onClick={async () => {
+                          setFetchingPictureSample(true)
+                          try {
+                            const res = await fetch(`/api/naale/dev/picture-description-sample?question_id=${q.id}`)
+                            if (res.ok) {
+                              const data = await res.json()
+                              setOpenAnswerText(data.good)
+                              setOpenValidationError('')
+                            }
+                          } finally {
+                            setFetchingPictureSample(false)
+                          }
+                        }}
+                        className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 disabled:opacity-50"
+                      >
+                        💡 QA: fill good answer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setOpenAnswerText('חתול. שולחן. אתמול היה.'); setOpenValidationError('') }}
                         className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
                       >
                         💡 QA: fill weak answer

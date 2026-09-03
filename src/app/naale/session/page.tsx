@@ -236,6 +236,9 @@ function SessionRunner() {
   const [openAnswerText, setOpenAnswerText] = useState('')
   const [openResult, setOpenResult] = useState<OpenAnswerResult | null>(null)
   const [openValidationError, setOpenValidationError] = useState('')
+  // QA-only: loading flag for the picture-description "fill good answer"
+  // button's fetch to /api/naale/dev/picture-description-sample.
+  const [fetchingPictureSample, setFetchingPictureSample] = useState(false)
   // Picture-description (תיאור תמונה בקול) is the one open-response topic
   // answered by voice — the mic writes straight into the same openAnswerText
   // state OpenAnswerInput already reads, so the rest of the open-answer flow
@@ -1482,6 +1485,44 @@ function SessionRunner() {
                         <button
                           type="button"
                           onClick={() => { setOpenAnswerText(OPEN_EXERCISE_DISPLAY[q.topic]!.devSampleAnswers!.weak(q.fields ?? {})); setOpenValidationError('') }}
+                          className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                        >
+                          💡 QA: fill weak answer
+                        </button>
+                      </div>
+                    )}
+                    {/* QA-only, picture-description special case: its model
+                        answer (image_description) is grading-only and never
+                        reaches the client as `fields` (see
+                        open-exercise-display.ts), so unlike the generic
+                        devSampleAnswers buttons above, "good" has to fetch it
+                        from the one debug-gated route allowed to cross that
+                        boundary rather than building it from fields alone. */}
+                    {debugMode && showHint && q.topic === 'תיאור תמונה בקול' && (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={fetchingPictureSample}
+                          onClick={async () => {
+                            setFetchingPictureSample(true)
+                            try {
+                              const res = await fetch(`/api/naale/dev/picture-description-sample?question_id=${q.id}`)
+                              if (res.ok) {
+                                const data = await res.json()
+                                setOpenAnswerText(data.good)
+                                setOpenValidationError('')
+                              }
+                            } finally {
+                              setFetchingPictureSample(false)
+                            }
+                          }}
+                          className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 disabled:opacity-50"
+                        >
+                          💡 QA: fill good answer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setOpenAnswerText('חתול. שולחן. אתמול היה.'); setOpenValidationError('') }}
                           className="text-xs px-2 py-1 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
                         >
                           💡 QA: fill weak answer
