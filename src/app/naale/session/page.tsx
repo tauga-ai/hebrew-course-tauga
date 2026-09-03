@@ -618,7 +618,12 @@ function SessionRunner() {
         qaLog(`/next: done (${data.reason})`)
         return { done: true, reason: data.reason as DoneReason }
       }
-      qaLog('/next: question served', data.question)
+      qaLog('/next: question served', {
+        id: data.question.id,
+        topic: data.question.topic,
+        picture_number: data.question.fields?.picture_number,
+        is_recycled: !!data.is_recycled,
+      })
       return { question: data.question }
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : t('שגיאה בטעינת השאלה') }

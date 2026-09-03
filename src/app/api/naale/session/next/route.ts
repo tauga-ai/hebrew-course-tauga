@@ -6,6 +6,7 @@ import { loadDisabledTopics } from '@/lib/naale/topics'
 import { pickNextTopic, difficultyLadder, MIN_LEVEL } from '@/lib/naale/leveling'
 import { publicFields } from '@/lib/naale/open-grading'
 import { selectAll } from '@/lib/naale/paginate'
+import { pickRecycledQuestionId } from '@/lib/naale/topic-recycling'
 
 /** Row shapes for the paginated bank/answer reads below. Spelled out because
  *  selectAll() needs the element type up front, unlike an inline query. */
@@ -331,12 +332,9 @@ export async function GET(req: NextRequest) {
   // is the fallback instead of ending after a handful of questions.
   if (owned.session.kind === 'topic' && owned.session.topic) {
     const topic = owned.session.topic
-    const topicAnswered = [...answered, ...openAnswered]
-      .filter(a => a.topic === topic && a.session_id !== sessionId)
-      .sort((a, b) => new Date(a.answered_at).getTime() - new Date(b.answered_at).getTime())
-
-    const oldest = topicAnswered[0]
-    const recycled = oldest ? bankByTopic.get(topic)?.find(q => q.id === oldest.question_id) : null
+    const topicAnswers = [...answered, ...openAnswered].filter(a => a.topic === topic)
+    const recycledId = pickRecycledQuestionId(topicAnswers, sessionId)
+    const recycled = recycledId ? bankByTopic.get(topic)?.find(q => q.id === recycledId) : null
 
     if (recycled) {
       const served = forClient(recycled)
