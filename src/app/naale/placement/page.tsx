@@ -11,6 +11,7 @@ import { useHoldToTranslate } from '@/lib/naale/use-hold-to-translate'
 import { useNaaleProfile } from '@/lib/naale/use-naale-profile'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
+import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 
@@ -407,12 +408,7 @@ function PlacementRunner() {
           {q.kind === 'open' ? (
             <>
               {q.topic === 'תיאור תמונה בקול' && q.fields?.picture_number && (
-                // eslint-disable-next-line @next/next/no-img-element -- source image dimensions vary per picture; same rationale as makbatzim's image questions.
-                <img
-                  src={`/api/naale/pictures/${q.fields.picture_number}`}
-                  alt=""
-                  className="w-full max-w-sm mx-auto aspect-[4/3] object-contain bg-black/5 dark:bg-white/5 rounded-xl mb-4 border border-card-border"
-                />
+                <PictureDescriptionImage pictureNumber={q.fields.picture_number} />
               )}
               {OPEN_EXERCISE_DISPLAY[q.topic]?.blocks(q.prompt, q.fields ?? {}).map(block => (
                 <div key={block.label} className="mb-3 text-right">
