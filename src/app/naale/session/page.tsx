@@ -12,6 +12,7 @@ import { ReportQuestionModal } from '@/components/naale/ReportQuestionModal'
 import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
 import { PausedSessionSheet } from '@/components/naale/PausedSessionSheet'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
+import { prefetchPictureImage } from '@/lib/naale/picture-prefetch'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { scoreColor } from '@/lib/score-color'
@@ -684,13 +685,24 @@ function SessionRunner() {
   // answer's Continue click rarely beats this — so by the time loadNext()
   // actually runs, the result is usually already sitting in the ref.
   //
+  // Also fires on openResult (AI-graded open-response topics — Story
+  // Continuation, WhatsApp, Text Summary, Picture Description), not just
+  // result (MCQ) — found live while verifying naale-picture-description-
+  // image-prefetch: this effect was MCQ-only, so open-response questions
+  // never prefetched anything (metadata OR image) and always fell into
+  // loadNext()'s on-demand fallback fetch on Continue. Safe to add: the two
+  // states are mutually exclusive per question (loadNext() resets both to
+  // null before loading the next one), and the separate correct-answer
+  // auto-advance effect below still checks result?.is_correct specifically,
+  // so this change doesn't make an open-graded answer auto-advance too.
+  //
   // Deferred via setTimeout rather than called directly: fetchNextQuestion
   // can itself call setReviewExhausted, so this repo's
   // react-hooks/set-state-in-effect lint rule treats invoking it directly as
   // synchronous state-setting within the effect — same rationale as the
   // countdown-expiry effect above and DevPanel.tsx's refresh calls.
   useEffect(() => {
-    if (!result) return
+    if (!result && !openResult) return
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout>
     // prefetchPromise.current is assigned HERE, synchronously, so the
@@ -704,7 +716,10 @@ function SessionRunner() {
       timeoutId = setTimeout(() => {
         fetchNextQuestion().then(outcome => {
           if (!cancelled) {
-            if ('question' in outcome) prefetchedQuestion.current = outcome.question
+            if ('question' in outcome) {
+              prefetchedQuestion.current = outcome.question
+              prefetchPictureImage(outcome.question)
+            }
             else if ('done' in outcome) prefetchedDone.current = { reason: outcome.reason }
             // 'error' outcome: left unset — loadNext()'s fallback fetch will
             // just retry for real and surface loadError normally if that
@@ -715,7 +730,7 @@ function SessionRunner() {
       }, 0)
     })
     return () => { cancelled = true; clearTimeout(timeoutId) }
-  }, [result, fetchNextQuestion])
+  }, [result, openResult, fetchNextQuestion])
 
   // Resume from the server's deadline — never a fresh 30 minutes on reload.
   //
