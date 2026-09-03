@@ -22,10 +22,16 @@
  * that resolution/weight was ever visible. Output is always JPEG regardless of source format
  * (flatten() composites any alpha channel onto white first, since JPEG has no alpha support).
  *
+ * Also writes src/data/naale/picture-blurs.json — a tiny base64 thumbnail per picture, bundled
+ * into the app (not stored in the DB or fetched at runtime) so PictureDescriptionImage can show a
+ * blurred preview of the real picture while the full image loads (naale-picture-description-
+ * blur-placeholder). Regenerated on every real (non-dry-run) run, so a corrected image's blur
+ * placeholder can't silently go stale.
+ *
  * Run with:
  *   npx tsx --env-file=.env.local scripts/upload-naale-pictures.ts [--dry-run]
  */
-import { readdirSync, readFileSync } from 'fs'
+import { readdirSync, readFileSync, writeFileSync } from 'fs'
 import path from 'path'
 import sharp from 'sharp'
 import { createServiceClient } from '../src/lib/supabase/service'
@@ -42,6 +48,12 @@ const SOURCE_DIR = path.join(
 // retina density, while cutting the largest source files (up to 10.1MB, 2816x1536) by 10-20x.
 const MAX_DIMENSION = 1200
 const JPEG_QUALITY = 82
+// Wide enough to preview real shapes/colors once blurred and scaled up to the card's full size
+// (naale-picture-description-blur-placeholder), small enough that all 30 stay a trivial addition
+// to the JS bundle (a few hundred bytes each, bundled — not fetched — by PictureDescriptionImage).
+const BLUR_WIDTH = 24
+const BLUR_JPEG_QUALITY = 40
+const BLUR_OUTPUT_PATH = path.join(process.cwd(), 'src/data/naale/picture-blurs.json')
 
 function findSourceFile(files: string[], n: number): string {
   const match = files.find(f => new RegExp(`^q${n}\\.(jpg|jpeg|png)$`, 'i').test(f))
@@ -57,6 +69,8 @@ async function main() {
   if (files.length !== TOTAL_IMAGES) {
     throw new Error(`expected ${TOTAL_IMAGES} source images, found ${files.length} in ${SOURCE_DIR}`)
   }
+
+  const blurs: Record<string, string> = {}
 
   for (let n = 1; n <= TOTAL_IMAGES; n++) {
     const sourceName = findSourceFile(files, n)
@@ -74,6 +88,13 @@ async function main() {
       .jpeg({ quality: JPEG_QUALITY })
       .toBuffer()
 
+    const blurBuffer = await sharp(original)
+      .resize({ width: BLUR_WIDTH, withoutEnlargement: true })
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: BLUR_JPEG_QUALITY })
+      .toBuffer()
+    blurs[String(n)] = `data:image/jpeg;base64,${blurBuffer.toString('base64')}`
+
     const { error } = await db.storage.from(BUCKET).upload(destPath, compressed, {
       contentType: 'image/jpeg',
       upsert: true,
@@ -83,6 +104,11 @@ async function main() {
       `uploaded ${sourceName} -> ${destPath} ` +
       `(${(original.length / 1024).toFixed(0)}KB -> ${(compressed.length / 1024).toFixed(0)}KB)`
     )
+  }
+
+  if (!dryRun) {
+    writeFileSync(BLUR_OUTPUT_PATH, JSON.stringify(blurs, null, 2) + '\n')
+    console.log(`wrote ${Object.keys(blurs).length} blur placeholders -> ${BLUR_OUTPUT_PATH}`)
   }
 
   console.log(dryRun ? 'dry run complete, nothing uploaded' : `uploaded ${TOTAL_IMAGES} images`)
