@@ -14,6 +14,7 @@ import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
 import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
+import { prefetchPictureImage } from '@/lib/naale/picture-prefetch'
 
 interface ServedQuestion {
   id: string
@@ -207,7 +208,10 @@ function PlacementRunner() {
       timeoutId = setTimeout(() => {
         fetchNextQuestion().then(outcome => {
           if (!cancelled) {
-            if ('question' in outcome) prefetchedQuestion.current = outcome
+            if ('question' in outcome) {
+              prefetchedQuestion.current = outcome
+              prefetchPictureImage(outcome.question)
+            }
             else if ('done' in outcome) prefetchedDone.current = true
             // 'error' outcome: left unset — loadNext()'s fallback fetch retries for real.
           }

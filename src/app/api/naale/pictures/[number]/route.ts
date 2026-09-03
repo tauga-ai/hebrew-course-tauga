@@ -4,10 +4,11 @@ import { getNaaleSession } from '@/lib/naale/auth'
 
 const BUCKET = 'naale-pictures'
 const TOPIC_NUMBER = 12
-// Long enough that a cached redirect (see Cache-Control below) stays valid
-// for a full practice session, short enough that a leaked signed URL doesn't
-// stay live for long.
-const SIGNED_URL_TTL_SECONDS = 3600
+// How long the browser can reuse an already-fetched picture with zero network request at all.
+// Images occasionally get corrected (upload-naale-pictures.ts upserts), so not forever — long
+// enough that a single practice session's repeat views and the prefetch this route exists to
+// serve (naale-picture-description-image-prefetch) both actually pay off.
+const CACHE_MAX_AGE_SECONDS = 3600
 
 export async function GET(_request: Request, { params }: { params: Promise<{ number: string }> }) {
   const session = await getNaaleSession()
@@ -26,22 +27,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
 
   const db = createServiceClient()
 
-  // Stored extension-less (upload-naale-pictures.ts uploads to `{topic}/{n}`, no extension) —
-  // Content-Type comes from the object's stored metadata, not its key, so the exact path is
-  // known upfront. This used to require a list() call first to discover the real extension
-  // (.jpg vs .png); removing that cut a full extra Storage round-trip off every image load.
-  const { data: signed, error: signError } = await db.storage
-    .from(BUCKET)
-    .createSignedUrl(`${TOPIC_NUMBER}/${n}`, SIGNED_URL_TTL_SECONDS)
-  if (signError || !signed) {
+  // Downloads the bytes ourselves (service-role, no signed URL) instead of redirecting to one —
+  // found live that Supabase's signed-URL responses are Cache-Control: no-cache, so even a
+  // prefetched image couldn't be reused without a network round-trip every time. Serving the
+  // bytes directly lets us set our own cacheable header instead, so a repeat request for the
+  // same picture is a real, zero-network browser cache hit.
+  const { data, error } = await db.storage.from(BUCKET).download(`${TOPIC_NUMBER}/${n}`)
+  if (error || !data) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  return NextResponse.redirect(signed.signedUrl, {
-    // Lets the browser skip re-hitting this route (auth check + a Storage API call) on every
-    // repeat view of the same picture within a session — it reuses the cached redirect target
-    // directly. Capped just under the signed URL's own TTL so a cached redirect never points at
-    // an already-expired URL.
-    headers: { 'Cache-Control': `private, max-age=${SIGNED_URL_TTL_SECONDS - 60}` },
+  // Always JPEG — upload-naale-pictures.ts re-encodes every source image to JPEG regardless of
+  // its original format (naale-picture-description-image-compression).
+  return new NextResponse(data, {
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': `private, max-age=${CACHE_MAX_AGE_SECONDS}`,
+    },
   })
 }
