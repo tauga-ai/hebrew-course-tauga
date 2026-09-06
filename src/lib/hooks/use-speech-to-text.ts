@@ -10,12 +10,15 @@ interface SpeechRecognitionResultLike {
 interface SpeechRecognitionEventLike {
   results: ArrayLike<SpeechRecognitionResultLike>
 }
+interface SpeechRecognitionErrorEventLike {
+  error: string
+}
 interface SpeechRecognitionLike {
   lang: string
   continuous: boolean
   interimResults: boolean
   onresult: ((e: SpeechRecognitionEventLike) => void) | null
-  onerror: (() => void) | null
+  onerror: ((e: SpeechRecognitionErrorEventLike) => void) | null
   onend: (() => void) | null
   start: () => void
   stop: () => void
@@ -30,6 +33,15 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | undefined {
   return w.SpeechRecognition || w.webkitSpeechRecognition
 }
 
+// How long a start() attempt waits for a first onresult before giving up and
+// reporting 'silent-timeout' — the Opera/Brave/Vivaldi case: the API exists,
+// recognition "starts," but the backend behind it isn't authorized for
+// non-Google Chromium builds, so neither onresult nor onerror ever fires.
+// Both call sites use continuous: false (a single utterance, not a
+// multi-minute session), so 8s is well past how long a real student takes to
+// start talking after clicking record.
+const NO_PROGRESS_TIMEOUT_MS = 8000
+
 interface UseSpeechToTextOptions {
   /** Called with the recognized text on every result event. */
   onTranscript: (text: string) => void
@@ -41,6 +53,10 @@ interface UseSpeechToTextOptions {
    *  speech, so this should only ever be overridden for QA (e.g. a developer testing in English
    *  without speaking Hebrew), never for a real student's session. */
   lang?: string
+  /** Called once per start() attempt that fails to produce a transcript — either a real
+   *  Web Speech API error code (e.g. 'not-allowed', 'network', 'audio-capture'), or the
+   *  synthetic 'silent-timeout' when NO_PROGRESS_TIMEOUT_MS passes with zero onresult events. */
+  onError?: (code: string) => void
 }
 
 /**
@@ -49,13 +65,22 @@ interface UseSpeechToTextOptions {
  * after stopping (e.g. right after navigating to the next question) can't overwrite state that
  * was already reset — see `acceptRef`.
  */
-export function useSpeechToText({ onTranscript, continuous = true, appendMode = false, lang = 'he-IL' }: UseSpeechToTextOptions) {
+export function useSpeechToText({ onTranscript, continuous = true, appendMode = false, lang = 'he-IL', onError }: UseSpeechToTextOptions) {
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const baseTextRef = useRef('')
   const acceptRef = useRef(true)
+  const gotResultRef = useRef(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const supported = typeof window !== 'undefined' && !!getSpeechRecognitionCtor()
+
+  function clearProgressTimeout() {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }
 
   function start(currentText = '') {
     const SR = typeof window !== 'undefined' ? getSpeechRecognitionCtor() : undefined
@@ -63,6 +88,7 @@ export function useSpeechToText({ onTranscript, continuous = true, appendMode = 
 
     acceptRef.current = true
     baseTextRef.current = appendMode ? currentText.trim() : ''
+    gotResultRef.current = false
 
     const rec = new SR()
     rec.lang = lang
@@ -72,18 +98,33 @@ export function useSpeechToText({ onTranscript, continuous = true, appendMode = 
 
     rec.onresult = (e) => {
       if (!acceptRef.current) return
+      gotResultRef.current = true
+      clearProgressTimeout()
       const transcript = Array.from(e.results).map(r => r[0].transcript).join('')
       const base = baseTextRef.current
       onTranscript(base ? `${base} ${transcript}` : transcript)
     }
-    rec.onerror = () => setIsListening(false)
+    rec.onerror = (e) => {
+      setIsListening(false)
+      clearProgressTimeout()
+      onError?.(e.error)
+    }
     rec.onend = () => setIsListening(false)
     rec.start()
     setIsListening(true)
+
+    clearProgressTimeout()
+    timeoutRef.current = setTimeout(() => {
+      if (acceptRef.current && !gotResultRef.current) {
+        onError?.('silent-timeout')
+        stop()
+      }
+    }, NO_PROGRESS_TIMEOUT_MS)
   }
 
   const stop = useCallback(() => {
     acceptRef.current = false
+    clearProgressTimeout()
     if (recognitionRef.current) {
       recognitionRef.current.onresult = null
       recognitionRef.current.onerror = null

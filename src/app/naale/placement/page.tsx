@@ -83,10 +83,15 @@ function PlacementRunner() {
   // matching state for why, including following the Dev Panel language
   // toggle for recognition language.
   const devLang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
+  // Same speech-error wiring as session/page.tsx — see that file's matching
+  // state for why (surfaces real Web Speech API errors plus the hook's
+  // synthetic 'silent-timeout', instead of a silently dead mic button).
+  const [speechError, setSpeechError] = useState(false)
   const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
     continuous: false,
     lang: devLang === 'en' ? 'en-US' : 'he-IL',
     onTranscript: text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') },
+    onError: () => setSpeechError(true),
   })
   const [submitting, setSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -161,6 +166,7 @@ function PlacementRunner() {
     setOpenAnswerText('')
     setOpenResult(null)
     setOpenValidationError('')
+    setSpeechError(false)
 
     if (prefetchedQuestion.current) {
       const { question, question_number, total } = prefetchedQuestion.current
@@ -448,12 +454,24 @@ function PlacementRunner() {
                       <SpeechToTextToggle
                         isListening={isListening}
                         supported={speechSupported}
-                        onToggle={() => (isListening ? stopListening() : startListening())}
+                        onToggle={() => {
+                          if (isListening) {
+                            stopListening()
+                          } else {
+                            setSpeechError(false)
+                            startListening()
+                          }
+                        }}
                       />
                     </div>
                   )}
                   {q.topic === 'תיאור תמונה בקול' && isListening && (
                     <p className="text-xs text-red-500 dark:text-red-400 mb-1 animate-pulse text-right">{t('🎤 מקליט... דבר בעברית')}</p>
+                  )}
+                  {q.topic === 'תיאור תמונה בקול' && !isListening && (speechError || !speechSupported) && (
+                    <p className="text-xs text-fg/60 mb-1 text-right">
+                      {t('ההקלטה הקולית לא זמינה בדפדפן הזה. אפשר להקליד את התשובה במקום.')}
+                    </p>
                   )}
                   <OpenAnswerInput
                     value={openAnswerText}
