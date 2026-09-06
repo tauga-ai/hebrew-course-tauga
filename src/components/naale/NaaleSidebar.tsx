@@ -81,6 +81,8 @@ const STAFF_ITEMS: NavItem[] = [
 ]
 const ADMIN_ITEMS: NavItem[] = [
   { slug: 'admin', name: 'ניהול', route: '/naale/admin', emoji: '🛠️', exact: true },
+  // naale-session-feedback-admin-dashboard: distribution/trend view of the popup's responses.
+  { slug: 'session-feedback-admin', name: 'משוב על תרגול', route: '/naale/admin/session-feedback', emoji: '📊' },
 ]
 
 function LogoutDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
