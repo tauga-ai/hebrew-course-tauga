@@ -252,10 +252,19 @@ function SessionRunner() {
   // real student is always in Hebrew mode, so this only ever matters when a
   // developer has already switched the panel to English to QA the app.
   const devLang = useSyncExternalStore(subscribeDevLang, getDevLang, getDevLang)
+  // Set when recording fails to produce a transcript — a real Web Speech API
+  // error, or the hook's synthetic 'silent-timeout' (the Opera/Brave/Vivaldi
+  // case: recognition "starts" but the backend behind it never actually
+  // responds, so neither a result nor a real error ever fires). Points the
+  // student at OpenAnswerInput below, which already accepts typing for every
+  // open-response topic — this only makes sure they know that's an option
+  // instead of a silently dead mic button.
+  const [speechError, setSpeechError] = useState(false)
   const { isListening, start: startListening, stop: stopListening, supported: speechSupported } = useSpeechToText({
     continuous: false,
     lang: devLang === 'en' ? 'en-US' : 'he-IL',
     onTranscript: text => { setOpenAnswerText(text); if (openValidationError) setOpenValidationError('') },
+    onError: () => setSpeechError(true),
   })
   // Same score-card pattern as sentence practice's THRESHOLDS/scoreLabel
   // (src/app/sentence/[setId]/page.tsx) — 4-5 is "advance", 3 is "neutral"
@@ -650,6 +659,7 @@ function SessionRunner() {
     setOpenAnswerText('')
     setOpenResult(null)
     setOpenValidationError('')
+    setSpeechError(false)
 
     if (prefetchedQuestion.current) {
       setQuestion(prefetchedQuestion.current)
@@ -1455,12 +1465,24 @@ function SessionRunner() {
                         <SpeechToTextToggle
                           isListening={isListening}
                           supported={speechSupported}
-                          onToggle={() => (isListening ? stopListening() : startListening())}
+                          onToggle={() => {
+                            if (isListening) {
+                              stopListening()
+                            } else {
+                              setSpeechError(false)
+                              startListening()
+                            }
+                          }}
                         />
                       </div>
                     )}
                     {q.topic === 'תיאור תמונה בקול' && isListening && (
                       <p className="text-xs text-red-500 dark:text-red-400 mb-1 animate-pulse text-right">{t('🎤 מקליט... דבר בעברית')}</p>
+                    )}
+                    {q.topic === 'תיאור תמונה בקול' && !isListening && (speechError || !speechSupported) && (
+                      <p className="text-xs text-fg/60 mb-1 text-right">
+                        {t('ההקלטה הקולית לא זמינה בדפדפן הזה. אפשר להקליד את התשובה במקום.')}
+                      </p>
                     )}
                     <OpenAnswerInput
                       value={openAnswerText}
