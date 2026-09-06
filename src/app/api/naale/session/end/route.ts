@@ -5,6 +5,7 @@ import { loadOwnedSession, isSessionCompleted, hasReachedTimer, MIN_ANSWERS_FOR_
 import { computeRewards, computeGradedRewards, computeStreak, countsAsTrackedSession, countsTowardStreak } from '@/lib/naale/rewards'
 import { selectAll } from '@/lib/naale/paginate'
 import { buildSessionProgress } from '@/lib/naale/stats'
+import { isFeedbackDue } from '@/lib/naale/session-feedback'
 
 /**
  * Ends a session and decides whether it counts as "completed" — reaching the
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   // route: placement is calibration, not practice. `completed` is already
   // always false for placement (excluding the +50 bonus), but the
   // per-correct-answer XP needs this explicit kind check too.
-  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, allSessions] = await Promise.all([
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, allSessions, { data: existingFeedback }] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean; topic: string; level_at_answer: number }[] })
       // Review answers (ticket 15) excluded too — same working decision as
@@ -83,9 +84,13 @@ export async function POST(req: NextRequest) {
       ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
       : db.from('naale_open_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Every session this account has ever had, for the weekly streak — one a
-    // day crosses the row cap inside three years.
+    // day crosses the row cap inside three years. Also doubles as the input
+    // to isFeedbackDue() below (naale-session-feedback-popup).
     selectAll<{ kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
       db.from('naale_sessions').select('kind, completed, started_at').eq('student_id', session.student.id).range(from, to)),
+    // Whether this exact session already got a feedback submission — stops a
+    // page reload from re-showing the popup once it's been answered once.
+    db.from('naale_session_feedback').select('id').eq('session_id', s.id).maybeSingle(),
   ])
 
   // This session's OWN xp_earned/coins_earned for the immediate recap —
@@ -110,6 +115,7 @@ export async function POST(req: NextRequest) {
   // scoped to this session's own rows via level_at_answer rather than the
   // student's current live level.
   const { topics } = buildSessionProgress(s.id, s.kind, completed, sessionAnswers ?? [], sessionOpenAnswers ?? [])
+  const feedback_required = isFeedbackDue(allSessions, { kind: s.kind, completed }, !!existingFeedback)
 
   return NextResponse.json({
     answered_count: s.answered_count,
@@ -122,5 +128,6 @@ export async function POST(req: NextRequest) {
     coins_earned: mcqCoins + gradedCoins,
     streak,
     topics,
+    feedback_required,
   })
 }

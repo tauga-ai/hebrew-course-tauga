@@ -25,6 +25,7 @@ import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
 import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
+import { SessionFeedbackForm } from '@/components/naale/SessionFeedbackForm'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
 import type { NaaleTopicStat } from '@/lib/naale/stats'
@@ -88,6 +89,7 @@ interface EndSummary {
   coins_earned: number
   streak: number
   topics: NaaleTopicStat[]
+  feedback_required: boolean
 }
 
 type DoneReason = 'time_up' | 'bank_exhausted' | 'no_topics'
@@ -229,6 +231,11 @@ function SessionRunner() {
   // session/end already returned.
   const [summaryNote, setSummaryNote] = useState<SessionSummary | null>(null)
   const [noteLoading, setNoteLoading] = useState(false)
+  // naale-session-feedback-popup: flips once the student submits the form
+  // gating this session's recap. summary.feedback_required already accounts
+  // for a prior submission (server checks naale_session_feedback), so this
+  // only needs to track "submitted just now, this page load."
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [question, setQuestion] = useState<ServedQuestion | null>(null)
   const [selected, setSelected] = useState<string>('')
   const [result, setResult] = useState<AnswerResult | null>(null)
@@ -1162,6 +1169,8 @@ function SessionRunner() {
               {t('לדף הבית')}
             </button>
           </div>
+        ) : summary?.feedback_required && !feedbackSubmitted ? (
+          <SessionFeedbackForm sessionId={sessionId!} onSubmitted={() => setFeedbackSubmitted(true)} />
         ) : (
           <div className="max-w-xl mx-auto py-4">
             {/* Two-step recap: step 0 is the celebratory/rewards moment (and
