@@ -58,6 +58,47 @@ export function questionIdFor(sheetName: string, rawNumber: string, sourceRow: n
   return `${topicNumber}_${n}`
 }
 
+/** Inverse of questionIdFor() — the raw "#" this row's question_id encodes.
+ *  Used by question-export.ts to repopulate a sheet's "#" column, since the
+ *  DB has no separate raw-number column of its own. */
+export function numberFromQuestionId(sheetName: string, question_id: string): number {
+  const topicNumber = TOPIC_NUMBERS[sheetName]
+  const prefix = `${topicNumber}_`
+  if (topicNumber === undefined || !question_id.startsWith(prefix)) {
+    throw new Error(`${sheetName}: question_id ${JSON.stringify(question_id)} doesn't match this topic's number`)
+  }
+  return parseInt(question_id.slice(prefix.length), 10)
+}
+
+// The next three reverse a forward transform a sheet reader applies to build
+// `prompt` from multiple source columns — kept next to questionIdFor() so the
+// forward and reverse directions of the same transform can't drift apart
+// silently. Used only by question-export.ts.
+
+// Mirrors readSentenceCorrectionSheet()'s `prompt: \`תקן את המשפט הבא:\n${brokenSentence}\``.
+const SENTENCE_CORRECTION_PREFIX = 'תקן את המשפט הבא:\n'
+export function brokenSentenceFromPrompt(prompt: string): string {
+  return prompt.startsWith(SENTENCE_CORRECTION_PREFIX)
+    ? prompt.slice(SENTENCE_CORRECTION_PREFIX.length)
+    : prompt
+}
+
+// Mirrors readReadingComprehensionSheet()'s `prompt: \`${passage}\n\n${question}\``.
+export function passageAndQuestionFromPrompt(prompt: string): { passage: string; question: string } {
+  const idx = prompt.lastIndexOf('\n\n')
+  if (idx === -1) return { passage: prompt, question: '' }
+  return { passage: prompt.slice(0, idx), question: prompt.slice(idx + 2) }
+}
+
+// Mirrors readSynonymsAntonymsSheet()'s two difficulty-gated templates.
+const SYNONYM_HIGH_RE = /^בחר את הזוג הנכון \(מילה נרדפת, מילה הפכית\) למילה "([\s\S]*)" במשפט:\n"([\s\S]*)"$/
+const SYNONYM_LOW_RE = /^בחר את המילה הנרדפת למילה "([\s\S]*)" במשפט:\n"([\s\S]*)"$/
+export function wordAndContextFromPrompt(prompt: string, difficulty: number): { word: string; context: string } {
+  const match = prompt.match(difficulty >= 4 ? SYNONYM_HIGH_RE : SYNONYM_LOW_RE)
+  if (!match) throw new Error(`synonyms/antonyms: prompt doesn't match the expected template — ${JSON.stringify(prompt.slice(0, 60))}`)
+  return { word: match[1], context: match[2] }
+}
+
 /** Cross-checks a sheet's title row against TOPIC_NUMBERS. A workbook that
  *  renumbers its topics would otherwise change every question_id silently. */
 export function checkTopicNumber(wb: XLSX.WorkBook, sheetName: string, anomalies: string[]): void {
@@ -69,7 +110,10 @@ export function checkTopicNumber(wb: XLSX.WorkBook, sheetName: string, anomalies
   }
 }
 
-const SENTENCE_COMPLETION_COL = {
+// Exported (alongside their LETTER_TO_COLUMN maps below) so question-export.ts
+// can reuse the exact same header names and letter ordering the importer
+// reads — one source of truth for both directions, per naale-question-bank-excel-export.
+export const SENTENCE_COMPLETION_COL = {
   num: NUMBER_COL,
   prompt: 'משפט (עם חסר)',
   answerA: 'תשובה A',
@@ -80,13 +124,13 @@ const SENTENCE_COMPLETION_COL = {
   difficulty: 'רמת קושי (1-5)',
 } as const
 const SENTENCE_COMPLETION_REQUIRED = Object.values(SENTENCE_COMPLETION_COL)
-const SENTENCE_COMPLETION_LETTER_TO_COLUMN = {
+export const SENTENCE_COMPLETION_LETTER_TO_COLUMN = {
   A: SENTENCE_COMPLETION_COL.answerA,
   B: SENTENCE_COMPLETION_COL.answerB,
   C: SENTENCE_COMPLETION_COL.answerC,
 } as const
 
-const SENTENCE_CORRECTION_COL = {
+export const SENTENCE_CORRECTION_COL = {
   num: NUMBER_COL,
   errorType: 'סוג השגיאה',
   brokenSentence: 'משפט שגוי',
@@ -99,14 +143,14 @@ const SENTENCE_CORRECTION_COL = {
   difficulty: 'רמת קושי (1-5)',
 } as const
 const SENTENCE_CORRECTION_REQUIRED = Object.values(SENTENCE_CORRECTION_COL)
-const SENTENCE_CORRECTION_LETTER_TO_COLUMN = {
+export const SENTENCE_CORRECTION_LETTER_TO_COLUMN = {
   A: SENTENCE_CORRECTION_COL.answerA,
   B: SENTENCE_CORRECTION_COL.answerB,
   C: SENTENCE_CORRECTION_COL.answerC,
   D: SENTENCE_CORRECTION_COL.answerD,
 } as const
 
-const READING_COMPREHENSION_COL = {
+export const READING_COMPREHENSION_COL = {
   num: NUMBER_COL,
   passage: 'טקסט קצר',
   question: 'שאלה',
@@ -119,14 +163,14 @@ const READING_COMPREHENSION_COL = {
   difficulty: 'רמת קושי (1-5)',
 } as const
 const READING_COMPREHENSION_REQUIRED = Object.values(READING_COMPREHENSION_COL)
-const READING_COMPREHENSION_LETTER_TO_COLUMN = {
+export const READING_COMPREHENSION_LETTER_TO_COLUMN = {
   A: READING_COMPREHENSION_COL.answerA,
   B: READING_COMPREHENSION_COL.answerB,
   C: READING_COMPREHENSION_COL.answerC,
   D: READING_COMPREHENSION_COL.answerD,
 } as const
 
-const SYNONYMS_ANTONYMS_COL = {
+export const SYNONYMS_ANTONYMS_COL = {
   num: NUMBER_COL,
   word: 'מילה',
   context: 'משפט הקשר',
@@ -139,7 +183,7 @@ const SYNONYMS_ANTONYMS_COL = {
   difficulty: 'רמת קושי (1-5)',
 } as const
 const SYNONYMS_ANTONYMS_REQUIRED = Object.values(SYNONYMS_ANTONYMS_COL)
-const SYNONYMS_ANTONYMS_LETTER_TO_COLUMN = {
+export const SYNONYMS_ANTONYMS_LETTER_TO_COLUMN = {
   A: SYNONYMS_ANTONYMS_COL.answerA,
   B: SYNONYMS_ANTONYMS_COL.answerB,
   C: SYNONYMS_ANTONYMS_COL.answerC,
