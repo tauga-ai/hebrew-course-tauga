@@ -1,7 +1,9 @@
--- Feedback popup shown after a student's 2nd completed practice session
--- (naale-session-feedback-popup). One row per session, enforced by the unique
--- constraint on session_id — a student is only ever asked once, gated by
--- session count server-side, not by anything the client can replay.
+-- Feedback popup shown after a student's 2nd, 4th, and 6th completed practice
+-- sessions (naale-session-feedback-popup, widened by
+-- naale-session-feedback-multi-trigger). One row per session, enforced by the
+-- unique constraint on session_id — a student is only ever asked once per
+-- qualifying session, gated by session count server-side, not by anything
+-- the client can replay.
 --
 -- Additive only. RLS enabled with no policies from creation — every read/
 -- write goes through createServiceClient() (service-role, bypasses RLS

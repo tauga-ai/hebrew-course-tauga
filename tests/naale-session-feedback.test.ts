@@ -12,13 +12,29 @@ test('isFeedbackDue: 2nd completed practice session triggers it', () => {
   assert.equal(isFeedbackDue(sessions, sessions[1], false), true)
 })
 
-test('isFeedbackDue: 3rd+ completed practice session never triggers it again', () => {
-  const sessions = [
-    { kind: 'practice', completed: true },
-    { kind: 'practice', completed: true },
-    { kind: 'practice', completed: true },
-  ]
+test('isFeedbackDue: 3rd completed practice session does not trigger it', () => {
+  const sessions = Array.from({ length: 3 }, () => ({ kind: 'practice', completed: true }))
   assert.equal(isFeedbackDue(sessions, sessions[2], false), false)
+})
+
+test('isFeedbackDue: 4th completed practice session triggers it', () => {
+  const sessions = Array.from({ length: 4 }, () => ({ kind: 'practice', completed: true }))
+  assert.equal(isFeedbackDue(sessions, sessions[3], false), true)
+})
+
+test('isFeedbackDue: 5th completed practice session does not trigger it', () => {
+  const sessions = Array.from({ length: 5 }, () => ({ kind: 'practice', completed: true }))
+  assert.equal(isFeedbackDue(sessions, sessions[4], false), false)
+})
+
+test('isFeedbackDue: 6th completed practice session triggers it', () => {
+  const sessions = Array.from({ length: 6 }, () => ({ kind: 'practice', completed: true }))
+  assert.equal(isFeedbackDue(sessions, sessions[5], false), true)
+})
+
+test('isFeedbackDue: 7th completed practice session does not trigger it', () => {
+  const sessions = Array.from({ length: 7 }, () => ({ kind: 'practice', completed: true }))
+  assert.equal(isFeedbackDue(sessions, sessions[6], false), false)
 })
 
 test('isFeedbackDue: an incomplete session never triggers it, whatever position it would be in', () => {

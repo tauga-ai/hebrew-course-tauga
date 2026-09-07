@@ -31,11 +31,12 @@ function RatingRow({ label, value, onChange }: { label: string; value: number | 
 
 /**
  * naale-session-feedback-popup: shown in place of the score/stats recap on a
- * student's 2nd completed practice session — see session/page.tsx's
- * `summary.feedback_required` branch for the gate. Submitting flips the
- * caller back to the normal recap; there is no way to see the score without
- * submitting this first (see task.md §1 for why that's a UI-order gate, not
- * a security one).
+ * student's 2nd, 4th, and 6th completed practice sessions — see
+ * session/page.tsx's `summary.feedback_required` branch for the gate.
+ * Submitting flips the caller back to the normal recap; there is no way to
+ * see the score without submitting this first (see
+ * naale-session-feedback-popup/task.md §1 for why that's a UI-order gate,
+ * not a security one).
  */
 export function SessionFeedbackForm({ sessionId, onSubmitted }: { sessionId: string; onSubmitted: () => void }) {
   const [questionQuality, setQuestionQuality] = useState<number | null>(null)
