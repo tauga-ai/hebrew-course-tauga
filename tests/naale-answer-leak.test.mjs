@@ -33,6 +33,15 @@ const DEV_HINT_ROUTES = new Set([
 ])
 const STRIP_PATTERN = 'correct_answer: undefined'
 
+//  - The question-bank export route is admin-only (requireNaaleAdmin), never
+//    reachable mid-session by a student, and its entire purpose is to hand a
+//    content manager the full bank — including correct answers and
+//    explanations — to edit and re-upload (naale-question-bank-excel-export).
+//    Not a question-serving route in the sense this guard exists for.
+const ADMIN_EXPORT_ROUTES = new Set([
+  'admin/questions/export/route.ts',
+])
+
 function findRouteFiles(dir) {
   const results = []
   for (const entry of readdirSync(dir)) {
@@ -47,7 +56,7 @@ test('no question-serving Naale route selects correct_answer', () => {
   const violations = []
   for (const file of findRouteFiles(NAALE_API_DIR)) {
     const relPath = relative(NAALE_API_DIR, file).replace(/\\/g, '/')
-    if (GRADING_ROUTES.has(relPath)) continue
+    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath)) continue
     const content = readFileSync(file, 'utf-8')
     if (!content.includes('correct_answer')) continue
     if (DEV_HINT_ROUTES.has(relPath) && content.includes(STRIP_PATTERN)) continue
@@ -68,7 +77,7 @@ test('no question-serving Naale route references explanation', () => {
   const violations = []
   for (const file of findRouteFiles(NAALE_API_DIR)) {
     const relPath = relative(NAALE_API_DIR, file).replace(/\\/g, '/')
-    if (GRADING_ROUTES.has(relPath)) continue
+    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath)) continue
     const content = readFileSync(file, 'utf-8')
     if (content.includes('explanation')) violations.push(relPath)
   }

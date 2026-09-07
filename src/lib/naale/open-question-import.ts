@@ -31,7 +31,9 @@ export const OPEN_SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: s
 // Sheet columns confirmed directly against Noam's workbook. The opening line
 // (`פתיחת AI`) is this topic's natural upsert key — mirrors how
 // question-import.ts's MCQ readers each pick their own "main text" column.
-const STORY_CONTINUATION_COL = {
+// Exported so question-export.ts can reuse the exact same header names —
+// one source of truth for both directions, per naale-question-bank-excel-export.
+export const STORY_CONTINUATION_COL = {
   num: NUMBER_COL,
   opening: 'פתיחת AI',
   task: 'משימת התלמיד',
@@ -77,7 +79,7 @@ OPEN_SHEET_READERS['סיפור בהמשכים'] = readStoryContinuationSheet
 // recipients — teacher, classmate, class group chat), so unlike Story
 // Continuation's opening line, it isn't a usable upsert key — the task
 // (`משימה`) is this row's unique content and becomes `prompt`.
-const WHATSAPP_COL = {
+export const WHATSAPP_COL = {
   num: NUMBER_COL,
   recipient: 'נמען',
   task: 'משימה',
@@ -121,7 +123,7 @@ OPEN_SHEET_READERS['ווטסאפ והודעות'] = readWhatsappSheet
 
 // The paragraph is this topic's natural upsert key — the longest, most
 // distinguishing text per row (mirrors Story Continuation's opening line).
-const TEXT_SUMMARY_COL = {
+export const TEXT_SUMMARY_COL = {
   num: NUMBER_COL,
   paragraph: 'פסקה ראשונית',
   task: 'משימת התלמיד',
@@ -167,7 +169,7 @@ OPEN_SHEET_READERS['סיכום טקסט קצר'] = readTextSummarySheet
 // open topic, the obvious "main content" column (תיאור התמונה, the official description) must
 // stay grading-only, since showing it would hand the student the answer. See task.md's Safety &
 // Rollout Guidelines for the full reasoning.
-const PICTURE_DESCRIPTION_COL = {
+export const PICTURE_DESCRIPTION_COL = {
   num: NUMBER_COL,
   imageDescription: 'תיאור התמונה',
   spokenTask: 'משימה קולית',
