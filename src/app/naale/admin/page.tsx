@@ -155,6 +155,26 @@ export default function NaaleAdminPage() {
     setImportError('')
   }
 
+  // naale-question-bank-excel-export
+  const [exporting, setExporting] = useState(false)
+
+  async function downloadQuestionBank() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/naale/admin/questions/export')
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `naale-question-bank-${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const [rosterFile, setRosterFile] = useState<File | null>(null)
   const [rosterReport, setRosterReport] = useState<RosterImportReport | null>(null)
   const [rosterImporting, setRosterImporting] = useState(false)
@@ -494,6 +514,24 @@ export default function NaaleAdminPage() {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-5">
+          {/* "Export question bank" */}
+          <h2 className="text-sm font-semibold text-fg/70 mb-3">{t('ייצוא מאגר שאלות')}</h2>
+          <p className="text-xs text-fg/50 mb-3">
+            {/* "Downloads an Excel file matching the import format exactly — can be edited and re-uploaded without any structural changes" */}
+            {t('מוריד קובץ אקסל התואם בדיוק לפורמט הייבוא — ניתן לערוך ולהעלות בחזרה ללא שינוי מבנה')}
+          </p>
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={downloadQuestionBank}
+            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+          >
+            {/* "Downloading..." / "Download question bank" */}
+            {exporting ? t('מוריד...') : t('הורדת מאגר השאלות')}
+          </button>
         </div>
 
         <div className="bg-surface rounded-2xl shadow-sm border border-card-border p-5">
