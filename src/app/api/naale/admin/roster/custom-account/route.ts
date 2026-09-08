@@ -10,12 +10,21 @@ export async function POST(request: Request) {
   if (admin.status === 'unauthenticated') return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   if (admin.status === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
-  const { email, role } = await request.json()
+  const { email, role, first_name, last_name, phone } = await request.json()
   if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'invalid_email' }, { status: 400 })
   }
   if (typeof role !== 'string' || !VALID_ROLES.includes(role)) {
     return NextResponse.json({ error: 'invalid_role' }, { status: 400 })
+  }
+
+  // Optional (naale-admin-add-student-dialog) — the bulk importer already
+  // tolerates a blank name/phone cell the same way, so this stays consistent
+  // with that rather than requiring all three.
+  const rosterFields = {
+    first_name: typeof first_name === 'string' && first_name.trim() ? first_name.trim() : null,
+    last_name: typeof last_name === 'string' && last_name.trim() ? last_name.trim() : null,
+    phone: typeof phone === 'string' && phone.trim() ? phone.trim() : null,
   }
 
   // Lowercase before writing new rows — naale_roster.email is a case-sensitive
@@ -42,8 +51,8 @@ export async function POST(request: Request) {
   const rosterEmail = existing?.email ?? normalizedEmail
 
   const { error: rosterError } = existing
-    ? await db.from('naale_roster').update({ role }).eq('email', existing.email)
-    : await db.from('naale_roster').insert({ email: normalizedEmail, role })
+    ? await db.from('naale_roster').update({ role, ...rosterFields }).eq('email', existing.email)
+    : await db.from('naale_roster').insert({ email: normalizedEmail, role, ...rosterFields })
   if (rosterError) return NextResponse.json({ error: rosterError.message }, { status: 500 })
 
   const password = generateRandomPassword()

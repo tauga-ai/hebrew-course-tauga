@@ -122,6 +122,109 @@ function PasswordDialog({
   )
 }
 
+/** Same modal shape as ConfirmDialog/PasswordDialog. Name/phone are written
+ *  into naale_roster (naale-admin-add-student-dialog) — the account this
+ *  flow creates is password-only (no Google identity), so that's already
+ *  enough for resolveFullName() (naale-profile-name-phone) to pick the
+ *  typed name up on the student's own profile with no other change needed. */
+function AddStudentDialog({
+  firstName, lastName, email, phone, role,
+  onFirstNameChange, onLastNameChange, onEmailChange, onPhoneChange, onRoleChange,
+  onSubmit, submitting, error, onClose,
+}: {
+  firstName: string; lastName: string; email: string; phone: string; role: 'student' | 'staff'
+  onFirstNameChange: (v: string) => void; onLastNameChange: (v: string) => void
+  onEmailChange: (v: string) => void; onPhoneChange: (v: string) => void
+  onRoleChange: (v: 'student' | 'staff') => void
+  onSubmit: (e: React.FormEvent) => void; submitting: boolean; error: string; onClose: () => void
+}) {
+  const inputClass =
+    'w-full border border-card-border rounded-lg px-4 py-2.5 text-right text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const labelClass = 'block text-sm font-medium text-fg/80 mb-1'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/90" onClick={onClose} />
+      <form onSubmit={onSubmit} className="relative w-full max-w-sm bg-surface rounded-2xl shadow-xl p-6">
+        <h3 className="text-base font-semibold text-fg mb-5">{t('הוספת תלמיד')}</h3>
+        <div className="space-y-4 mb-5">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="addStudentFirstName" className={labelClass}>{t('שם פרטי')}</label>
+              <input
+                id="addStudentFirstName"
+                required
+                value={firstName}
+                onChange={e => onFirstNameChange(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="addStudentLastName" className={labelClass}>{t('שם משפחה')}</label>
+              <input
+                id="addStudentLastName"
+                required
+                value={lastName}
+                onChange={e => onLastNameChange(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="addStudentEmail" className={labelClass}>{t('כתובת אימייל')}</label>
+            <input
+              id="addStudentEmail"
+              type="email"
+              required
+              value={email}
+              onChange={e => onEmailChange(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="addStudentPhone" className={labelClass}>{t('טלפון')}</label>
+            <input
+              id="addStudentPhone"
+              value={phone}
+              onChange={e => onPhoneChange(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="addStudentRole" className={labelClass}>{t('תפקיד')}</label>
+            <select
+              id="addStudentRole"
+              value={role}
+              onChange={e => onRoleChange(e.target.value as 'student' | 'staff')}
+              className={inputClass}
+            >
+              <option value="student">{t('תלמיד')}</option>
+              <option value="staff">{t('צוות')}</option>
+            </select>
+          </div>
+        </div>
+        {error && <p className="text-red-500 dark:text-red-400 text-sm mb-4">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg border border-card-border text-fg text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition"
+          >
+            {t('ביטול')}
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+          >
+            {submitting ? t('יוצר...') : t('צור משתמש')}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export default function NaaleAdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
@@ -192,8 +295,12 @@ export default function NaaleAdminPage() {
   const [rosterSearch, setRosterSearch] = useState('')
   const [rosterError, setRosterError] = useState('')
 
+  const [customFirstName, setCustomFirstName] = useState('')
+  const [customLastName, setCustomLastName] = useState('')
   const [customEmail, setCustomEmail] = useState('')
+  const [customPhone, setCustomPhone] = useState('')
   const [customRole, setCustomRole] = useState<'student' | 'staff'>('student')
+  const [showAddStudent, setShowAddStudent] = useState(false)
   const [creatingCustom, setCreatingCustom] = useState(false)
   const [customError, setCustomError] = useState('')
   const [customResult, setCustomResult] = useState<
@@ -303,12 +410,22 @@ export default function NaaleAdminPage() {
     const res = await fetch('/api/naale/admin/roster/custom-account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: customEmail, role: customRole }),
+      body: JSON.stringify({
+        email: customEmail,
+        role: customRole,
+        first_name: customFirstName,
+        last_name: customLastName,
+        phone: customPhone,
+      }),
     })
     setCreatingCustom(false)
     if (!res.ok) { setCustomError((await res.json()).error ?? 'שגיאה'); return }
     setCustomResult(await res.json())
+    setCustomFirstName('')
+    setCustomLastName('')
     setCustomEmail('')
+    setCustomPhone('')
+    setShowAddStudent(false)
     loadRoster()
   }
 
@@ -712,32 +829,13 @@ export default function NaaleAdminPage() {
           <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">
             {t('הוספת משתמש בודד')}
           </h3>
-          <form onSubmit={createCustomAccount} className="flex flex-col sm:flex-row gap-2 mb-3">
-            <input
-              type="email"
-              required
-              value={customEmail}
-              onChange={e => setCustomEmail(e.target.value)}
-              placeholder={t('כתובת אימייל')}
-              className="flex-1 border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            <select
-              value={customRole}
-              onChange={e => setCustomRole(e.target.value as 'student' | 'staff')}
-              className="border border-card-border rounded-lg px-3 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="student">{t('תלמיד')}</option>
-              <option value="staff">{t('צוות')}</option>
-            </select>
-            <button
-              type="submit"
-              disabled={creatingCustom}
-              className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
-            >
-              {creatingCustom ? t('יוצר...') : t('צור משתמש')}
-            </button>
-          </form>
-          {customError && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{customError}</p>}
+          <button
+            type="button"
+            onClick={() => setShowAddStudent(true)}
+            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition mb-3"
+          >
+            {t('הוסף תלמיד')}
+          </button>
 
           <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">{t('ייבוא רשימת נרשמים')}</h3>
 
@@ -856,6 +954,24 @@ export default function NaaleAdminPage() {
         />
       )}
       {customResult && <PasswordDialog result={customResult} onClose={() => setCustomResult(null)} />}
+      {showAddStudent && (
+        <AddStudentDialog
+          firstName={customFirstName}
+          lastName={customLastName}
+          email={customEmail}
+          phone={customPhone}
+          role={customRole}
+          onFirstNameChange={setCustomFirstName}
+          onLastNameChange={setCustomLastName}
+          onEmailChange={setCustomEmail}
+          onPhoneChange={setCustomPhone}
+          onRoleChange={setCustomRole}
+          onSubmit={createCustomAccount}
+          submitting={creatingCustom}
+          error={customError}
+          onClose={() => setShowAddStudent(false)}
+        />
+      )}
     </NaaleShell>
   )
 }
