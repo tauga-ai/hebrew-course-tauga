@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { PageHeader } from '@/components/PageHeader'
 import { NaaleShell } from '@/components/naale/NaaleShell'
 import { Avatar } from '@/components/naale/Avatar'
+import { LtrIsolate } from '@/components/tzav-rishon/LtrIsolate'
 import { createClient } from '@/lib/supabase/client'
 import { t } from '@/lib/dev-i18n'
 
@@ -16,6 +17,7 @@ interface ProfileIdentity {
   backHref: string
   fullName: string
   email: string
+  phone: string | null
   avatarUrl: string | null
   roleLabel: 'student' | 'staff' | 'admin'
   hasPassword: boolean
@@ -59,6 +61,9 @@ export default function NaaleProfilePage() {
           backHref: '/naale/admin',
           fullName: admin.full_name,
           email: admin.email,
+          // Admin-only accounts (no roster/students row) have no phone
+          // source at all — naale-profile-name-phone is roster-sourced.
+          phone: null,
           avatarUrl: admin.avatar_url,
           roleLabel: 'admin',
           hasPassword: admin.has_password,
@@ -75,6 +80,7 @@ export default function NaaleProfilePage() {
         backHref: me.role === 'staff' ? '/naale/staff' : '/naale',
         fullName: me.student.full_name,
         email: me.email,
+        phone: me.student.phone ?? null,
         avatarUrl: me.avatar_url,
         roleLabel: me.role,
         hasPassword: me.has_password,
@@ -132,6 +138,9 @@ export default function NaaleProfilePage() {
         <div className="min-w-0">
           <div className="text-sm font-medium text-fg truncate">{identity.fullName}</div>
           <div className="text-xs text-fg/50 truncate">{identity.email}</div>
+          {identity.phone && (
+            <div className="text-xs text-fg/50 truncate"><LtrIsolate>{identity.phone}</LtrIsolate></div>
+          )}
           <div className="text-xs text-fg/50">
             {t(identity.roleLabel === 'admin' ? 'מנהל' : identity.roleLabel === 'staff' ? 'צוות' : 'תלמיד')}
           </div>
