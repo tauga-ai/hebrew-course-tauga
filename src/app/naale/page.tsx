@@ -329,7 +329,7 @@ export default function NaaleHome() {
     <NaaleShell role="student" showAdminLink={me.is_admin}>
       <div className="mt-4 mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name}</h1>
+          <h1 className="text-2xl font-extrabold text-fg">{t('שלום')}, {me.student.full_name.split(' ')[0]}</h1>
           <p className="text-sm text-fg/60">{t('נעלה')}</p>
         </div>
       </div>

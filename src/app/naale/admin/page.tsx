@@ -138,62 +138,84 @@ function AddStudentDialog({
   onRoleChange: (v: 'student' | 'staff') => void
   onSubmit: (e: React.FormEvent) => void; submitting: boolean; error: string; onClose: () => void
 }) {
+  const inputClass =
+    'w-full border border-card-border rounded-lg px-4 py-2.5 text-right text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const labelClass = 'block text-sm font-medium text-fg/80 mb-1'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90" onClick={onClose} />
-      <form onSubmit={onSubmit} className="relative w-full max-w-sm bg-surface rounded-2xl shadow-xl p-5">
-        <h3 className="text-sm font-semibold text-fg mb-4">{t('הוספת תלמיד')}</h3>
-        <div className="flex flex-col gap-2 mb-3">
-          <input
-            required
-            value={firstName}
-            onChange={e => onFirstNameChange(e.target.value)}
-            placeholder={t('שם פרטי')}
-            className="border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <input
-            required
-            value={lastName}
-            onChange={e => onLastNameChange(e.target.value)}
-            placeholder={t('שם משפחה')}
-            className="border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={e => onEmailChange(e.target.value)}
-            placeholder={t('כתובת אימייל')}
-            className="border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <input
-            value={phone}
-            onChange={e => onPhoneChange(e.target.value)}
-            placeholder={t('טלפון')}
-            className="border border-card-border rounded-lg px-4 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <select
-            value={role}
-            onChange={e => onRoleChange(e.target.value as 'student' | 'staff')}
-            className="border border-card-border rounded-lg px-3 py-2 text-sm bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="student">{t('תלמיד')}</option>
-            <option value="staff">{t('צוות')}</option>
-          </select>
+      <form onSubmit={onSubmit} className="relative w-full max-w-sm bg-surface rounded-2xl shadow-xl p-6">
+        <h3 className="text-base font-semibold text-fg mb-5">{t('הוספת תלמיד')}</h3>
+        <div className="space-y-4 mb-5">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="addStudentFirstName" className={labelClass}>{t('שם פרטי')}</label>
+              <input
+                id="addStudentFirstName"
+                required
+                value={firstName}
+                onChange={e => onFirstNameChange(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="addStudentLastName" className={labelClass}>{t('שם משפחה')}</label>
+              <input
+                id="addStudentLastName"
+                required
+                value={lastName}
+                onChange={e => onLastNameChange(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="addStudentEmail" className={labelClass}>{t('כתובת אימייל')}</label>
+            <input
+              id="addStudentEmail"
+              type="email"
+              required
+              value={email}
+              onChange={e => onEmailChange(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="addStudentPhone" className={labelClass}>{t('טלפון')}</label>
+            <input
+              id="addStudentPhone"
+              value={phone}
+              onChange={e => onPhoneChange(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="addStudentRole" className={labelClass}>{t('תפקיד')}</label>
+            <select
+              id="addStudentRole"
+              value={role}
+              onChange={e => onRoleChange(e.target.value as 'student' | 'staff')}
+              className={inputClass}
+            >
+              <option value="student">{t('תלמיד')}</option>
+              <option value="staff">{t('צוות')}</option>
+            </select>
+          </div>
         </div>
-        {error && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{error}</p>}
+        {error && <p className="text-red-500 dark:text-red-400 text-sm mb-4">{error}</p>}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-card-border text-fg text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition"
+            className="flex-1 py-2.5 rounded-lg border border-card-border text-fg text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition"
           >
             {t('ביטול')}
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
           >
             {submitting ? t('יוצר...') : t('צור משתמש')}
           </button>
