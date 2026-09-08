@@ -1,9 +1,11 @@
 /**
- * Parsing and upsert logic for the Naale roster (email + role), shared by
+ * Parsing and upsert logic for the Naale roster (email + role, optionally
+ * name + phone — naale-roster-name-phone), shared by
  * scripts/import-naale-roster.ts (CLI) and /api/naale/admin/roster/import
- * (web upload). Accepts a CSV or an Excel file — the real school-provided
- * file's exact format wasn't confirmed at the time this was written, so both
- * are supported rather than guessed.
+ * (web upload). Accepts a CSV or an Excel file, in either the legacy
+ * 2-column (email, role) shape or the real school-provided 5-column shape
+ * (first_name, last_name, email, phone, role) — both are supported so an
+ * older minimal file still imports unchanged.
  *
  * Unlike question-import.ts's per-sheet fault tolerance, this is
  * deliberately all-or-nothing: naale_roster is the access-control list
@@ -18,6 +20,9 @@ const VALID_ROLES: NaaleRosterRole[] = ['student', 'staff']
 interface ParsedRow {
   email: string
   role: NaaleRosterRole
+  firstName?: string
+  lastName?: string
+  phone?: string
   line: number
 }
 
@@ -27,8 +32,10 @@ interface ParseResult {
 }
 
 /** Shared row-level validation, regardless of source format — a valid row is
- *  exactly [email, role], nothing more or less. */
-function validateRows(rawRows: string[][]): ParseResult {
+ *  either [email, role] (legacy) or [first_name, last_name, email, phone,
+ *  role] (the real school-provided shape, naale-roster-name-phone), nothing
+ *  else. */
+export function validateRows(rawRows: string[][]): ParseResult {
   const rows: ParsedRow[] = []
   const errors: string[] = []
   const seen = new Map<string, number>()
@@ -38,15 +45,22 @@ function validateRows(rawRows: string[][]): ParseResult {
     const trimmed = fields.map(f => String(f ?? '').trim())
     if (trimmed.every(f => f === '')) return // blank row, skip silently
 
-    // Tolerate a header row, but only if it actually looks like one.
-    if (idx === 0 && trimmed[0]?.toLowerCase() === 'email') return
+    // Header tolerance for both shapes — only at row 1, only an exact match
+    // on the column that would be "email" in each shape.
+    if (idx === 0 && (trimmed[0]?.toLowerCase() === 'email' || trimmed[2] === 'כתובת מייל')) return
 
-    if (trimmed.length !== 2) {
-      errors.push(`line ${line}: expected 2 fields (email,role), got ${trimmed.length}: ${JSON.stringify(trimmed)}`)
+    let email: string, role: string
+    let firstName: string | undefined, lastName: string | undefined, phone: string | undefined
+
+    if (trimmed.length === 2) {
+      ;[email, role] = trimmed
+    } else if (trimmed.length === 5) {
+      ;[firstName, lastName, email, phone, role] = trimmed
+    } else {
+      errors.push(`line ${line}: expected 2 fields (email,role) or 5 fields (first_name,last_name,email,phone,role), got ${trimmed.length}: ${JSON.stringify(trimmed)}`)
       return
     }
 
-    const [email, role] = trimmed
     const normalizedEmail = email.toLowerCase()
 
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail)) {
@@ -64,7 +78,14 @@ function validateRows(rawRows: string[][]): ParseResult {
     }
 
     seen.set(normalizedEmail, line)
-    rows.push({ email: normalizedEmail, role: role as NaaleRosterRole, line })
+    rows.push({
+      email: normalizedEmail,
+      role: role as NaaleRosterRole,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      phone: phone || undefined,
+      line,
+    })
   })
 
   return { rows, errors }
@@ -126,9 +147,21 @@ export async function importRosterFile(
 
   let written = false
   if (!opts.dryRun) {
+    // Explicit `?? null` rather than omitting the key: re-importing a row
+    // whose name/phone was removed from the source file should clear it,
+    // not leave a stale value from a previous import.
     const { error } = await db
       .from('naale_roster')
-      .upsert(rows.map(({ email, role }) => ({ email, role })), { onConflict: 'email' })
+      .upsert(
+        rows.map(({ email, role, firstName, lastName, phone }) => ({
+          email,
+          role,
+          first_name: firstName ?? null,
+          last_name: lastName ?? null,
+          phone: phone ?? null,
+        })),
+        { onConflict: 'email' }
+      )
     if (error) throw new Error(`upsert failed — ${error.message}`)
     written = true
   }

@@ -6,7 +6,9 @@
  * Run with:
  *   npx tsx --env-file=.env.local scripts/import-naale-roster.ts <path-to-file> [--dry-run]
  *
- * Accepts a .csv or .xlsx file, two columns: email, role (student|staff).
+ * Accepts a .csv or .xlsx file, in either shape:
+ *   - legacy: 2 columns — email, role (student|staff)
+ *   - full:   5 columns — first_name, last_name, email, phone, role (student|staff)
  */
 import { readFileSync } from 'fs'
 import { createServiceClient } from '../src/lib/supabase/service'
