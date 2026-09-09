@@ -17,7 +17,18 @@ export type NaaleSessionResult =
    *  the shared students table (unlike naale_role, which other queries
    *  filter on directly). Keeps every genuinely Naale-only fact under a
    *  naale_ table instead of leaking onto the cross-track students table. */
-  | { status: 'ok'; user: User; role: NaaleRole; student: Student; phone: string | null }
+  | {
+      status: 'ok'
+      user: User
+      role: NaaleRole
+      student: Student
+      phone: string | null
+      /** Whether issuePassword() has ever set a password for this account —
+       *  see hasPasswordIdentity()'s doc comment (naale-password-profile-
+       *  detection) for why Supabase's own app_metadata.providers can't be
+       *  trusted alone for this. */
+      passwordIssuedByAdmin: boolean
+    }
 
 const NAALE_TRACK = 'naale'
 const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group, naale_role, translation_lang'
@@ -77,12 +88,13 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
   // meaningfully) behaves as a case-insensitive exact match.
   const { data: rosterRow } = await db
     .from('naale_roster')
-    .select('email, role, first_name, last_name, phone')
+    .select('email, role, first_name, last_name, phone, password_issued_by_admin')
     .ilike('email', user.email)
     .maybeSingle()
 
   if (!rosterRow) return { status: 'not_on_roster', user }
   const role = rosterRow.role as NaaleRole
+  const passwordIssuedByAdmin = rosterRow.password_issued_by_admin ?? false
 
   const { data: naaleClass } = await db
     .from('classes')
@@ -134,10 +146,13 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
 
     if (Object.keys(updates).length > 0) {
       await db.from('students').update(updates).eq('id', existing.id)
-      return { status: 'ok', user, role, student: { ...existing, ...updates } as Student, phone: rosterPhone }
+      return {
+        status: 'ok', user, role, student: { ...existing, ...updates } as Student,
+        phone: rosterPhone, passwordIssuedByAdmin,
+      }
     }
 
-    return { status: 'ok', user, role, student: existing as Student, phone: rosterPhone }
+    return { status: 'ok', user, role, student: existing as Student, phone: rosterPhone, passwordIssuedByAdmin }
   }
 
   const fullName = resolveFullName(user, rosterRow.first_name, rosterRow.last_name) || user.email
@@ -154,7 +169,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
     .select(STUDENT_COLUMNS)
     .single()
 
-  if (created) return { status: 'ok', user, role, student: created as Student, phone: rosterPhone }
+  if (created) return { status: 'ok', user, role, student: created as Student, phone: rosterPhone, passwordIssuedByAdmin }
 
   // 23505 = unique_violation on students.auth_user_id — two first-login
   // requests raced (e.g. a double-clicked sign-in). The other one won and the
@@ -165,7 +180,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
       .select(STUDENT_COLUMNS)
       .eq('auth_user_id', user.id)
       .maybeSingle()
-    if (raced) return { status: 'ok', user, role, student: raced as Student, phone: rosterPhone }
+    if (raced) return { status: 'ok', user, role, student: raced as Student, phone: rosterPhone, passwordIssuedByAdmin }
   }
 
   throw new Error(`failed to provision naale student: ${error?.message}`)

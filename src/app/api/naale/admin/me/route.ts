@@ -28,7 +28,7 @@ export async function GET() {
   // case-insensitive pattern getNaaleSession() already uses for this table.
   const { data: rosterRow } = await createServiceClient()
     .from('naale_roster')
-    .select('role')
+    .select('role, password_issued_by_admin')
     .ilike('email', admin.user.email ?? '')
     .maybeSingle()
 
@@ -37,6 +37,6 @@ export async function GET() {
     full_name: fullName,
     avatar_url: avatarUrl,
     roster_role: rosterRow?.role ?? null,
-    has_password: hasPasswordIdentity(admin.user),
+    has_password: hasPasswordIdentity(admin.user) || !!rosterRow?.password_issued_by_admin,
   })
 }

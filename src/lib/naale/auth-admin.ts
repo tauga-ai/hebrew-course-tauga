@@ -66,12 +66,25 @@ export async function issuePassword(db: Db, email: string, password: string): Pr
   if (existing) {
     const { error } = await db.auth.admin.updateUserById(existing.id, { password })
     if (error) throw error
+    await markPasswordIssued(db, email)
     return 'reset'
   }
 
   const { error } = await db.auth.admin.createUser({ email, password, email_confirm: true })
   if (error) throw error
+  await markPasswordIssued(db, email)
   return 'created'
+}
+
+// Supabase Auth doesn't add 'email' to app_metadata.providers when a password
+// is set via updateUserById() on an OAuth-created user (github.com/supabase/
+// auth#2085), so hasPasswordIdentity() alone under-detects these accounts
+// (naale-password-profile-detection). Tracked here instead, since both real
+// callers already go through this one function. Best-effort: the Auth
+// password update/create above already succeeded, so a roster hiccup here
+// shouldn't surface as a failure of password issuance itself.
+async function markPasswordIssued(db: Db, email: string): Promise<void> {
+  await db.from('naale_roster').update({ password_issued_by_admin: true }).ilike('email', email)
 }
 
 // Excludes visually ambiguous characters (0/O, 1/l/I) — this password gets
