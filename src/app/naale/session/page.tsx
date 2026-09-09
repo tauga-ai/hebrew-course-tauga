@@ -932,11 +932,22 @@ function SessionRunner() {
       // student still has an unanswered question on screen (Timer: soft
       // stop, naale-topic-based-sessions) — the server (session/answer,
       // session/open-answer) already accepts a late submission for exactly
-      // this question. Once it's answered (result/openResult lands) or
-      // there's no question in flight, this effect re-runs and closes
-      // normally — session/next already refuses to serve anything new past
-      // the deadline regardless of kind, so nothing new loads either way.
+      // this question.
       if (kind === 'topic' && question && !result && !openResult) return
+      // ...and don't force-close while a wrong-answer MCQ explanation or an
+      // open-ended score/explanation is on screen either (naale-timer-cuts-
+      // off-feedback) — both already have their own "Continue" (המשך) button
+      // that calls loadNext(), which itself ends the session correctly once
+      // session/next reports the deadline has passed. Unlike the unanswered-
+      // question guard above, this one also covers 'practice' (the 30-minute
+      // mixed session): a question already answered on time has nothing left
+      // to submit late, so widening this guard doesn't touch the 30-minute
+      // session's hard stop on late answers/questions — it only stops the
+      // client from ripping away feedback the student already earned. A
+      // correct MCQ answer is deliberately excluded from both kinds: its
+      // ~700ms auto-advance flash has nothing to read, so racing it against
+      // the timer is harmless.
+      if ((kind === 'topic' || kind === 'practice') && ((result && !result.is_correct) || openResult)) return
       // Away with the clock banked: the countdown is draining off a deadline
       // the server froze, so zero here means nothing (naale-topic-session-
       // resume). The resume on return moves the deadline and re-runs this
