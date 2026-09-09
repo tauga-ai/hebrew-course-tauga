@@ -49,6 +49,6 @@ export async function GET() {
     },
     avatar_url: avatarUrl,
     is_admin: !!adminRow,
-    has_password: hasPasswordIdentity(session.user),
+    has_password: hasPasswordIdentity(session.user) || session.passwordIssuedByAdmin,
   })
 }
