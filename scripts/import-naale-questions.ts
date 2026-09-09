@@ -1,6 +1,7 @@
 /**
  * CLI entry point for the Naale question-bank import. The actual parsing,
- * validation, and upsert logic lives in src/lib/naale/question-import.ts
+ * validation, and insert-only-for-new-rows logic lives in
+ * src/lib/naale/question-import.ts
  * (multiple-choice sheets) and src/lib/naale/open-question-import.ts
  * (free-text, AI-graded sheets) — both shared with the /naale/admin web
  * upload, which runs the same two importers against the same file, so the
@@ -27,10 +28,17 @@ function printReport(label: string, tableName: string, report: QuestionImportRep
     console.log(`Skipping ${report.skippedSheets.length} sheet(s) not registered for this importer (expected — belongs to the other content kind or has no reader yet): ${report.skippedSheets.join(', ')}`)
   }
 
+  const newCount = report.totalRows - report.alreadyExists.length
   if (dryRun) {
     console.log('--dry-run: nothing written.')
   } else if (report.written) {
-    console.log(`${report.totalRows} questions upserted into ${tableName}.`)
+    console.log(`${newCount} new question(s) inserted into ${tableName}.`)
+  }
+
+  if (report.alreadyExists.length > 0) {
+    console.log(`${report.alreadyExists.length} row(s) already exist in ${tableName} — left untouched (edit them from the report page instead):`)
+    for (const a of report.alreadyExists.slice(0, 20)) console.log(`  - ${a.question_id} [${a.topic}]`)
+    if (report.alreadyExists.length > 20) console.log(`  ... and ${report.alreadyExists.length - 20} more`)
   }
 
   if (report.orphans.length > 0) {

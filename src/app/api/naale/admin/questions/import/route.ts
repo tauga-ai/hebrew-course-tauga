@@ -7,7 +7,8 @@ import { runOpenQuestionImport } from '@/lib/naale/open-question-import'
 
 /**
  * mode: 'preview' (default) parses and validates without writing; 'commit'
- * performs the same parse and then upserts. The browser re-sends the file
+ * performs the same parse and then inserts only the rows that are genuinely
+ * new. The browser re-sends the file
  * for the commit step rather than this route caching anything between
  * requests — keeps this stateless across instances.
  */

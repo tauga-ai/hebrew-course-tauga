@@ -42,6 +42,17 @@ const ADMIN_EXPORT_ROUTES = new Set([
   'admin/questions/export/route.ts',
 ])
 
+//  - The staff report-page live-content route is staff-only
+//    (requireNaaleStaff), never reachable mid-session by a student (it's not
+//    part of the session/next question-serving flow), and its entire purpose
+//    is letting staff see and fix a question's current wording — including
+//    its correct answer and explanation — from a reported-question card
+//    (naale-report-quick-edit). Same rationale as ADMIN_EXPORT_ROUTES, just
+//    staff-gated instead of admin-gated.
+const STAFF_CONTENT_ROUTES = new Set([
+  'staff/questions/[id]/route.ts',
+])
+
 function findRouteFiles(dir) {
   const results = []
   for (const entry of readdirSync(dir)) {
@@ -56,7 +67,7 @@ test('no question-serving Naale route selects correct_answer', () => {
   const violations = []
   for (const file of findRouteFiles(NAALE_API_DIR)) {
     const relPath = relative(NAALE_API_DIR, file).replace(/\\/g, '/')
-    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath)) continue
+    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath) || STAFF_CONTENT_ROUTES.has(relPath)) continue
     const content = readFileSync(file, 'utf-8')
     if (!content.includes('correct_answer')) continue
     if (DEV_HINT_ROUTES.has(relPath) && content.includes(STRIP_PATTERN)) continue
@@ -77,7 +88,7 @@ test('no question-serving Naale route references explanation', () => {
   const violations = []
   for (const file of findRouteFiles(NAALE_API_DIR)) {
     const relPath = relative(NAALE_API_DIR, file).replace(/\\/g, '/')
-    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath)) continue
+    if (GRADING_ROUTES.has(relPath) || ADMIN_EXPORT_ROUTES.has(relPath) || STAFF_CONTENT_ROUTES.has(relPath)) continue
     const content = readFileSync(file, 'utf-8')
     if (content.includes('explanation')) violations.push(relPath)
   }
