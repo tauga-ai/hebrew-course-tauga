@@ -18,6 +18,7 @@ type BankRow = {
   answer_kind: string
   options: string[] | null
   correct_answer: string
+  audio_file_name: string | null
 }
 type OpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
 // session_id is only used by topic-session recycling below, to avoid
@@ -42,6 +43,9 @@ type PublicQuestion = {
   // Present in the DB row always, but deliberately stripped from `served`
   // below unless debugMode — see that assignment for why.
   correct_answer?: string
+  // 'mcq' only, and only for הבנת הנשמע — every other MCQ topic has this
+  // column null. Not sensitive, so unlike correct_answer it's never stripped.
+  audio_file_name?: string | null
   // 'open' only — already stripped of grading-only keys before being sent
   // to the client (see the `served` assignment below), same concern as
   // correct_answer above.
@@ -149,7 +153,7 @@ export async function GET(req: NextRequest) {
   const [{ data: levels }, mcqBank, openBank, answered, openAnswered, placementSessions, disabledTopics] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<BankRow>('naale_questions', (from, to) => {
-      const q = db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+      const q = db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer, audio_file_name')
       return (bankTopic ? q.eq('topic', bankTopic) : q).range(from, to)
     }),
     selectAll<OpenBankRow>('naale_open_questions', (from, to) => {

@@ -13,6 +13,7 @@ import { LeaveSessionModal } from '@/components/naale/LeaveSessionModal'
 import { PausedSessionSheet } from '@/components/naale/PausedSessionSheet'
 import { useCountdown, formatCountdown } from '@/lib/naale/use-countdown'
 import { prefetchPictureImage } from '@/lib/naale/picture-prefetch'
+import { prefetchListeningAudio } from '@/lib/naale/listening-audio-prefetch'
 import { XP_PER_CORRECT, COINS_PER_CORRECT, COIN_SCORE_THRESHOLD, gradedAnswerReward } from '@/lib/naale/rewards'
 import { t, debugMode, getDevLang, subscribeDevLang } from '@/lib/dev-i18n'
 import { scoreColor } from '@/lib/score-color'
@@ -25,6 +26,7 @@ import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
 import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
+import { ListeningAudioPlayer } from '@/components/naale/ListeningAudioPlayer'
 import { SessionFeedbackForm } from '@/components/naale/SessionFeedbackForm'
 import { useSpeechToText } from '@/lib/hooks/use-speech-to-text'
 import { OPEN_EXERCISE_DISPLAY } from '@/lib/naale/open-exercise-display'
@@ -47,6 +49,9 @@ interface ServedQuestion {
   // below — never used for grading, which always happens server-side via
   // /answer regardless.
   correct_answer?: string
+  // 'mcq' only, and only for הבנת הנשמע (Listening Comprehension) — every
+  // other MCQ topic has this column null.
+  audio_file_name?: string | null
   // 'open' only — already stripped of grading-only keys by the server (see
   // open-grading.ts's publicFields()).
   fields?: Record<string, string>
@@ -741,6 +746,7 @@ function SessionRunner() {
             if ('question' in outcome) {
               prefetchedQuestion.current = outcome.question
               prefetchPictureImage(outcome.question)
+              prefetchListeningAudio(outcome.question)
             }
             else if ('done' in outcome) prefetchedDone.current = { reason: outcome.reason }
             // 'error' outcome: left unset — loadNext()'s fallback fetch will
@@ -1431,6 +1437,9 @@ function SessionRunner() {
 
             {hintElement}
 
+            {q.topic === 'הבנת הנשמע' && (
+              <ListeningAudioPlayer audioFileName={(q.kind === 'mcq' ? q.audio_file_name : q.fields?.audio_file_name) ?? ''} />
+            )}
             {q.kind === 'open' ? (
               <>
                 {q.topic === 'תיאור תמונה בקול' && q.fields?.picture_number && (
