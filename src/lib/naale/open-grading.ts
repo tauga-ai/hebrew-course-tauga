@@ -40,14 +40,24 @@ const REQUEST_TIMEOUT_MS = 15_000
 const MAX_ATTEMPTS = 2
 const RETRY_DELAY_MS = 500
 
+// Shown instead of real feedback when Gemini responds but the response can't
+// be parsed/validated — the student's answer is still saved (see
+// session/open-answer/route.ts), just not actually graded
+// (naale-open-grading-preserve-failed-answer).
+const FALLBACK_MESSAGE = 'אירעה שגיאה בבדיקת התשובה. הנתונים נשמרו, אנא המשך לשאלה הבאה.'
+
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-/** Throws on a missing registration, a provider error, or a malformed reply
- *  — callers (the answer routes) are responsible for catching this and
- *  falling back to a generic message, same pattern as sentence/feedback's
- *  try/catch around its Gemini call. */
+/** Throws on a missing registration or a genuine provider error (network
+ *  failure, API outage) — callers (the answer routes) are responsible for
+ *  catching this and falling back to a generic message, same pattern as
+ *  sentence/feedback's try/catch around its Gemini call. A response that
+ *  came back but couldn't be parsed/validated does NOT throw: it resolves
+ *  with a fallback `GradedResult` (`gradingFailed: true`) instead, so a
+ *  caller can still save the student's answer rather than losing it
+ *  (naale-open-grading-preserve-failed-answer). */
 export async function gradeOpenAnswer(topic: string, prompt: string, fields: Record<string, string>, userText: string): Promise<GradedResult> {
   const builder = OPEN_GRADING_BUILDERS[topic]
   if (!builder) throw new Error(`No grading prompt registered for topic: ${topic}`)
@@ -94,8 +104,12 @@ export async function gradeOpenAnswer(topic: string, prompt: string, fields: Rec
   try {
     return parseGradedResponse(rawText)
   } catch (err) {
+    // Gemini responded, but the content itself couldn't be parsed/validated
+    // — unlike the network/API failures caught in the retry loop above, this
+    // isn't rethrown: the student's answer must still be saved, just flagged
+    // as ungraded rather than lost (naale-open-grading-preserve-failed-answer).
     const reason = err instanceof Error ? err.message : String(err)
     console.error(`[open-grading] malformed response for topic "${topic}" (${reason}):`, rawText)
-    throw err
+    return { score: 3, feedback: FALLBACK_MESSAGE, gradingFailed: true }
   }
 }
