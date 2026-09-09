@@ -6,8 +6,8 @@ import { OPEN_EXERCISE_DISPLAY } from '../src/lib/naale/open-exercise-display'
 
 const TOPICS = Object.keys(OPEN_GRADING_BUILDERS)
 
-test('OPEN_GRADING_BUILDERS has all 4 built AI-graded topics registered', () => {
-  assert.deepEqual(new Set(TOPICS), new Set(['סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר', 'תיאור תמונה בקול']))
+test('OPEN_GRADING_BUILDERS has all 5 built AI-graded topics registered', () => {
+  assert.deepEqual(new Set(TOPICS), new Set(['סיפור בהמשכים', 'ווטסאפ והודעות', 'סיכום טקסט קצר', 'תיאור תמונה בקול', 'הבנת הנשמע']))
 })
 
 test('registry consistency: OPEN_GRADING_BUILDERS and OPEN_EXERCISE_DISPLAY use the exact same topic keys', () => {
@@ -51,15 +51,18 @@ for (const topic of TOPICS) {
     // Also fill in any grading-only field these topics reference internally.
     fields.expected_phrasing = '__expected_phrasing__'
     fields.expected_summary = '__expected_summary__'
+    fields.transcript = '__transcript__'
+    fields.expected_answer = '__expected_answer__'
 
     const instruction = builder.buildSystemInstruction('__prompt__', fields)
     assert.match(instruction, /__prompt__/)
-    // picture_number (תיאור תמונה בקול) is public for a different reason than every other
-    // public field here: it's how the client builds the image URL, not grading content — the
-    // model is never told which picture number it's looking at. Every other public field IS
-    // grading-relevant content, so it's still expected to appear in the instruction.
+    // picture_number (תיאור תמונה בקול) and audio_file_name (הבנת הנשמע) are public for a
+    // different reason than every other public field here: they're how the client builds the
+    // image/audio URL, not grading content — the model is never told which picture/audio file
+    // it's about. Every other public field IS grading-relevant content, so it's still expected
+    // to appear in the instruction.
     for (const key of builder.publicFieldKeys) {
-      if (key === 'picture_number') continue
+      if (key === 'picture_number' || key === 'audio_file_name') continue
       assert.match(instruction, new RegExp(`__${key}__`))
     }
   })

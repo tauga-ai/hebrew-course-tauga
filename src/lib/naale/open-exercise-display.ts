@@ -92,6 +92,12 @@ export const OPEN_PUBLIC_FIELD_KEYS: Record<string, string[]> = {
   'ווטסאפ והודעות': ['recipient'],
   'סיכום טקסט קצר': ['student_task'],
   'תיאור תמונה בקול': ['picture_number'],
+  // transcript and expected_answer stay grading-only — revealing the
+  // transcript would let the student read the answer instead of listening
+  // for it, defeating the exercise (naale-listening-comprehension-content).
+  // audio_file_name is the client's lookup key for the audio player, same
+  // role picture_number plays for the picture-description topic.
+  'הבנת הנשמע': ['audio_file_name'],
 }
 
 /** Drops every key the given topic does not display. Unknown topic → nothing. */
@@ -189,6 +195,30 @@ export const OPEN_EXERCISE_DISPLAY: Record<string, OpenExerciseDisplay> = {
     // placement/page.tsx instead special-case this topic's QA buttons to hit
     // /api/naale/dev/picture-description-sample, the one debug-gated route
     // that's allowed to cross that boundary.
+  },
+  // Levels 3-5 only — levels 1-2 are MCQ (naale_questions), not this open-text
+  // path at all (naale-listening-comprehension-content). The audio player
+  // itself (naale-listening-comprehension-player) isn't built yet; `blocks`
+  // here only covers the question text, matching how every other topic's
+  // blocks are just its text content, independent of whatever media widget a
+  // later ticket mounts alongside them.
+  'הבנת הנשמע': {
+    // Noam's exact §3 limit for the open-text response.
+    wordLimit: 20,
+    blocks: prompt => [
+      { label: 'השאלה', text: prompt },
+    ],
+    // Noam's exact §7 string for an empty submission.
+    emptyErrorMessage: 'אנא הקלד תשובה לפני ההגשה',
+    devSampleAnswers: {
+      // expected_answer (grading-only, never shown to the student) IS the
+      // rubric/reference answer for this exact question — same reasoning as
+      // WhatsApp/Text Summary's good template.
+      good: fields => fields.expected_answer,
+      // Unrelated to any question — should reliably score 1-2 regardless of
+      // which question this fills.
+      weak: () => 'חתול. שולחן. אתמול היה.',
+    },
   },
 }
 

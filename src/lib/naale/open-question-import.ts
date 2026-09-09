@@ -218,6 +218,54 @@ function readPictureDescriptionSheet(wb: XLSX.WorkBook, sheetName: string): Open
 
 OPEN_SHEET_READERS['תיאור תמונה בקול'] = readPictureDescriptionSheet
 
+// Reads the same "הבנת הנשמע" sheet question-import.ts's
+// readListeningComprehensionMcqSheet reads, split by difficulty — this half
+// only ever returns levels 3-5 (naale-listening-comprehension-content).
+// audio_file_name lives in `fields` here (levels 1-2 get their own
+// naale_questions.audio_file_name column instead, since MCQ rows have no
+// flexible field storage).
+export const LISTENING_OPEN_COL = {
+  num: NUMBER_COL,
+  audioFile: 'שם קובץ אודיו',
+  transcript: 'תמלול קטע השמע',
+  prompt: 'שאלה',
+  expectedAnswer: 'תשובה מצופה / רובריקה להערכה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const LISTENING_OPEN_REQUIRED = Object.values(LISTENING_OPEN_COL)
+
+function readListeningComprehensionOpenSheet(wb: XLSX.WorkBook, sheetName: string): OpenQuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, LISTENING_OPEN_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[LISTENING_OPEN_COL.prompt]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const difficulty = parseInt(cell(LISTENING_OPEN_COL.difficulty), 10)
+      return { cell, sourceRow, difficulty }
+    })
+    .filter(({ difficulty }) => difficulty >= 3 && difficulty <= 5)
+    .map(({ cell, sourceRow, difficulty }) => ({
+      topic: sheetName,
+      question_id: questionIdFor(sheetName, cell(LISTENING_OPEN_COL.num), sourceRow),
+      difficulty,
+      prompt: cell(LISTENING_OPEN_COL.prompt),
+      fields: {
+        transcript: cell(LISTENING_OPEN_COL.transcript),
+        expected_answer: cell(LISTENING_OPEN_COL.expectedAnswer),
+        audio_file_name: cell(LISTENING_OPEN_COL.audioFile),
+      },
+      source_row: sourceRow,
+    }))
+}
+
+OPEN_SHEET_READERS['הבנת הנשמע'] = readListeningComprehensionOpenSheet
+
 export interface OpenQuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]

@@ -31,6 +31,7 @@ export const NUMBER_COL = '#'
  *  topics, so the 7 in scope are deliberately non-contiguous. */
 export const TOPIC_NUMBERS: Record<string, number> = {
   'הבנת הנקרא': 4,
+  'הבנת הנשמע': 5,
   'נרדפות והופכיות': 6,
   'השלמת משפטים': 7,
   'תיקון משפטים': 8,
@@ -202,6 +203,9 @@ interface QuestionRow {
   options: string[]
   correct_answer: string
   explanation: string
+  // Only Listening Comprehension's MCQ rows (levels 1-2) set this — every
+  // other topic's rows simply omit it (naale-listening-comprehension-content).
+  audio_file_name?: string
   source_row: number
 }
 
@@ -403,6 +407,78 @@ function readSynonymsAntonymsSheet(wb: XLSX.WorkBook, sheetName: string): Questi
     })
 }
 
+// This sheet mixes MCQ (levels 1-2) and open-text (levels 3-5) rows on the
+// SAME sheet — every other sheet in this codebase is 100% one kind, so this
+// is the first split-by-difficulty reader pair (naale-listening-
+// comprehension-content). This reader only ever returns the MCQ half; the
+// open-text half lives in open-question-import.ts's
+// readListeningComprehensionOpenSheet, reading the same sheet with the same
+// header. The correct-answer column is a 1-4 DIGIT here, not a letter like
+// every other MCQ sheet, so it gets its own digit->column map instead of
+// reusing *_LETTER_TO_COLUMN.
+export const LISTENING_MCQ_COL = {
+  num: NUMBER_COL,
+  audioFile: 'שם קובץ אודיו',
+  prompt: 'שאלה',
+  option1: 'אפשרות 1',
+  option2: 'אפשרות 2',
+  option3: 'אפשרות 3',
+  option4: 'אפשרות 4',
+  correctDigit: 'תשובה נכונה (1-4)',
+  explanation: 'הסבר לתשובה הנכונה',
+  difficulty: 'רמת קושי (1-5)',
+} as const
+const LISTENING_MCQ_REQUIRED = Object.values(LISTENING_MCQ_COL)
+export const LISTENING_DIGIT_TO_COLUMN = {
+  '1': LISTENING_MCQ_COL.option1,
+  '2': LISTENING_MCQ_COL.option2,
+  '3': LISTENING_MCQ_COL.option3,
+  '4': LISTENING_MCQ_COL.option4,
+} as const
+
+function readListeningComprehensionMcqSheet(wb: XLSX.WorkBook, sheetName: string): QuestionRow[] {
+  const ws = wb.Sheets[sheetName]
+  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const header = (rows[HEADER_ROW_INDEX] ?? []).map(c => String(c ?? ''))
+  const col = buildColumnMap(header, LISTENING_MCQ_REQUIRED, sheetName)
+  const dataRows = rows.slice(HEADER_ROW_INDEX + 1)
+
+  return dataRows
+    .filter(row => String(row[col[LISTENING_MCQ_COL.prompt]] ?? '').trim() !== '')
+    .map((row, idx) => {
+      const cell = (name: string) => String(row[col[name]] ?? '').trim()
+      const sourceRow = HEADER_ROW_INDEX + 2 + idx
+      const difficulty = parseInt(cell(LISTENING_MCQ_COL.difficulty), 10)
+      return { cell, sourceRow, difficulty }
+    })
+    .filter(({ difficulty }) => difficulty >= MIN_LEVEL && difficulty <= 2)
+    .map(({ cell, sourceRow, difficulty }) => {
+      const question_id = questionIdFor(sheetName, cell(LISTENING_MCQ_COL.num), sourceRow)
+      const digit = cell(LISTENING_MCQ_COL.correctDigit)
+      const correctColumn = LISTENING_DIGIT_TO_COLUMN[digit as keyof typeof LISTENING_DIGIT_TO_COLUMN]
+      if (!correctColumn) {
+        throw new Error(`${sheetName} row ${sourceRow}: correct-answer digit must be 1-4, got ${JSON.stringify(digit)}`)
+      }
+      return {
+        topic: sheetName,
+        question_id,
+        difficulty,
+        prompt: cell(LISTENING_MCQ_COL.prompt),
+        answer_kind: 'mcq' as const,
+        options: [
+          cell(LISTENING_MCQ_COL.option1),
+          cell(LISTENING_MCQ_COL.option2),
+          cell(LISTENING_MCQ_COL.option3),
+          cell(LISTENING_MCQ_COL.option4),
+        ],
+        correct_answer: cell(correctColumn),
+        explanation: cell(LISTENING_MCQ_COL.explanation),
+        audio_file_name: cell(LISTENING_MCQ_COL.audioFile),
+        source_row: sourceRow,
+      }
+    })
+}
+
 /** Every real-content sheet registered for import, keyed by its exact sheet
  *  name (which is also the topic key every session query matches on). Add a
  *  new entry here once a topic has real content, pairing it with a reader
@@ -411,6 +487,7 @@ export const SHEET_READERS: Record<string, (wb: XLSX.WorkBook, sheetName: string
   'השלמת משפטים': readSentenceCompletionSheet,
   'תיקון משפטים': readSentenceCorrectionSheet,
   'הבנת הנקרא': readReadingComprehensionSheet,
+  'הבנת הנשמע': readListeningComprehensionMcqSheet,
   'נרדפות והופכיות': readSynonymsAntonymsSheet,
 }
 
@@ -453,7 +530,15 @@ function validate(topic: string, questions: QuestionRow[], anomalies: string[]) 
   // 2-3 questions per level is the whole reason the scale moved from 1-10 to
   // 1-5. A level with nothing in it means a student who reaches it
   // immediately hits the "topic finished for today" fallback.
-  for (let level = MIN_LEVEL; level <= MAX_LEVEL; level++) {
+  //
+  // Listening Comprehension mixes MCQ (levels 1-2) and open-text (3-5) on
+  // the SAME sheet (naale-listening-comprehension-content) — this reader
+  // only ever returns levels 1-2 by design, so checking the usual full 1-5
+  // range would permanently and falsely flag 3-5 as missing every single
+  // import. Levels 3-5 are the open reader's responsibility instead
+  // (open-question-import.ts has no equivalent coverage check of its own).
+  const maxLevelForThisSheet = topic === 'הבנת הנשמע' ? 2 : MAX_LEVEL
+  for (let level = MIN_LEVEL; level <= maxLevelForThisSheet; level++) {
     if (!byDifficulty.has(level)) {
       anomalies.push(`${topic}: NO questions at difficulty ${level} — students reaching this level will hit the exhausted-topic fallback immediately`)
     }
