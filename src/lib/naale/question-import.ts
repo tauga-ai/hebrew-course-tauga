@@ -439,7 +439,7 @@ function validate(topic: string, questions: QuestionRow[], anomalies: string[]) 
       anomalies.push(`${topic} row ${q.source_row}: question ends with an ellipsis — likely truncated content in the source spreadsheet, not a parsing issue`)
     }
     if (seenIds.has(q.question_id)) {
-      anomalies.push(`${topic} row ${q.source_row}: duplicate question id ${q.question_id} — the (topic, question_id) upsert key collapses these into one row`)
+      anomalies.push(`${topic} row ${q.source_row}: duplicate question id ${q.question_id} — the (topic, question_id) insert key collapses these into one row`)
     }
     seenIds.add(q.question_id)
     // No longer collapses rows now that identity is the id, but two identical
@@ -460,19 +460,44 @@ function validate(topic: string, questions: QuestionRow[], anomalies: string[]) 
   }
 }
 
+/**
+ * Splits a workbook's parsed rows into ones whose (topic, question_id) is
+ * already in the DB versus genuinely new ones — shared by both
+ * runQuestionImport() and runOpenQuestionImport() so the insert-only rule
+ * (naale-report-quick-edit) can't drift between the two content kinds.
+ * Pure and DB-free on purpose: `existing` is whatever the caller already read.
+ */
+export function partitionByExisting<T extends { topic: string; question_id: string }>(
+  allRows: T[],
+  existing: { topic: string; question_id: string }[]
+): { newRows: T[]; alreadyExists: { topic: string; question_id: string }[] } {
+  const existingKeys = new Set(existing.map(r => `${r.topic} ${r.question_id}`))
+  const newRows = allRows.filter(r => !existingKeys.has(`${r.topic} ${r.question_id}`))
+  const alreadyExists = allRows
+    .filter(r => existingKeys.has(`${r.topic} ${r.question_id}`))
+    .map(r => ({ topic: r.topic, question_id: r.question_id }))
+  return { newRows, alreadyExists }
+}
+
 export interface QuestionImportReport {
   summary: { topic: string; count: number; byLevel: Record<number, number> }[]
   anomalies: string[]
   skippedSheets: string[]
   orphans: { topic: string; question_id: string; prompt: string }[]
+  // Rows the workbook carried whose question_id already exists in the DB —
+  // left untouched rather than silently reverted (naale-report-quick-edit).
+  // Reported, not just skipped, so a re-upload that "did nothing" for a row
+  // is visible, not a mystery.
+  alreadyExists: { topic: string; question_id: string }[]
   totalRows: number
   written: boolean
 }
 
 /**
- * Parses, validates, and (unless dryRun) upserts every registered sheet from
- * `wb`. Shared by scripts/import-naale-questions.ts (CLI) and
- * /api/naale/admin/questions/import (web upload) so the two never diverge.
+ * Parses, validates, and (unless dryRun) inserts every new row of every
+ * registered sheet from `wb`. Shared by scripts/import-naale-questions.ts
+ * (CLI) and /api/naale/admin/questions/import (web upload) so the two never
+ * diverge.
  */
 export async function runQuestionImport(
   wb: XLSX.WorkBook,
@@ -513,25 +538,32 @@ export async function runQuestionImport(
   const expectedSheets = Object.keys(SHEET_READERS)
   const skippedSheets = wb.SheetNames.filter(n => !expectedSheets.includes(n))
 
+  // Read once, before writing — drives both the insert-only decision below
+  // and the orphans report that already existed. Reported, never deleted —
+  // scoped to registered sheets so rows seeded for not-yet-imported topics
+  // aren't flagged as orphans of a workbook that never covered them. Read
+  // even on a dry run so the preview shows the same information a real run's
+  // console output would. Reads the whole bank, which is already past 1000
+  // rows — an unpaginated read here would report phantom orphans for every
+  // row max_rows trimmed.
+  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_questions', (from, to) =>
+    db.from('naale_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
+  const { newRows, alreadyExists } = partitionByExisting(allRows, existing)
+
   let written = false
-  if (!opts.dryRun && allRows.length > 0) {
-    const { error } = await db.from('naale_questions').upsert(allRows, { onConflict: 'topic,question_id' })
-    if (error) throw new Error(`upsert failed — ${error.message}`)
+  if (!opts.dryRun && newRows.length > 0) {
+    // insert, not upsert — a question_id already in the DB is left alone,
+    // however the workbook now describes it. Editing an existing question is
+    // the report-page quick-edit's job from here on (naale-report-quick-edit).
+    const { error } = await db.from('naale_questions').insert(newRows)
+    if (error) throw new Error(`insert failed — ${error.message}`)
     written = true
   }
 
-  // Reported, never deleted — scoped to registered sheets so rows seeded for
-  // not-yet-imported topics aren't flagged as orphans of a workbook that
-  // never covered them. Read even on a dry run so the preview shows the same
-  // information a real run's console output would.
-  // Reads the whole bank, which is already past 1000 rows — an unpaginated
-  // read here would report phantom orphans for every row max_rows trimmed.
-  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_questions', (from, to) =>
-    db.from('naale_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
   const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
   const orphans = existing
     .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
     .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 
-  return { summary, anomalies, skippedSheets, orphans, totalRows: allRows.length, written }
+  return { summary, anomalies, skippedSheets, orphans, alreadyExists, totalRows: allRows.length, written }
 }

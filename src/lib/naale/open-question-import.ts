@@ -8,7 +8,7 @@
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { selectAll } from './paginate'
-import { buildColumnMap, checkTopicNumber, NUMBER_COL, questionIdFor } from './question-import'
+import { buildColumnMap, checkTopicNumber, NUMBER_COL, partitionByExisting, questionIdFor } from './question-import'
 
 // Each content ticket's sheet reader imports buildColumnMap directly from
 // ./question-import (exported there for exactly this reuse) — not
@@ -223,15 +223,19 @@ export interface OpenQuestionImportReport {
   anomalies: string[]
   skippedSheets: string[]
   orphans: { topic: string; question_id: string; prompt: string }[]
+  // Rows the workbook carried whose question_id already exists in the DB —
+  // left untouched rather than silently reverted (naale-report-quick-edit).
+  alreadyExists: { topic: string; question_id: string }[]
   totalRows: number
   written: boolean
 }
 
 /**
- * Parses, validates, and (unless dryRun) upserts every registered sheet from
- * `wb`. Shared by scripts/import-naale-questions.ts (CLI) and
- * /api/naale/admin/questions/import (web upload), alongside runQuestionImport()
- * for the MCQ sheets, so a single workbook upload covers both content kinds.
+ * Parses, validates, and (unless dryRun) inserts every new row of every
+ * registered sheet from `wb`. Shared by scripts/import-naale-questions.ts
+ * (CLI) and /api/naale/admin/questions/import (web upload), alongside
+ * runQuestionImport() for the MCQ sheets, so a single workbook upload covers
+ * both content kinds.
  */
 export async function runOpenQuestionImport(
   wb: XLSX.WorkBook,
@@ -269,22 +273,27 @@ export async function runOpenQuestionImport(
   const expectedSheets = Object.keys(OPEN_SHEET_READERS)
   const skippedSheets = wb.SheetNames.filter(n => !expectedSheets.includes(n))
 
+  // Read once, before writing — drives both the insert-only decision below
+  // and the orphans report. Reported, never deleted — same convention as
+  // runQuestionImport(). Reads the whole bank, which is already past 1000
+  // rows — an unpaginated read here would report phantom orphans for every
+  // row max_rows trimmed.
+  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_open_questions', (from, to) =>
+    db.from('naale_open_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
+  const { newRows, alreadyExists } = partitionByExisting(allRows, existing)
+
   let written = false
-  if (!opts.dryRun && allRows.length > 0) {
-    const { error } = await db.from('naale_open_questions').upsert(allRows, { onConflict: 'topic,question_id' })
-    if (error) throw new Error(`upsert failed — ${error.message}`)
+  if (!opts.dryRun && newRows.length > 0) {
+    // insert, not upsert — see runQuestionImport()'s identical comment.
+    const { error } = await db.from('naale_open_questions').insert(newRows)
+    if (error) throw new Error(`insert failed — ${error.message}`)
     written = true
   }
 
-  // Reported, never deleted — same convention as runQuestionImport().
-  // Reads the whole bank, which is already past 1000 rows — an unpaginated
-  // read here would report phantom orphans for every row max_rows trimmed.
-  const existing = await selectAll<{ topic: string; question_id: string; prompt: string }>('naale_open_questions', (from, to) =>
-    db.from('naale_open_questions').select('topic, question_id, prompt').in('topic', expectedSheets).range(from, to))
   const workbookKeys = new Set(allRows.map(r => `${r.topic} ${r.question_id}`))
   const orphans = existing
     .filter(r => !workbookKeys.has(`${r.topic} ${r.question_id}`))
     .map(r => ({ topic: r.topic, question_id: r.question_id, prompt: r.prompt }))
 
-  return { summary, anomalies, skippedSheets, orphans, totalRows: allRows.length, written }
+  return { summary, anomalies, skippedSheets, orphans, alreadyExists, totalRows: allRows.length, written }
 }

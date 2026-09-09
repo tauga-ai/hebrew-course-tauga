@@ -506,6 +506,7 @@ export default function NaaleAdminPage() {
     anomalies: [...report.mcq.anomalies, ...report.open.anomalies],
     skippedSheets: report.mcq.skippedSheets.filter(s => report.open.skippedSheets.includes(s)),
     orphans: [...report.mcq.orphans, ...report.open.orphans],
+    alreadyExists: [...report.mcq.alreadyExists, ...report.open.alreadyExists],
     totalRows: report.mcq.totalRows + report.open.totalRows,
     written: report.mcq.written || report.open.written,
   }
@@ -769,6 +770,12 @@ export default function NaaleAdminPage() {
               {combined.orphans.length > 0 && (
                 <p className="text-xs text-fg/40">
                   {combined.orphans.length} {t('שאלות קיימות שלא נמצאות בקובץ זה (לא נמחקו)')}
+                </p>
+              )}
+
+              {combined.alreadyExists.length > 0 && (
+                <p className="text-xs text-fg/40">
+                  {combined.alreadyExists.length} {t('שורות שכבר קיימות במאגר ולא עודכנו (ניתן לערוך מדף הדיווחים)')}
                 </p>
               )}
             </div>
