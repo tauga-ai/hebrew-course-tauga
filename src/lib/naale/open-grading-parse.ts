@@ -1,4 +1,12 @@
-export interface GradedResult { score: number; feedback: string }
+export interface GradedResult {
+  score: number
+  feedback: string
+  // Set when this result is a fallback for a response Gemini sent back that
+  // couldn't be parsed/validated as the expected shape — never for a genuine
+  // real grade. Absent (not false) on every normal successful parse
+  // (naale-open-grading-preserve-failed-answer).
+  gradingFailed?: boolean
+}
 
 /**
  * Parses and validates a raw Gemini response for gradeOpenAnswer(). Split out

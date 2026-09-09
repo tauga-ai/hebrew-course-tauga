@@ -79,13 +79,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'כבר ענית על שאלה זו', code: 'duplicate_answer' }, { status: 409 })
   }
 
-  let graded: { score: number; feedback: string }
+  let graded: { score: number; feedback: string; gradingFailed?: boolean }
   try {
     graded = await gradeOpenAnswer(question.topic, question.prompt, question.fields as Record<string, string>, user_text)
   } catch (err) {
+    // A genuine Gemini call failure (network/API) — gradeOpenAnswer() itself
+    // already resolves rather than throws for a malformed-but-received
+    // response, so reaching this catch means the call never came back at
+    // all. Unaffected by naale-open-grading-preserve-failed-answer: this
+    // path still 502s with nothing saved, exactly as before.
     console.error('Naale open-answer grading error:', err)
     return NextResponse.json({ error: 'שגיאה בבדיקת התשובה, נסה שוב' }, { status: 502 })
   }
+
+  // A grading-failure result is treated the same as a sanctioned review for
+  // every effect that matters here: it must not move the topic's level or
+  // streak, must not count toward this session's answered_count or the
+  // recent-answers milestone streak, and must be flagged is_review so
+  // stats.ts's XP/streak aggregation (which filters on exactly that column)
+  // and the client's reward-flash gating both already exclude it for free
+  // (naale-open-grading-preserve-failed-answer) — it just still gets SAVED,
+  // unlike before.
+  const countsAsReal = !isSanctionedReview && graded.gradingFailed !== true
 
   const { data: levelRow } = await db
     .from('naale_topic_levels')
@@ -98,8 +113,10 @@ export async function POST(req: NextRequest) {
     ? { level: levelRow.level, correct_streak: levelRow.correct_streak, wrong_streak: levelRow.wrong_streak }
     : { level: MIN_LEVEL, correct_streak: 0, wrong_streak: 0 }
   // Same working decision as MCQ review answers: graded, recorded, but never
-  // moves the level — it's re-shown because it scored poorly.
-  const after = isSanctionedReview ? before : applyGradedAnswer(before, graded.score)
+  // moves the level — it's re-shown because it scored poorly. A
+  // grading-failure answer gets the same treatment, for the same reason: the
+  // score is a placeholder, not a real grade.
+  const after = countsAsReal ? applyGradedAnswer(before, graded.score) : before
 
   const { error: answerError } = await db.from('naale_open_answers').insert({
     session_id,
@@ -111,7 +128,7 @@ export async function POST(req: NextRequest) {
     user_text,
     score: graded.score,
     feedback: graded.feedback,
-    is_review: isSanctionedReview,
+    is_review: !countsAsReal,
   })
   if (answerError) {
     // Same DB-level backstop as naale_answers_session_question_unique — see
@@ -122,7 +139,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: answerError.message }, { status: 500 })
   }
 
-  if (!isSanctionedReview) {
+  if (countsAsReal) {
     await db.from('naale_topic_levels').upsert({
       student_id: session.student.id,
       topic: question.topic,
@@ -152,7 +169,7 @@ export async function POST(req: NextRequest) {
   // sits at the very start of a student's history — it can only shrink an early
   // window, never hide a recent answer out of a later one.
   let milestone: number | null = null
-  if (!isSanctionedReview) {
+  if (countsAsReal) {
     const { data: recent } = await db
       .from('naale_open_answers')
       .select('score, session_id')
@@ -186,6 +203,6 @@ export async function POST(req: NextRequest) {
     level: after.level,
     level_changed: after.level !== before.level,
     milestone,
-    is_review: isSanctionedReview,
+    is_review: !countsAsReal,
   })
 }
