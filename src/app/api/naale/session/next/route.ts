@@ -173,9 +173,12 @@ export async function GET(req: NextRequest) {
 
   const levelByTopic = new Map<string, number>((levels ?? []).map(l => [l.topic, l.level]))
 
-  // A topic name only ever exists in naale_questions OR naale_open_questions,
-  // never both — so merging by topic here can't collide two different
-  // question kinds under one key.
+  // A topic name usually exists in naale_questions OR naale_open_questions,
+  // never both — except Listening Comprehension (הבנת הנשמע), which is
+  // genuinely both: MCQ for levels 1-2, open-text for 3-5
+  // (naale-listening-comprehension-content). The merge below doesn't depend
+  // on the old one-table-per-topic assumption — it just appends into
+  // whichever array already exists for that topic — so this is safe as-is.
   const bankByTopic = new Map<string, PublicQuestion[]>()
   for (const row of mcqBank) {
     if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
