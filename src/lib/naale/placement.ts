@@ -28,6 +28,7 @@ type PlacementBankRow = {
   answer_kind: string
   options: string[] | null
   correct_answer: string
+  audio_file_name: string | null
 }
 type PlacementOpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
 
@@ -39,7 +40,7 @@ export async function getPlacementQuestions() {
   const [mcq, open, disabledTopics] = await Promise.all([
     selectAll<PlacementBankRow>('naale_questions', (from, to) =>
       db.from('naale_questions')
-        .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+        .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer, audio_file_name')
         .order('difficulty', { ascending: true })
         .order('id', { ascending: true }) // deterministic tie-break
         .range(from, to)),

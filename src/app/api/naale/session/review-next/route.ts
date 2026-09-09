@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
   const { data: question } = await db
     .from('naale_questions')
-    .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer')
+    .select('id, topic, difficulty, prompt, answer_kind, options, correct_answer, audio_file_name')
     .eq('id', next.question_id)
     .maybeSingle()
 

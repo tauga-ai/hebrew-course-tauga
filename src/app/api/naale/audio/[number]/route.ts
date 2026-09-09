@@ -39,6 +39,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
   return new NextResponse(data, {
     headers: {
       'Content-Type': 'audio/mpeg',
+      // Without an explicit Content-Length, this response comes back
+      // chunked — Chrome then reports the <audio> element's `duration` as
+      // Infinity until the whole clip has buffered, breaking the player's
+      // progress bar and total-time display until self-correction kicks in.
+      'Content-Length': String(data.size),
       'Cache-Control': `private, max-age=${CACHE_MAX_AGE_SECONDS}`,
     },
   })
