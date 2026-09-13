@@ -32,9 +32,9 @@ type ReportRow = {
  *
  * Reporter names are resolved in a second query rather than an embedded join,
  * so this doesn't depend on a PostgREST relationship existing between
- * naale_question_reports and students — there is deliberately no FK from the
- * report to either question bank (see the migration), and keeping the reads
- * uniform makes that asymmetry less surprising.
+ * naale_question_reports and naale_students — there is deliberately no FK
+ * from the report to either question bank (see the migration), and keeping
+ * the reads uniform makes that asymmetry less surprising.
  */
 export async function GET() {
   const staff = await requireNaaleStaff()
@@ -63,7 +63,7 @@ export async function GET() {
 
   const studentIds = [...new Set(reports.map(r => r.student_id))]
   const { data: students } = studentIds.length
-    ? await db.from('students').select('id, full_name').in('id', studentIds)
+    ? await db.from('naale_students').select('id, full_name').in('id', studentIds)
     : { data: [] }
   const nameById = new Map((students ?? []).map(s => [s.id, s.full_name as string]))
 

@@ -44,7 +44,7 @@ export async function GET() {
     student: {
       id: session.student.id,
       full_name: session.student.full_name,
-      translation_lang: session.student.translation_lang ?? 'ru',
+      translation_lang: session.translationLang,
       phone: session.phone,
     },
     avatar_url: avatarUrl,

@@ -17,10 +17,9 @@ import { selectAll } from '@/lib/naale/paginate'
  *
  * Two gates, both server-side, mirroring the list route:
  *  1. Staff role required — requireNaaleStaff().
- *  2. The *target* must be a Naale student. Without the class + naale_role
- *     check, a staff member could reach a Druze/Arabic or adult-Russian
- *     student, or another staff member, by putting their id in the URL —
- *     staff have students rows too, so they can practice.
+ *  2. The *target* must be a Naale student. Without the role check, a staff
+ *     member could reach another staff member's row by putting their id in
+ *     the URL — staff have naale_students rows too, so they can practice.
  *
  * Reads go through selectAll(). Filtering by student_id is not a bound:
  * tests/naale-pagination-guard.test.mjs only counts .eq('session_id') as
@@ -44,20 +43,11 @@ export async function GET(
 
   const db = createServiceClient()
 
-  const { data: naaleClass } = await db
-    .from('classes')
-    .select('id')
-    .eq('track', 'naale')
-    .maybeSingle()
-
-  if (!naaleClass) return NextResponse.json({ error: 'naale class missing' }, { status: 500 })
-
   const { data: student } = await db
-    .from('students')
+    .from('naale_students')
     .select('id, full_name, auth_user_id')
     .eq('id', studentId)
-    .eq('class_id', naaleClass.id)
-    .eq('naale_role', 'student')
+    .eq('role', 'student')
     .maybeSingle()
 
   // Same 404 for "no such id" and "not a Naale student", so the response can't

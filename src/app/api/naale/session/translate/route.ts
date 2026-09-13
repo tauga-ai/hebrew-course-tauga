@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = createServiceClient()
-  const targetLang = session.student.translation_lang === 'ar' ? 'ar' : 'ru'
+  const targetLang = session.translationLang === 'ar' ? 'ar' : 'ru'
   let translation: string
   try {
     translation = await translateWord(db, cleaned, targetLang)

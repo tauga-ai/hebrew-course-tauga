@@ -105,8 +105,8 @@ function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean })
  *
  * Staff also get a "try a practice session" button, reusing the same
  * /session/start -> /naale/session flow students use unchanged — staff have
- * students rows too (so they can practice), but /api/naale/staff/students
- * filters them out via naale_role so they never show up in this list.
+ * naale_students rows too (so they can practice), but /api/naale/staff/students
+ * filters them out via role so they never show up in this list.
  *
  * Redesigned from a flat expandable list into a searchable roster table with
  * a "needs attention" section (accuracy below NEEDS_ATTENTION_THRESHOLD,
