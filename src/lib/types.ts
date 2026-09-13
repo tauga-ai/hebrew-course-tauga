@@ -9,12 +9,6 @@ export interface Student {
   class_id: number
   created_at: string
   lesson_group: number | null
-  /** Naale track only — denormalized from naale_roster at provisioning time
-   *  (see requireNaaleStaff()/getNaaleSession()). Null on the other two tracks. */
-  naale_role?: 'student' | 'staff' | null
-  /** Naale track only — language for the hold-to-translate feature. 'ru' (Russian)
-   *  or 'ar' (Arabic). Defaults to 'ru' for all existing students. */
-  translation_lang?: 'ru' | 'ar'
 }
 
 export interface PracticeSet {
@@ -65,6 +59,20 @@ export interface StudentSession {
 }
 
 export type NaaleRole = 'student' | 'staff'
+
+/** A Naale student/staff account — lives in its own naale_students table, entirely
+ *  independent of the shared, cross-track `students` table (naale-students-full-split).
+ *  No `class_id`/`lesson_group`: a row existing in naale_students at all already means
+ *  "this is a Naale account," so the cross-track scoping those two fields exist for on
+ *  `Student` has no equivalent need here. */
+export interface NaaleStudentProfile {
+  id: string
+  full_name: string
+  role: NaaleRole
+  translation_lang: 'ru' | 'ar'
+  created_at: string
+  updated_at: string
+}
 
 export interface NaaleRosterEntry {
   email: string

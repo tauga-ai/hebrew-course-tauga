@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest) {
 
   const db = createServiceClient()
   const { error } = await db
-    .from('students')
+    .from('naale_students')
     .update({ translation_lang })
     .eq('id', session.student.id)
 

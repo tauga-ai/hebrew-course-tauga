@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { NaaleRole, Student } from '@/lib/types'
+import type { NaaleRole, NaaleStudentProfile } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 
 export type NaaleSessionResult =
@@ -10,19 +10,20 @@ export type NaaleSessionResult =
    *  design — the UI must show a "contact your counselor" page. Never a crash,
    *  and never a silently-defaulted role. */
   | { status: 'not_on_roster'; user: User }
-  /** `phone` is read live from naale_roster, not denormalized onto students
+  /** `phone` is read live from naale_roster, not stored on naale_students
    *  (naale-profile-name-phone) — this function already queries the roster
    *  on every call for the role check, and phone has no other consumer
-   *  anywhere in the app, so there's nothing to gain from also storing it on
-   *  the shared students table (unlike naale_role, which other queries
-   *  filter on directly). Keeps every genuinely Naale-only fact under a
-   *  naale_ table instead of leaking onto the cross-track students table. */
+   *  anywhere in the app, so there's nothing to gain from also storing it. */
   | {
       status: 'ok'
       user: User
       role: NaaleRole
-      student: Student
+      student: NaaleStudentProfile
       phone: string | null
+      /** Same value as student.translation_lang — a sibling field so callers
+       *  that only care about the resolved language don't need to reach into
+       *  `student` for it. */
+      translationLang: 'ru' | 'ar'
       /** Whether issuePassword() has ever set a password for this account —
        *  see hasPasswordIdentity()'s doc comment (naale-password-profile-
        *  detection) for why Supabase's own app_metadata.providers can't be
@@ -30,8 +31,7 @@ export type NaaleSessionResult =
       passwordIssuedByAdmin: boolean
     }
 
-const NAALE_TRACK = 'naale'
-const STUDENT_COLUMNS = 'id, full_name, class_id, created_at, lesson_group, naale_role, translation_lang'
+const NAALE_STUDENT_COLUMNS = 'id, full_name, role, translation_lang, created_at, updated_at'
 
 /**
  * A Google identity's own name always wins (naale-profile-name-phone) — the
@@ -54,20 +54,23 @@ export function resolveFullName(
 /**
  * Resolves a Naale-track caller from the Supabase session.
  *
- * Three things this does that getStudentFromSession() does not:
+ * Two things this does that getStudentFromSession() does not:
  *  1. Derives the role from naale_roster by email — the school's CSV is the
  *     only source of truth for who gets in and as what.
- *  2. Auto-provisions the students row on first login. This track has no
- *     /student/complete-profile step: the roster already vouches for the
+ *  2. Auto-provisions the naale_students row on first login. This track has
+ *     no /student/complete-profile step: the roster already vouches for the
  *     student, and the display name comes from their Google identity when
  *     they have one, or their naale_roster name otherwise (naale-profile-
  *     name-phone — mainly for password-login students, who have no Google
  *     identity to pull a name from at all).
- *  3. Verifies the student's class is on the 'naale' track, so a draft-prep
- *     student's valid cookie cannot reach Naale data.
  *
- * Never call getStudentFromSession() from a Naale route — it does not check
- * track, and would let the other two populations through.
+ * No cross-track check is needed here (naale-students-full-split): Naale
+ * accounts live in their own naale_students table now, so a row existing
+ * there at all already means "this is a Naale account" — there is no shared
+ * `students` row a draft-prep account's cookie could collide with.
+ *
+ * Never call getStudentFromSession() from a Naale route — it resolves a
+ * *different* table (students) and knows nothing about this one.
  */
 export async function getNaaleSession(): Promise<NaaleSessionResult> {
   const supabase = await createClient()
@@ -95,40 +98,24 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
   if (!rosterRow) return { status: 'not_on_roster', user }
   const role = rosterRow.role as NaaleRole
   const passwordIssuedByAdmin = rosterRow.password_issued_by_admin ?? false
-
-  const { data: naaleClass } = await db
-    .from('classes')
-    .select('id')
-    .eq('track', NAALE_TRACK)
-    .maybeSingle()
-
-  if (!naaleClass) throw new Error('naale class row missing — run migration_naale_track.sql')
+  const rosterPhone = rosterRow.phone ?? null
 
   const { data: existing } = await db
-    .from('students')
-    .select(STUDENT_COLUMNS)
+    .from('naale_students')
+    .select(NAALE_STUDENT_COLUMNS)
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
   if (existing) {
-    // A roster email whose students row points at another track's class means
-    // the same person exists on two tracks. Refuse rather than silently
-    // reading/writing across the isolation boundary.
-    if (existing.class_id !== naaleClass.id) return { status: 'not_on_roster', user }
-
-    // Keep a few denormalized students columns in sync with the roster on
-    // every login, not just at first creation — same reasoning for all
-    // three: a change in naale_roster should take effect without a manual
-    // backfill.
-    const updates: Partial<Student> = {}
-
-    // naale_role: without this, a role change in naale_roster (student
-    // promoted to staff, say) takes effect for the SESSION's own role
-    // (always read fresh above) but not for this column — and
-    // /api/naale/staff/students filters on exactly this column, so a
-    // promoted staff member would keep appearing in their own staff-facing
-    // student list. Confirmed live during Ticket 16's QA pass.
-    if (existing.naale_role !== role) updates.naale_role = role
+    // Keep role in sync with the roster on every login, not just at first
+    // creation — a role change in naale_roster (student promoted to staff,
+    // say) takes effect for the SESSION's own role (always read fresh above)
+    // but not for this column otherwise — and /api/naale/staff/students
+    // filters on exactly this column, so a promoted staff member would keep
+    // appearing in their own staff-facing student list. Confirmed live
+    // during Ticket 16's QA pass.
+    const updates: Partial<NaaleStudentProfile> = {}
+    if (existing.role !== role) updates.role = role
 
     // full_name: only touch it if the CURRENT value is exactly the
     // email-fallback this function itself would have written (i.e. nothing
@@ -142,45 +129,51 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
       if (resolved) updates.full_name = resolved
     }
 
-    const rosterPhone = rosterRow.phone ?? null
-
     if (Object.keys(updates).length > 0) {
-      await db.from('students').update(updates).eq('id', existing.id)
+      await db.from('naale_students').update(updates).eq('id', existing.id)
+      const merged = { ...existing, ...updates } as NaaleStudentProfile
       return {
-        status: 'ok', user, role, student: { ...existing, ...updates } as Student,
-        phone: rosterPhone, passwordIssuedByAdmin,
+        status: 'ok', user, role, student: merged,
+        phone: rosterPhone, translationLang: merged.translation_lang, passwordIssuedByAdmin,
       }
     }
 
-    return { status: 'ok', user, role, student: existing as Student, phone: rosterPhone, passwordIssuedByAdmin }
+    return {
+      status: 'ok', user, role, student: existing as NaaleStudentProfile,
+      phone: rosterPhone, translationLang: existing.translation_lang, passwordIssuedByAdmin,
+    }
   }
 
   const fullName = resolveFullName(user, rosterRow.first_name, rosterRow.last_name) || user.email
-  const rosterPhone = rosterRow.phone ?? null
 
   const { data: created, error } = await db
-    .from('students')
-    .insert({
-      full_name: fullName,
-      class_id: naaleClass.id,
-      auth_user_id: user.id,
-      naale_role: role,
-    })
-    .select(STUDENT_COLUMNS)
+    .from('naale_students')
+    .insert({ auth_user_id: user.id, full_name: fullName, role })
+    .select(NAALE_STUDENT_COLUMNS)
     .single()
 
-  if (created) return { status: 'ok', user, role, student: created as Student, phone: rosterPhone, passwordIssuedByAdmin }
+  if (created) {
+    return {
+      status: 'ok', user, role, student: created as NaaleStudentProfile,
+      phone: rosterPhone, translationLang: created.translation_lang, passwordIssuedByAdmin,
+    }
+  }
 
-  // 23505 = unique_violation on students.auth_user_id — two first-login
+  // 23505 = unique_violation on naale_students.auth_user_id — two first-login
   // requests raced (e.g. a double-clicked sign-in). The other one won and the
   // row now exists, so re-read instead of failing the request.
   if (error?.code === '23505') {
     const { data: raced } = await db
-      .from('students')
-      .select(STUDENT_COLUMNS)
+      .from('naale_students')
+      .select(NAALE_STUDENT_COLUMNS)
       .eq('auth_user_id', user.id)
       .maybeSingle()
-    if (raced) return { status: 'ok', user, role, student: raced as Student, phone: rosterPhone, passwordIssuedByAdmin }
+    if (raced) {
+      return {
+        status: 'ok', user, role, student: raced as NaaleStudentProfile,
+        phone: rosterPhone, translationLang: raced.translation_lang, passwordIssuedByAdmin,
+      }
+    }
   }
 
   throw new Error(`failed to provision naale student: ${error?.message}`)
@@ -189,7 +182,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
 export type NaaleStaffResult =
   | { status: 'unauthenticated' }
   | { status: 'forbidden' }
-  | { status: 'ok'; user: User; student: Student }
+  | { status: 'ok'; user: User; student: NaaleStudentProfile }
 
 /**
  * Staff-only gate for the Naale track. Counselors and teachers share the single

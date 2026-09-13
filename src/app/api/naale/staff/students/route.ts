@@ -8,15 +8,11 @@ import { requireNaaleStaff } from '@/lib/naale/auth'
  * Two scoping rules, both server-side:
  *  1. Staff role required — a Naale student calling this would see every
  *     classmate's progress, which the spec explicitly forbids.
- *  2. Naale class only, AND naale_role = 'student' only. Staff must never see
- *     the Druze/Arabic or adult-Russian populations, even though all three
- *     share the students table — and staff must not see themselves/each
- *     other listed as students (they have students rows too, so they can
- *     practice).
- *
- * naale_role is denormalized onto students at provisioning time (see
- * getNaaleSession()) specifically so this filter is a plain column check,
- * not a per-request Admin API email lookup.
+ *  2. role = 'student' only. naale_students is its own table
+ *     (naale-students-full-split) — there is no other track's data to
+ *     accidentally include — but staff must still not see themselves/each
+ *     other listed as students (they have naale_students rows too, so they
+ *     can practice).
  *
  * There is deliberately NO per-counselor/group filtering: the spec resolved
  * that all staff on this track see all Naale students. That differs from the
@@ -59,19 +55,10 @@ export async function GET() {
 
   const db = createServiceClient()
 
-  const { data: naaleClass } = await db
-    .from('classes')
-    .select('id')
-    .eq('track', 'naale')
-    .maybeSingle()
-
-  if (!naaleClass) return NextResponse.json({ error: 'naale class missing' }, { status: 500 })
-
   const { data: students } = await db
-    .from('students')
+    .from('naale_students')
     .select('id, full_name, created_at, auth_user_id')
-    .eq('class_id', naaleClass.id)
-    .eq('naale_role', 'student')
+    .eq('role', 'student')
 
   const studentIds = (students ?? []).map(s => s.id)
 
