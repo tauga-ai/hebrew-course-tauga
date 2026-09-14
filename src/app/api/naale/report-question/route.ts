@@ -139,7 +139,12 @@ export async function POST(req: NextRequest) {
       reportId: inserted.id,
       questionId: question.question_id,
       topic: question.topic,
+      difficulty: question.difficulty,
+      kind,
+      prompt: question.prompt,
       note: trimmedNote,
+      studentAnswer,
+      studentWasCorrect,
     })
   )
 
