@@ -6,6 +6,7 @@ import { applyGradedAnswer, MIN_LEVEL } from '@/lib/naale/leveling'
 import { runDebateTurn } from '@/lib/naale/debate-grading'
 import { checkAiRateLimit } from '@/lib/ai-rate-limit'
 import { fetchRecentGradedAnswersMilestone } from '@/lib/naale/graded-answer-milestone'
+import { getSessionReviewQueue } from '@/lib/naale/review-queue'
 
 type DebateQuestionRow = {
   question_id: string
@@ -106,7 +107,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Final turn — score, save, level, clear the pending exchange.
-  const countsAsReal = turnResult.gradingFailed !== true
+  // naale-debate-review-support: this question may have been re-served from
+  // getSessionReviewQueue() (a wrong answer from a past session) rather than
+  // fresh — same check open-answer/route.ts already makes. Recomputed here
+  // rather than trusted from the client, same reasoning as everywhere else in
+  // this app: what got served and what counts as a sanctioned review answer
+  // must never disagree.
+  const reviewQueue = await getSessionReviewQueue(session.student.id, session_id)
+  const isSanctionedReview = reviewQueue.some(entry => entry.question_id === question_id)
+  const countsAsReal = !isSanctionedReview && turnResult.gradingFailed !== true
   const { data: levelRow } = await db
     .from('naale_topic_levels')
     .select('level, correct_streak, wrong_streak, answered_count')

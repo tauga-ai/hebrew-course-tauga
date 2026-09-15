@@ -59,9 +59,25 @@ test('REVIEW_QUESTION_COUNT is the spec\'s upper bound of "2-3"', () => {
 test('toReviewCandidates: tags each answer with the bank it has to be served from', () => {
   const candidates = toReviewCandidates(
     [{ question_id: 'm1', difficulty: 3, is_correct: true }],
-    [{ question_id: 'o1', difficulty: 4, score: 5 }]
+    [{ question_id: 'o1', difficulty: 4, score: 5 }],
+    [{ question_id: 'd1', difficulty: 2, score: 5 }]
   )
-  assert.deepEqual(candidates.map(c => [c.question_id, c.kind]), [['m1', 'mcq'], ['o1', 'open']])
+  assert.deepEqual(candidates.map(c => [c.question_id, c.kind]), [['m1', 'mcq'], ['o1', 'open'], ['d1', 'conversation']])
+})
+
+// naale-debate-review-support: debate answers used to be entirely invisible to
+// this queue, same gap open-topic answers used to have.
+test('toReviewCandidates: a poorly-scored debate answer is review-worthy', () => {
+  const [wrong, right] = toReviewCandidates(
+    [],
+    [],
+    [
+      { question_id: 'd-bad', difficulty: 3, score: 2 },
+      { question_id: 'd-good', difficulty: 3, score: 5 },
+    ]
+  )
+  assert.equal(wrong.is_correct, false)
+  assert.equal(right.is_correct, true)
 })
 
 // Finding L3: this queue used to call a 3 correct, so a merely-passable graded
@@ -70,7 +86,8 @@ test('toReviewCandidates: tags each answer with the bank it has to be served fro
 test('toReviewCandidates: a graded 3 is review-worthy, 4 and 5 are not', () => {
   const [one, two, three, four, five] = toReviewCandidates(
     [],
-    [1, 2, 3, 4, 5].map((score, i) => ({ question_id: `o${i}`, difficulty: 1, score }))
+    [1, 2, 3, 4, 5].map((score, i) => ({ question_id: `o${i}`, difficulty: 1, score })),
+    []
   )
   assert.equal(one.is_correct, false)
   assert.equal(two.is_correct, false)
@@ -87,7 +104,8 @@ test('pickReviewQueue: wrong answers win regardless of which bank they came from
       [
         { question_id: 'o-hard-bad', difficulty: 4, score: 1 },
         { question_id: 'o-mid-bad', difficulty: 2, score: 3 },
-      ]
+      ],
+      []
     ),
     3
   )
@@ -107,7 +125,8 @@ test('pickReviewQueue: one pool capped in total, not one queue per bank', () => 
   const queue = pickReviewQueue(
     toReviewCandidates(
       [1, 2, 3].map(i => ({ question_id: `m${i}`, difficulty: i, is_correct: false })),
-      [1, 2, 3].map(i => ({ question_id: `o${i}`, difficulty: i, score: 1 }))
+      [1, 2, 3].map(i => ({ question_id: `o${i}`, difficulty: i, score: 1 })),
+      []
     ),
     REVIEW_QUESTION_COUNT
   )
@@ -116,12 +135,12 @@ test('pickReviewQueue: one pool capped in total, not one queue per bank', () => 
 
 test('pickReviewQueue: an all-MCQ previous session still yields an all-MCQ queue', () => {
   const queue = pickReviewQueue(
-    toReviewCandidates([{ question_id: 'm1', difficulty: 2, is_correct: false }], []),
+    toReviewCandidates([{ question_id: 'm1', difficulty: 2, is_correct: false }], [], []),
     3
   )
   assert.deepEqual(queue, [{ question_id: 'm1', kind: 'mcq' }])
 })
 
 test('pickReviewQueue: nothing to review returns empty, does not throw', () => {
-  assert.deepEqual(pickReviewQueue(toReviewCandidates([], []), 3), [])
+  assert.deepEqual(pickReviewQueue(toReviewCandidates([], [], []), 3), [])
 })

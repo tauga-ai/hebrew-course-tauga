@@ -7,14 +7,15 @@ import { pickReviewQueue, toReviewCandidates, REVIEW_QUESTION_COUNT, type Review
  * there's nothing to review yet (no prior practice session, or that session
  * has no non-review answers).
  *
- * Reads BOTH banks. It used to read only naale_answers, which meant the three
- * AI-graded topics — Story Continuation, WhatsApp, Text Summary — could never
- * resurface in the session opener no matter how badly a student did on them.
- * A separate getOpenReviewQuestionIds() had been written for them and was
- * never wired to the serving route; folding it in here rather than reviving it
- * alongside is deliberate, because two independent queues of
- * REVIEW_QUESTION_COUNT would open a session with up to twice the review the
- * spec asks for. See pickReviewQueue() for the one-pool reasoning.
+ * Reads ALL banks (mcq, open, and — naale-debate-review-support — debate). It
+ * used to read only naale_answers, which meant the three AI-graded topics —
+ * Story Continuation, WhatsApp, Text Summary — could never resurface in the
+ * session opener no matter how badly a student did on them. A separate
+ * getOpenReviewQuestionIds() had been written for them and was never wired to
+ * the serving route; folding it in here rather than reviving it alongside is
+ * deliberate, because independent per-bank queues of REVIEW_QUESTION_COUNT
+ * would open a session with more review than the spec asks for. See
+ * pickReviewQueue() for the one-pool reasoning.
  *
  * "Previous session" means the most recent ENDED session with kind='practice'
  * — placement never counts (ticket 11: it's calibration, not practice), per
@@ -50,7 +51,7 @@ export async function getSessionReviewQueue(
   // is_review excluded from both: a review question shouldn't itself become a
   // candidate for the NEXT session's review — only fresh material from last
   // time is eligible.
-  const [{ data: mcqAnswers }, { data: openAnswers }] = await Promise.all([
+  const [{ data: mcqAnswers }, { data: openAnswers }, { data: debateAnswers }] = await Promise.all([
     db
       .from('naale_answers')
       .select('question_id, difficulty, is_correct')
@@ -61,11 +62,16 @@ export async function getSessionReviewQueue(
       .select('question_id, difficulty, score')
       .eq('session_id', previousSessionId)
       .eq('is_review', false),
+    db
+      .from('naale_debate_answers')
+      .select('question_id, difficulty, score')
+      .eq('session_id', previousSessionId)
+      .eq('is_review', false),
   ])
 
   // Correct/wrong mapping (including the graded threshold, finding L3) lives
   // in toReviewCandidates() so it can be tested without a database.
-  const candidates = toReviewCandidates(mcqAnswers ?? [], openAnswers ?? [])
+  const candidates = toReviewCandidates(mcqAnswers ?? [], openAnswers ?? [], debateAnswers ?? [])
 
   if (candidates.length === 0) return []
 

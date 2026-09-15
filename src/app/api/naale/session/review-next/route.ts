@@ -43,18 +43,20 @@ export async function GET(req: NextRequest) {
 
   const db = createServiceClient()
 
-  // Both answer tables: the queue spans both banks, so "already reviewed this
+  // All answer tables: the queue spans all banks, so "already reviewed this
   // session" has to as well — otherwise a graded review question would be
   // re-served on every call until the session ended.
-  const [reviewQueue, { data: answeredMcq }, { data: answeredOpen }] = await Promise.all([
+  const [reviewQueue, { data: answeredMcq }, { data: answeredOpen }, { data: answeredDebate }] = await Promise.all([
     getSessionReviewQueue(session.student.id, sessionId),
     db.from('naale_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
     db.from('naale_open_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
+    db.from('naale_debate_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
   ])
 
   const answeredIds = new Set([
     ...(answeredMcq ?? []).map(a => a.question_id),
     ...(answeredOpen ?? []).map(a => a.question_id),
+    ...(answeredDebate ?? []).map(a => a.question_id),
   ])
   const remaining = reviewQueue.filter(entry => !answeredIds.has(entry.question_id))
 
@@ -63,6 +65,37 @@ export async function GET(req: NextRequest) {
   }
 
   const next = remaining[0]
+
+  // naale_debate_questions has no uuid `id` column — question_id (text, e.g.
+  // "debate_1") is its own primary key, unlike the 'mcq'/'open' branches
+  // below — so the lookup column differs, not just the table.
+  if (next.kind === 'conversation') {
+    const { data: question } = await db
+      .from('naale_debate_questions')
+      .select('question_id, topic, difficulty, subject, initial_ai_argument, required_connectors')
+      .eq('question_id', next.question_id)
+      .maybeSingle()
+
+    // Same missing-question handling as the other branches.
+    if (!question) return NextResponse.json({ done: true })
+
+    // Same 'conversation' shape session/next/route.ts already serves for the
+    // normal flow — expected_answer_rubric/max_turns never selected above, so
+    // they can't leak here either.
+    return NextResponse.json({
+      question: {
+        id: question.question_id,
+        topic: question.topic,
+        difficulty: question.difficulty,
+        kind: 'conversation',
+        prompt: question.initial_ai_argument,
+        subject: question.subject,
+        initial_ai_argument: question.initial_ai_argument,
+        required_connectors: question.required_connectors,
+        is_review: true,
+      },
+    })
+  }
 
   if (next.kind === 'open') {
     const { data: question } = await db
