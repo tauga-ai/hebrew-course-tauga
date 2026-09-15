@@ -19,9 +19,14 @@ import { notifyQuestionReport } from '@/lib/naale/question-reports-notify'
  * report about whatever the client felt like claiming, which is worthless as
  * an incident record.
  *
- * The question may live in either bank, so both are checked. A topic name only
- * ever exists in one of the two, and the ids are uuids, so a hit in both is
- * impossible in practice; the mcq branch simply wins if it ever happened.
+ * The question may live in any of three tables, so all three are checked. A
+ * topic name only ever exists in one, so a hit in more than one is impossible
+ * in practice; mcq wins over open, which wins over debate, if it ever
+ * happened. Debate reports are stored as question_kind 'open' (naale-debate-
+ * module didn't add a third value to naale_question_reports' check
+ * constraint) — defensible since a debate answer is also free-text and
+ * AI-graded, just multi-turn; only the lookup and the stored answer text
+ * differ, not the report's actual purpose.
  */
 export async function POST(req: NextRequest) {
   const session = await getNaaleSession()
@@ -63,12 +68,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const [{ data: mcqQuestion }, { data: openQuestion }] = await Promise.all([
+  const [{ data: mcqQuestion }, { data: openQuestion }, { data: debateQuestion }] = await Promise.all([
     db.from('naale_questions').select('id, question_id, topic, difficulty, prompt').eq('id', question_id).maybeSingle(),
     db.from('naale_open_questions').select('id, question_id, topic, difficulty, prompt').eq('id', question_id).maybeSingle(),
+    // naale_debate_questions has no separate uuid `id` — question_id (text)
+    // IS its primary key, so the lookup column differs from the other two.
+    db.from('naale_debate_questions').select('question_id, topic, difficulty, initial_ai_argument').eq('question_id', question_id).maybeSingle(),
   ])
 
   const question = mcqQuestion ?? openQuestion
+    ?? (debateQuestion ? { ...debateQuestion, id: debateQuestion.question_id, prompt: debateQuestion.initial_ai_argument } : null)
   if (!question) return NextResponse.json({ error: 'שאלה לא נמצאה' }, { status: 404 })
   const kind = mcqQuestion ? 'mcq' : 'open'
 
@@ -93,6 +102,19 @@ export async function POST(req: NextRequest) {
         .eq('question_id', question_id)
         .maybeSingle()
       studentWasCorrect = data?.is_correct ?? null
+    } else if (debateQuestion) {
+      // Debate's shape differs from a plain open answer — two turn texts
+      // (turn_2_text null for a single-turn question) instead of one
+      // user_text, in their own table.
+      const { data } = await db
+        .from('naale_debate_answers')
+        .select('turn_1_text, turn_2_text, score')
+        .eq('student_id', studentId)
+        .eq('session_id', session_id)
+        .eq('question_id', question_id)
+        .maybeSingle()
+      studentAnswer = data ? [data.turn_1_text, data.turn_2_text].filter(Boolean).join('\n') : null
+      studentWasCorrect = data ? data.score >= GRADED_CORRECT_SCORE : null
     } else {
       const { data } = await db
         .from('naale_open_answers')

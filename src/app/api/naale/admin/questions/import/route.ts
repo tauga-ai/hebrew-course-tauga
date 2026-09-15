@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleAdmin } from '@/lib/naale/auth'
 import { runQuestionImport } from '@/lib/naale/question-import'
 import { runOpenQuestionImport } from '@/lib/naale/open-question-import'
+import { runDebateQuestionImport } from '@/lib/naale/debate-question-import'
 
 /**
  * mode: 'preview' (default) parses and validates without writing; 'commit'
@@ -36,11 +37,12 @@ export async function POST(request: Request) {
   try {
     // Both content kinds live in the same workbook — one upload covers both,
     // rather than asking the admin to upload the same file twice.
-    const [mcqReport, openReport] = await Promise.all([
+    const [mcqReport, openReport, debateReport] = await Promise.all([
       runQuestionImport(wb, db, { dryRun: mode !== 'commit' }),
       runOpenQuestionImport(wb, db, { dryRun: mode !== 'commit' }),
+      runDebateQuestionImport(wb, db, { dryRun: mode !== 'commit' }),
     ])
-    return NextResponse.json({ mcq: mcqReport, open: openReport })
+    return NextResponse.json({ mcq: mcqReport, open: openReport, debate: debateReport })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'import_failed' }, { status: 500 })
   }

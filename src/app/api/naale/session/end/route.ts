@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // route: placement is calibration, not practice. `completed` is already
   // always false for placement (excluding the +50 bonus), but the
   // per-correct-answer XP needs this explicit kind check too.
-  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, allSessions, { data: existingFeedback }] = await Promise.all([
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: sessionDebateAnswers }, allSessions, { data: existingFeedback }] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean; topic: string; level_at_answer: number }[] })
       // Review answers (ticket 15) excluded too — same working decision as
@@ -83,6 +83,14 @@ export async function POST(req: NextRequest) {
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
       : db.from('naale_open_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
+    // Same gap, same fix, for the debate topic (naale-debate-module): missed
+    // when that ticket only touched /next and the milestone helper, not this
+    // route. A session made entirely of debate answers showed "0 XP, 0
+    // correct" despite real Gemini scores being saved — confirmed live
+    // 2026-09-15 (4 answered, scores 2-3, summary showed 0/0/0).
+    s.kind === 'placement'
+      ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
+      : db.from('naale_debate_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Every session this account has ever had, for the weekly streak — one a
     // day crosses the row cap inside three years. Also doubles as the input
     // to isFeedbackDue() below (naale-session-feedback-popup).
@@ -98,23 +106,24 @@ export async function POST(req: NextRequest) {
   // same countsAsTrackedSession gate on the completion bonus or a topic
   // session's own recap would show +50 XP while the all-time view (which IS
   // gated) disagrees about the very same session.
+  const allGradedAnswers = [...(sessionOpenAnswers ?? []), ...(sessionDebateAnswers ?? [])]
   const { xp: mcqXp, coins: mcqCoins } = computeRewards(
     sessionAnswers ?? [],
     countsAsTrackedSession(s) ? [{ completed }] : []
   )
-  const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(sessionOpenAnswers ?? [])
+  const { xp: gradedXp, coins: gradedCoins } = computeGradedRewards(allGradedAnswers)
   const streak = computeStreak(
     allSessions.filter(x => x.completed && countsTowardStreak(x)).map(x => new Date(x.started_at))
   )
   // Same "4-5 counts as correct" read as everywhere else a graded score needs
   // a pass/fail comparison (my-stats, placementLevel, applyGradedAnswer).
   const correct_count = (sessionAnswers ?? []).filter(a => a.is_correct).length
-    + (sessionOpenAnswers ?? []).filter(a => a.score >= 4).length
+    + allGradedAnswers.filter(a => a.score >= 4).length
   // Per-topic breakdown for just this session (ticket: naale-session-breakdown)
   // — reuses the same shared aggregation logic as the all-time stats views,
   // scoped to this session's own rows via level_at_answer rather than the
   // student's current live level.
-  const { topics } = buildSessionProgress(s.id, s.kind, completed, sessionAnswers ?? [], sessionOpenAnswers ?? [])
+  const { topics } = buildSessionProgress(s.id, s.kind, completed, sessionAnswers ?? [], allGradedAnswers)
   const feedback_required = isFeedbackDue(allSessions, { kind: s.kind, completed }, !!existingFeedback)
 
   return NextResponse.json({

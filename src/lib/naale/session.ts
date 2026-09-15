@@ -42,7 +42,7 @@ export async function loadOwnedSession(sessionId: string, studentId: string): Pr
   const db = createServiceClient()
   const { data } = await db
     .from('naale_sessions')
-    .select('id, student_id, kind, topic, pending_question_id, started_at, deadline_at, ended_at, answered_count, completed, translations_used, translated_words, paused_remaining_ms')
+    .select('id, student_id, kind, topic, pending_question_id, started_at, deadline_at, ended_at, answered_count, completed, translations_used, translated_words, paused_remaining_ms, pending_exchange')
     .eq('id', sessionId)
     .maybeSingle()
 

@@ -74,7 +74,7 @@ test('nextFreeNumber: 1 when a topic has no existing questions, max+1 otherwise'
 })
 
 test('round trip: every MCQ topic parses back to the same content it was built from', async () => {
-  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(MCQ_ROWS, []))
+  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(MCQ_ROWS, [], []))
   for (const row of MCQ_ROWS) {
     const parsed = SHEET_READERS[row.topic](wb, row.topic).find(q => q.question_id === row.question_id)
     assert.ok(parsed, `${row.topic} ${row.question_id} did not round-trip at all`)
@@ -87,7 +87,7 @@ test('round trip: every MCQ topic parses back to the same content it was built f
 })
 
 test('round trip: every open topic parses back to the same content it was built from', async () => {
-  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook([], OPEN_ROWS))
+  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook([], OPEN_ROWS, []))
   for (const row of OPEN_ROWS) {
     const parsed = OPEN_SHEET_READERS[row.topic](wb, row.topic).find(q => q.question_id === row.question_id)
     assert.ok(parsed, `${row.topic} ${row.question_id} did not round-trip at all`)
@@ -109,14 +109,14 @@ test('rows land sorted by "#", regardless of the order the DB rows arrive in', a
     { ...MCQ_ROWS[0], question_id: '7_1' },
     { ...MCQ_ROWS[0], question_id: '7_3' },
   ]
-  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(scrambled, []))
+  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(scrambled, [], []))
   const rows: string[][] = XLSX.utils.sheet_to_json(wb.Sheets['השלמת משפטים'], { header: 1, defval: '' })
   const dataRows = rows.slice(3, 3 + scrambled.length)
   assert.deepEqual(dataRows.map(r => r[0]), ['1', '3', '5'])
 })
 
 test('round trip: the trailing "next free #" note row is silently skipped, not imported as a question', async () => {
-  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(MCQ_ROWS, OPEN_ROWS))
+  const wb = await toXlsxWorkbook(buildQuestionBankWorkbook(MCQ_ROWS, OPEN_ROWS, []))
   const parsedCompletion = SHEET_READERS['השלמת משפטים'](wb, 'השלמת משפטים')
   assert.equal(parsedCompletion.length, MCQ_ROWS.filter(r => r.topic === 'השלמת משפטים').length)
   const parsedStory = OPEN_SHEET_READERS['סיפור בהמשכים'](wb, 'סיפור בהמשכים')
@@ -124,7 +124,7 @@ test('round trip: the trailing "next free #" note row is silently skipped, not i
 })
 
 test('header row is visibly styled — colored fill and bold white text', async () => {
-  const wb = buildQuestionBankWorkbook(MCQ_ROWS, [])
+  const wb = buildQuestionBankWorkbook(MCQ_ROWS, [], [])
   const ws = wb.getWorksheet('השלמת משפטים')!
   const headerCell = ws.getRow(3).getCell(1)
   assert.equal((headerCell.fill as ExcelJS.FillPattern).fgColor?.argb, 'FF1F4E78')

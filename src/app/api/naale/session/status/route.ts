@@ -34,14 +34,17 @@ export async function GET(req: NextRequest) {
   // already resyncs answered_count below) leaves a stale count from a
   // previous session on screen until this session's own /end call replaces
   // it. Skipped for placement, same as everywhere else that computes rewards.
-  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }] = s.kind === 'placement'
-    ? [{ data: [] as { is_correct: boolean }[] }, { data: [] as { score: number }[] }]
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: sessionDebateAnswers }] = s.kind === 'placement'
+    ? [{ data: [] as { is_correct: boolean }[] }, { data: [] as { score: number }[] }, { data: [] as { score: number }[] }]
     : await Promise.all([
         db.from('naale_answers').select('is_correct').eq('session_id', s.id).eq('is_review', false),
         db.from('naale_open_answers').select('score').eq('session_id', s.id).eq('is_review', false),
+        // Same combined count as /session/end — see that route for the debate
+        // gap this mirrors.
+        db.from('naale_debate_answers').select('score').eq('session_id', s.id).eq('is_review', false),
       ])
   const correct_count = (sessionAnswers ?? []).filter(a => a.is_correct).length
-    + (sessionOpenAnswers ?? []).filter(a => a.score >= 4).length
+    + [...(sessionOpenAnswers ?? []), ...(sessionDebateAnswers ?? [])].filter(a => a.score >= 4).length
 
   // Dev-only session-length override. Deliberately NOT applied to a pausable
   // session: the recompute below assumes deadline_at is always

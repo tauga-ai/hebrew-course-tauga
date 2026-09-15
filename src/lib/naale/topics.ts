@@ -17,13 +17,15 @@ import { selectAll } from './paginate'
  * doing if the bank grows much further; pagination is the migration-free fix.
  */
 export async function loadAllTopics(db: SupabaseClient): Promise<string[]> {
-  const [mcq, open] = await Promise.all([
+  const [mcq, open, debate] = await Promise.all([
     selectAll<{ topic: string }>('naale_questions', (from, to) =>
       db.from('naale_questions').select('topic').range(from, to)),
     selectAll<{ topic: string }>('naale_open_questions', (from, to) =>
       db.from('naale_open_questions').select('topic').range(from, to)),
+    selectAll<{ topic: string }>('naale_debate_questions', (from, to) =>
+      db.from('naale_debate_questions').select('topic').range(from, to)),
   ])
-  return [...new Set([...mcq, ...open].map(r => r.topic))].sort()
+  return [...new Set([...mcq, ...open, ...debate].map(r => r.topic))].sort()
 }
 
 /**

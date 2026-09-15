@@ -129,6 +129,13 @@ export interface NaaleSession {
   completed: boolean
   translations_used: number
   translated_words: string[]
+  /** In-progress multi-turn conversation state (debate, and eventually
+   *  role-play) between the two round trips a two-turn question needs before
+   *  scoring. Shape: { question_id, turn_1_text, ai_reply }. Null once no
+   *  exchange is in progress (before turn 1, and again after the final turn
+   *  is scored and this is cleared). Not scoped to one topic — the
+   *  question_id inside it says which question it belongs to. */
+  pending_exchange: { question_id: string; turn_1_text: string; ai_reply: string } | null
 }
 
 export interface NaaleAnswer {
