@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
       ? Promise.all([
           db.from('naale_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
           db.from('naale_open_questions').select('id', { count: 'exact', head: true }).eq('topic', topic),
+          db.from('naale_debate_questions').select('question_id', { count: 'exact', head: true }).eq('topic', topic),
         ])
       : Promise.resolve(null),
     // Only relevant when a topic was requested, same reasoning as
@@ -299,8 +300,8 @@ export async function POST(req: NextRequest) {
   // gates the 30-minute session the same way). `questionCounts` was likewise
   // fetched in parallel above, only when a topic was actually requested.
   if (topic) {
-    const [{ count: mcqCount }, { count: openCount }] = questionCounts!
-    if ((mcqCount ?? 0) === 0 && (openCount ?? 0) === 0) {
+    const [{ count: mcqCount }, { count: openCount }, { count: debateCount }] = questionCounts!
+    if ((mcqCount ?? 0) === 0 && (openCount ?? 0) === 0 && (debateCount ?? 0) === 0) {
       return NextResponse.json({ error: 'נושא לא נמצא' }, { status: 400 })
     }
     // An admin-disabled topic (naale-topic-toggle) is refused the same way an

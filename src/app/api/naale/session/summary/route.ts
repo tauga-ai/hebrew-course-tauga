@@ -88,21 +88,28 @@ export async function POST(req: NextRequest) {
       ui_icon: stored.summary_icon ?? SESSION_SUMMARY_FALLBACK_ICON,
     })
   }
-  const [{ data: answers }, { data: openAnswers }] = await Promise.all([
+  const [{ data: answers }, { data: openAnswers }, { data: debateAnswers }] = await Promise.all([
     db.from('naale_answers')
       .select('is_correct, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
     db.from('naale_open_answers')
       .select('score, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
+    // Same gap /session/end had — debate answers were never merged in here
+    // either, so a debate-only session got the fallback note instead of a
+    // real per-topic one.
+    db.from('naale_debate_answers')
+      .select('score, topic, level_at_answer')
+      .eq('session_id', s.id).eq('is_review', false),
   ])
+  const allGradedAnswers = [...(openAnswers ?? []), ...(debateAnswers ?? [])]
 
   // A session with no answers has nothing to say something personal about.
-  if (!answers?.length && !openAnswers?.length) return NextResponse.json(fallback)
+  if (!answers?.length && !allGradedAnswers.length) return NextResponse.json(fallback)
 
   // Same per-topic aggregation the recap's "by topic" step already shows, so
   // the note and the numbers underneath it can never disagree.
-  const { topics } = buildSessionProgress(s.id, s.kind, s.completed, answers ?? [], openAnswers ?? [])
+  const { topics } = buildSessionProgress(s.id, s.kind, s.completed, answers ?? [], allGradedAnswers)
   const ranking = rankSessionTopics(topics)
 
   // Shares the one AI budget with grading (15 requests / 3 min per student),

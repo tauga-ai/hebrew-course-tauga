@@ -38,6 +38,7 @@ import {
   SENTENCE_COMPLETION_COL, SENTENCE_CORRECTION_COL, READING_COMPREHENSION_COL, SYNONYMS_ANTONYMS_COL,
 } from './question-import'
 import { STORY_CONTINUATION_COL, WHATSAPP_COL, TEXT_SUMMARY_COL, PICTURE_DESCRIPTION_COL } from './open-question-import'
+import { DEBATE_COL, numberFromDebateId } from './debate-question-import'
 
 export interface ExportQuestionRow {
   topic: string
@@ -55,6 +56,16 @@ export interface ExportOpenQuestionRow {
   difficulty: number
   prompt: string
   fields: Record<string, string>
+}
+
+export interface ExportDebateRow {
+  question_id: string
+  difficulty: number
+  subject: string
+  initial_ai_argument: string
+  required_connectors: string
+  expected_answer_rubric: string
+  max_turns: number
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const
@@ -378,14 +389,23 @@ const ROLE_PLAY_SHEET_AOA: (string | number)[][] = [
   [3, "בקשת עזרה מחבר", "מה נשמע? מה אתה עושה? (AI בתפקיד חבר)", "לבקש עזרה בשיעורי הבית.", ""],
 ]
 
-const DEBATE_SHEET_AOA: (string | number)[][] = [
-  ["14. דיבייט / הבעת דעה", "", "", ""],
-  ["", "", "", ""],
-  ["#", "נושא", "טענת AI", "רמת קושי (1-5)"],
-  [1, "תלבושת אחידה בבית הספר", "אני חושב שתלבושת אחידה זה מצוין כי זה חוסך זמן בבוקר.", ""],
-  [2, "שימוש בטלפונים בהפסקות", "צריך לאסור טלפונים בהפסקה כדי שילדים ידברו זה עם זה.", ""],
-  [3, "שיעורי בית בסופ\"ש", "שיעורי בית בסוף השבוע עוזרים לזכור את החומר.", ""],
-]
+// Real content now (naale-debate-module) — unlike ROLE_PLAY_SHEET_AOA above,
+// which is still a static placeholder. Not built via sheetAOA()/
+// nextFreeNumber(): both assume a bare numeric "#" in column A derived via
+// numberFromQuestionId(), but this sheet's column A is the question_id
+// string itself ("debate_1", not "1") — see debate-question-import.ts's
+// module comment for why this sheet's ID scheme differs from every other
+// topic's.
+function debateSheet(rows: ExportDebateRow[]): string[][] {
+  const header = Object.values(DEBATE_COL)
+  const dataRows = rows.map(r => [
+    r.question_id, String(r.difficulty), r.subject, r.initial_ai_argument,
+    r.required_connectors, r.expected_answer_rubric, String(r.max_turns),
+  ])
+  const nextFree = rows.length === 0 ? 1 : Math.max(...rows.map(r => numberFromDebateId(r.question_id))) + 1
+  const note = noteRow(header.length, `Next free #: ${nextFree}`)
+  return [['14. דיבייט / הבעת דעה'], [], header, ...dataRows, note]
+}
 
 
 // Colors/positions confirmed against Noam's real workbook's header cells
@@ -403,7 +423,8 @@ const DATA_ROW_HEIGHT = 40
 
 export function buildQuestionBankWorkbook(
   mcqRows: ExportQuestionRow[],
-  openRows: ExportOpenQuestionRow[]
+  openRows: ExportOpenQuestionRow[],
+  debateRows: ExportDebateRow[]
 ): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook()
   // All content is Hebrew — confirmed against Noam's real workbook
@@ -496,7 +517,9 @@ export function buildQuestionBankWorkbook(
   // sequential) — deliberately not copied; reordered to 11, 12, 13, 14.
   append('תיאור תמונה בקול', pictureDescriptionSheet(byTopic(openRows, 'תיאור תמונה בקול')))
   append('משחק תפקידים', ROLE_PLAY_SHEET_AOA)
-  append('דיבייט הבעת דעה', DEBATE_SHEET_AOA)
+  append('דיבייט הבעת דעה', debateSheet(
+    [...debateRows].sort((a, b) => numberFromDebateId(a.question_id) - numberFromDebateId(b.question_id))
+  ))
 
   return wb
 }

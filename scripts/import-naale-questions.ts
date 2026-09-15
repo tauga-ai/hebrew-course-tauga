@@ -15,6 +15,7 @@ import * as XLSX from 'xlsx'
 import { createServiceClient } from '../src/lib/supabase/service'
 import { runQuestionImport, type QuestionImportReport } from '../src/lib/naale/question-import'
 import { runOpenQuestionImport, type OpenQuestionImportReport } from '../src/lib/naale/open-question-import'
+import { runDebateQuestionImport, type DebateImportReport } from '../src/lib/naale/debate-question-import'
 
 function printReport(label: string, tableName: string, report: QuestionImportReport | OpenQuestionImportReport, dryRun: boolean) {
   console.log(`\n=== ${label} ===`)
@@ -56,6 +57,45 @@ function printReport(label: string, tableName: string, report: QuestionImportRep
   return true
 }
 
+/** Simpler printer for debate's single-topic report shape (no per-sheet loop,
+ *  no skippedSheets — there's only ever one sheet). */
+function printDebateReport(report: DebateImportReport, dryRun: boolean) {
+  console.log('\n=== Debate & Opinion Expression ===')
+  if (report.skippedSheet) {
+    console.log(report.anomalies[0])
+    return true
+  }
+  const byLevel = [1, 2, 3, 4, 5].map(l => `L${l}:${report.summary.byLevel[l] ?? 0}`).join(' ')
+  console.log(`Parsed: ${report.summary.topic}: ${report.summary.count} questions (${byLevel})`)
+
+  const newCount = report.totalRows - report.alreadyExists.length
+  if (dryRun) {
+    console.log('--dry-run: nothing written.')
+  } else if (report.written) {
+    console.log(`${newCount} new question(s) inserted into naale_debate_questions.`)
+  }
+
+  if (report.alreadyExists.length > 0) {
+    console.log(`${report.alreadyExists.length} row(s) already exist in naale_debate_questions — left untouched:`)
+    for (const a of report.alreadyExists.slice(0, 20)) console.log(`  - ${a.question_id}`)
+    if (report.alreadyExists.length > 20) console.log(`  ... and ${report.alreadyExists.length - 20} more`)
+  }
+
+  if (report.orphans.length > 0) {
+    console.log(`${report.orphans.length} questions in the table are NOT in this workbook (left untouched):`)
+    for (const o of report.orphans.slice(0, 20)) console.log(`  - ${o.question_id}`)
+    if (report.orphans.length > 20) console.log(`  ... and ${report.orphans.length - 20} more`)
+  }
+
+  if (report.anomalies.length > 0) {
+    console.log(`${report.anomalies.length} anomalies found:`)
+    for (const a of report.anomalies) console.log(`  - ${a}`)
+    return false
+  }
+  console.log('No anomalies found in automated validation pass.')
+  return true
+}
+
 async function main() {
   const xlsxPath = process.argv[2]
   const dryRun = process.argv.includes('--dry-run')
@@ -67,15 +107,17 @@ async function main() {
   const wb = XLSX.readFile(xlsxPath)
   const db = createServiceClient()
 
-  const [mcqReport, openReport] = await Promise.all([
+  const [mcqReport, openReport, debateReport] = await Promise.all([
     runQuestionImport(wb, db, { dryRun }),
     runOpenQuestionImport(wb, db, { dryRun }),
+    runDebateQuestionImport(wb, db, { dryRun }),
   ])
 
   const mcqClean = printReport('Multiple-choice sheets', 'naale_questions', mcqReport, dryRun)
   const openClean = printReport('Free-text (AI-graded) sheets', 'naale_open_questions', openReport, dryRun)
+  const debateClean = printDebateReport(debateReport, dryRun)
 
-  if (!mcqClean || !openClean) process.exitCode = 1
+  if (!mcqClean || !openClean || !debateClean) process.exitCode = 1
 }
 
 main()

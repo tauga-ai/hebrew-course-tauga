@@ -25,6 +25,7 @@ import { canGoBack, goBack, goForward, isResolved } from '@/lib/naale/session-hi
 import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
+import { DebateExchange } from '@/components/naale/DebateExchange'
 import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
 import { ListeningAudioPlayer } from '@/components/naale/ListeningAudioPlayer'
 import { SessionFeedbackForm } from '@/components/naale/SessionFeedbackForm'
@@ -36,10 +37,11 @@ interface ServedQuestion {
   id: string
   topic: string
   difficulty: number
-  // Which content table this came from — naale_questions (mcq) or
-  // naale_open_questions (open, AI-graded free text), matching /next's own
-  // PublicQuestion discriminant.
-  kind: 'mcq' | 'open'
+  // Which content table this came from — naale_questions (mcq),
+  // naale_open_questions (open, AI-graded free text), or
+  // naale_debate_questions (conversation, multi-turn AI-graded), matching
+  // /next's own PublicQuestion discriminant.
+  kind: 'mcq' | 'open' | 'conversation'
   prompt: string
   // 'mcq' only:
   answer_kind?: 'mcq' | 'text'
@@ -55,6 +57,12 @@ interface ServedQuestion {
   // 'open' only — already stripped of grading-only keys by the server (see
   // open-grading.ts's publicFields()).
   fields?: Record<string, string>
+  // 'conversation' only (debate). subject/initial_ai_argument/prompt are the
+  // same value — the server ships initial_ai_argument as prompt too, for
+  // consistency with every other kind's "the main text is q.prompt" shape.
+  subject?: string
+  initial_ai_argument?: string
+  required_connectors?: string
   // Ticket 15: true when this question came from /review-next rather than
   // /next — 2-3 hard exercises from the student's previous practice session,
   // re-served before new material. Purely a UI hint; the server independently
@@ -82,6 +90,13 @@ interface OpenAnswerResult {
   milestone: number | null
   /** See AnswerResult.is_review — same rule for graded answers. */
   is_review: boolean
+  // debate-answer/route.ts only (q.kind === 'conversation') — the exchange
+  // that got this score, so the already-answered view can show it instead of
+  // just the number. Absent (undefined) for every other 'open' topic, which
+  // is a single untracked turn with nothing to show back.
+  turn_1_text?: string
+  turn_2_text?: string | null
+  ai_counter_argument?: string | null
 }
 
 interface EndSummary {
@@ -1039,6 +1054,49 @@ function SessionRunner() {
     }
   }
 
+  // Parallel to submitOpenAnswer() above, for the debate topic's multi-turn
+  // exchange. Unlike a single-shot open answer, one call here can come back
+  // "awaiting_final" (a counter-argument, no score yet) — in that case
+  // nothing is saved server-side and this returns the counter-argument to
+  // DebateExchange, which shows it and collects a second reply. Only once a
+  // real score exists does this behave like submitOpenAnswer: set openResult
+  // (same OpenAnswerResult shape — score/feedback/level/milestone/is_review —
+  // so the existing feedback UI below needs no changes to render it) and
+  // count the answer.
+  async function submitDebateAnswer(userText: string): Promise<{ awaiting_final: true; ai_response: string } | null> {
+    if (!question || submitting || !userText.trim()) return null
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/naale/session/debate-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, user_text: userText }),
+      })
+      const data = await res.json()
+      if (res.status === 409) {
+        if (data.code === 'expired') {
+          qaLog('/debate-answer: 409 expired, ending session')
+          finishSession('time_up')
+          return null
+        }
+        qaLog('/debate-answer: 409 duplicate_answer, continuing to next question')
+        loadNext()
+        return null
+      }
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
+      qaLog('/debate-answer: result', data)
+      if (data.awaiting_final) return { awaiting_final: true, ai_response: data.ai_response }
+      setOpenResult(data)
+      setAnsweredCount(c => c + 1)
+      return null
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : t('שגיאה בשליחת התשובה'))
+      return null
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // Auto-submits an MCQ option the instant it's clicked — no separate submit
   // button for multiple-choice, matching Quizlet's Learn-mode "tap an answer,
   // it's graded immediately" flow.
@@ -1457,6 +1515,13 @@ function SessionRunner() {
                   </div>
                 )}
               </>
+            ) : q.kind === 'conversation' ? (
+              // Nothing rendered up here — unlike every other kind, debate's
+              // "question" evolves turn by turn (a counter-argument replaces
+              // the opening one), so DebateExchange owns showing the current
+              // AI line itself, down in the answer area below, rather than
+              // splitting a static prompt display from a separate input.
+              null
             ) : (
               <p className="text-fg font-medium text-lg mb-4 text-right whitespace-pre-line">{renderText(q.prompt)}</p>
             )}
@@ -1484,9 +1549,22 @@ function SessionRunner() {
           </div>
 
           <div className="-mx-6 -mb-6 px-6 pb-6 pt-4 bg-black/[0.02] dark:bg-white/[0.03]">
-            {q.kind === 'open' ? (
+            {q.kind === 'open' || q.kind === 'conversation' ? (
               <>
                 {!openResult ? (
+                  q.kind === 'conversation' ? (
+                    <DebateExchange
+                      key={q.id}
+                      initialAiLine={q.initial_ai_argument ?? q.prompt}
+                      requiredConnectors={q.required_connectors ?? ''}
+                      submitting={submitting}
+                      // Timer: soft stop (naale-topic-based-sessions) — same
+                      // reasoning as OpenAnswerInput's submitLabel below:
+                      // this only ever renders the LIVE, unanswered question.
+                      submitLabel={kind === 'topic' && remaining === 0 ? t('סיום התרגול') : undefined}
+                      onSubmit={submitDebateAnswer}
+                    />
+                  ) : (
                   <>
                     {q.topic === 'תיאור תמונה בקול' && (
                       <div className="flex items-center justify-between mb-2">
@@ -1597,8 +1675,31 @@ function SessionRunner() {
                       </div>
                     )}
                   </>
+                  )
                 ) : (
                   <div className="mt-3">
+                    {/* Debate-only: unlike every other 'open' topic (whose
+                        static prompt/blocks stay visible above regardless of
+                        answered state), a debate question's whole context —
+                        subject, opening argument, counter-argument — only
+                        ever existed inside DebateExchange, which stops
+                        rendering the moment openResult exists. Without this,
+                        the score view would show a number with zero context
+                        for what was even argued. */}
+                    {q.kind === 'conversation' && (
+                      <div className="mb-4 space-y-2 text-right">
+                        <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {q.initial_ai_argument ?? q.prompt}</p>
+                        {openResult.turn_1_text && (
+                          <p className="text-sm text-fg/80"><span className="font-semibold">{t('אני')}:</span> {openResult.turn_1_text}</p>
+                        )}
+                        {openResult.ai_counter_argument && (
+                          <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {openResult.ai_counter_argument}</p>
+                        )}
+                        {openResult.turn_2_text && (
+                          <p className="text-sm text-fg/80"><span className="font-semibold">{t('אני')}:</span> {openResult.turn_2_text}</p>
+                        )}
+                      </div>
+                    )}
                     <div className={`rounded-2xl border p-5 text-center mb-3 ${openScoreBg(openResult.score)}`}>
                       <div className={`text-6xl font-bold ${openScoreTextColor(openResult.score)}`}>
                         <LtrIsolate>{openResult.score}</LtrIsolate>
@@ -1766,9 +1867,10 @@ function SessionRunner() {
             )}
 
             {/* Free-text is the only branch that still needs an explicit
-                submit — MCQ auto-submits on click above, and 'open' has its
-                own submit button inside OpenAnswerInput. */}
-            {!result && q.kind !== 'open' && q.answer_kind !== 'mcq' && (
+                submit — MCQ auto-submits on click above, 'open' has its own
+                submit button inside OpenAnswerInput, and 'conversation' has
+                its own inside DebateExchange (also OpenAnswerInput-backed). */}
+            {!result && q.kind !== 'open' && q.kind !== 'conversation' && q.answer_kind !== 'mcq' && (
               <button
                 onClick={() => submitAnswer(selected)}
                 disabled={submitting || selected === ''}

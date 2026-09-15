@@ -7,14 +7,16 @@
  *   - all naale_topic_levels rows
  *   - all naale_sessions rows (naale_answers cascades via FK, so those go too)
  *
- * Does NOT touch the students row, the auth user, or naale_roster — the
- * account keeps its name/login and just loses its Naale progress.
+ * Does NOT touch the naale_students row, the auth user, or naale_roster —
+ * the account keeps its name/login and just loses its Naale progress.
  *
- * Looked up by auth email rather than student name/id: students has no email
- * column, so this goes through auth.admin.listUsers() (paginated — the admin
- * API has no email filter) to find the auth user, then students.auth_user_id
- * to find the row, then confirms it's actually in the 'naale' class before
- * touching anything.
+ * Looked up by auth email rather than student name/id: naale_students has no
+ * email column, so this goes through auth.admin.listUsers() (paginated — the
+ * admin API has no email filter) to find the auth user, then
+ * naale_students.auth_user_id to find the row. No cross-track check needed
+ * (naale-students-full-split) — a naale_students row existing at all already
+ * means this is a Naale account, since that table is exclusively Naale's own
+ * (see src/lib/naale/auth.ts's getNaaleSession() comment).
  *
  * DRY RUN by default: prints what would be deleted and stops. Pass --confirm
  * to actually delete.
@@ -55,24 +57,14 @@ async function main() {
     process.exit(1)
   }
 
-  const { data: naaleClass } = await db.from('classes').select('id').eq('track', 'naale').maybeSingle()
-  if (!naaleClass) {
-    console.error("No 'naale' class row found — is migration_naale_track.sql applied?")
-    process.exit(1)
-  }
-
   const { data: student } = await db
-    .from('students')
-    .select('id, full_name, class_id')
+    .from('naale_students')
+    .select('id, full_name')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
   if (!student) {
-    console.error(`No students row for ${email} (auth user ${user.id})`)
-    process.exit(1)
-  }
-  if (student.class_id !== naaleClass.id) {
-    console.error(`${email} is not on the Naale track (class_id ${student.class_id}) — refusing to touch it.`)
+    console.error(`No naale_students row for ${email} (auth user ${user.id})`)
     process.exit(1)
   }
 
@@ -81,8 +73,10 @@ async function main() {
   const { count: levelCount } = await db.from('naale_topic_levels').select('id', { count: 'exact', head: true }).eq('student_id', student.id)
   const { count: sessionCount } = await db.from('naale_sessions').select('id', { count: 'exact', head: true }).eq('student_id', student.id)
   const { count: answerCount } = await db.from('naale_answers').select('id', { count: 'exact', head: true }).eq('student_id', student.id)
+  const { count: openAnswerCount } = await db.from('naale_open_answers').select('id', { count: 'exact', head: true }).eq('student_id', student.id)
+  const { count: debateAnswerCount } = await db.from('naale_debate_answers').select('id', { count: 'exact', head: true }).eq('student_id', student.id)
 
-  console.log(`Would delete: ${levelCount} naale_topic_levels rows, ${sessionCount} naale_sessions rows (cascades to ${answerCount} naale_answers rows)`)
+  console.log(`Would delete: ${levelCount} naale_topic_levels rows, ${sessionCount} naale_sessions rows (cascades to ${answerCount} naale_answers, ${openAnswerCount} naale_open_answers, ${debateAnswerCount} naale_debate_answers rows)`)
 
   if (!confirm) {
     console.log('\nDRY RUN — nothing deleted. Re-run with --confirm to actually delete.')
