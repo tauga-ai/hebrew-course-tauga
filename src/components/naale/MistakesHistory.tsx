@@ -9,7 +9,7 @@ import { t } from '@/lib/dev-i18n'
 
 interface Mistake {
   id: string
-  kind: 'mcq' | 'open'
+  kind: 'mcq' | 'open' | 'conversation'
   topic: string
   session_id: string
   prompt: string
@@ -18,10 +18,12 @@ interface Mistake {
   attempt_count: number
   /** MCQ only. */
   correct_answer?: string
-  /** Open only — stands in for a correct answer, since there isn't one. */
+  /** Open/conversation only — stands in for a correct answer, since there isn't one. */
   feedback?: string
   /** Open only — display fields, already stripped of grading-only keys. */
   fields?: Record<string, string>
+  /** Conversation only — the AI's mid-exchange counter-argument. */
+  ai_counter_argument?: string | null
 }
 
 interface MistakesResponse {
@@ -183,6 +185,27 @@ export function MistakesHistory() {
                       )}
                       <p className="text-[0.65rem] text-fg/40">{t('התשובה שלך')}</p>
                       <p className="text-[0.8rem] text-fg/80 mb-2 whitespace-pre-wrap">{m.chosen_answer}</p>
+                      <p className="text-[0.65rem] text-fg/40">{t('משוב')}</p>
+                      <p className="text-[0.8rem] text-fg/70 leading-relaxed">{m.feedback}</p>
+                    </>
+                  ) : m.kind === 'conversation' ? (
+                    // Same simple "AI: ... / אני: ..." transcript layout as
+                    // session/page.tsx's already-answered debate view — the
+                    // opening argument, the student's own text (both turns
+                    // already joined into chosen_answer), and the AI's
+                    // mid-exchange counter-argument if this was a two-turn
+                    // exchange, then the grader's feedback.
+                    <>
+                      <p className="text-[0.8rem] text-fg mb-2 leading-relaxed whitespace-pre-line">
+                        <span className="font-semibold">AI:</span> {m.prompt}
+                      </p>
+                      <p className="text-[0.65rem] text-fg/40">{t('התשובה שלך')}</p>
+                      <p className="text-[0.8rem] text-fg/80 mb-2 whitespace-pre-wrap">{m.chosen_answer}</p>
+                      {m.ai_counter_argument && (
+                        <p className="text-[0.8rem] text-fg mb-2">
+                          <span className="font-semibold">AI:</span> {m.ai_counter_argument}
+                        </p>
+                      )}
                       <p className="text-[0.65rem] text-fg/40">{t('משוב')}</p>
                       <p className="text-[0.8rem] text-fg/70 leading-relaxed">{m.feedback}</p>
                     </>

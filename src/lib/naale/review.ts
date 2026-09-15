@@ -39,7 +39,7 @@ export function pickReviewQuestions(previous: PreviousAnswer[], count: number): 
 
 /** Which bank a review question has to be served from. Matches the
  *  `kind` discriminant /next and /review-next put on a served question. */
-export type QuestionKind = 'mcq' | 'open'
+export type QuestionKind = 'mcq' | 'open' | 'conversation'
 
 /** A previous-session answer tagged with the bank it came from, so a merged
  *  queue can still be read back out of the right table. */
@@ -53,13 +53,13 @@ export interface ReviewQueueEntry {
 }
 
 /**
- * The session-opener queue across BOTH banks — one pool, capped at `count`
- * in total.
+ * The session-opener queue across ALL banks (mcq, open, and — naale-debate-
+ * review-support — debate) — one pool, capped at `count` in total.
  *
  * One pool rather than one queue per bank, because the spec asks for "2-3 hard
  * exercises from the previous session" — a count of exercises, not a count per
- * exercise type. Running two queues of 3 would open a session with up to 6
- * review questions and bury the new material.
+ * exercise type. Running a queue per bank would open a session with up to
+ * count × (number of banks) review questions and bury the new material.
  *
  * It also means MCQ and AI-graded questions compete on the same terms: wrong
  * answers first, hardest first, whichever bank they came from. A student whose
@@ -78,7 +78,7 @@ export function pickReviewQueue(previous: ReviewCandidate[], count: number): Rev
 }
 
 /**
- * One previous session's answers, from both banks, as a single candidate pool.
+ * One previous session's answers, from all banks, as a single candidate pool.
  *
  * Pure so the correct/wrong mapping is testable without a database — which
  * matters mainly for the graded threshold, the one value here that isn't just
@@ -95,7 +95,8 @@ export function pickReviewQueue(previous: ReviewCandidate[], count: number): Rev
  */
 export function toReviewCandidates(
   mcq: { question_id: string; difficulty: number; is_correct: boolean }[],
-  open: { question_id: string; difficulty: number; score: number }[]
+  open: { question_id: string; difficulty: number; score: number }[],
+  debate: { question_id: string; difficulty: number; score: number }[]
 ): ReviewCandidate[] {
   return [
     ...mcq.map(a => ({
@@ -109,6 +110,14 @@ export function toReviewCandidates(
       difficulty: a.difficulty,
       is_correct: a.score >= GRADED_CORRECT_SCORE,
       kind: 'open' as const,
+    })),
+    // Same "4-5 counts as correct" threshold as open — debate is also a 1-5
+    // graded score, just via a multi-turn exchange instead of one shot.
+    ...debate.map(a => ({
+      question_id: a.question_id,
+      difficulty: a.difficulty,
+      is_correct: a.score >= GRADED_CORRECT_SCORE,
+      kind: 'conversation' as const,
     })),
   ]
 }

@@ -8,13 +8,19 @@ export interface MistakeAttempt {
   session_id: string
   topic: string
   answered_at: string
-  kind: 'mcq' | 'open'
+  kind: 'mcq' | 'open' | 'conversation'
   was_correct: boolean
-  /** MCQ: the option they picked. Open: their written answer. Empty on a
-   *  pre-migration MCQ row, which can clear a mistake but can't be shown as one. */
+  /** MCQ: the option they picked. Open: their written answer. Conversation
+   *  (naale-debate-review-support): both turns joined with a newline. Empty
+   *  on a pre-migration MCQ row, which can clear a mistake but can't be shown
+   *  as one. */
   answer_text: string
-  /** Open only — the grader's response, which stands in for a correct answer. */
+  /** Open/conversation only — the grader's response, which stands in for a
+   *  correct answer. */
   feedback?: string
+  /** Conversation only — the AI's mid-exchange counter-argument, so the
+   *  client can render the full transcript, not just the student's turns. */
+  ai_counter_argument?: string | null
   is_review: boolean
 }
 
