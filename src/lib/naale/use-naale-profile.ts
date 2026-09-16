@@ -16,6 +16,10 @@ export interface NaaleProfile {
   // Whether this account has a password identity (vs. Google-only) — gates
   // the change-password section on /naale/profile.
   has_password?: boolean
+  // The caller's own grade(s) — a student has zero or one, staff has
+  // zero-to-many (naale-grade-filtering). Not present for role='admin', which
+  // has no grade concept. Used to default the staff roster's filter buttons.
+  grades?: string[]
 }
 
 /**
@@ -50,6 +54,7 @@ async function load(role: NaaleProfileRole): Promise<NaaleProfile | null> {
           translation_lang: data.student.translation_lang,
           is_admin: data.is_admin,
           has_password: data.has_password,
+          grades: data.grades,
         }
   } catch {
     return null

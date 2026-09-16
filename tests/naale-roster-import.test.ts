@@ -28,7 +28,32 @@ test('validateRows: 5-column shape captures name/phone', () => {
 test('validateRows: wrong field count still errors', () => {
   const { errors } = validateRows([['a@b.com', 'student', 'extra']])
   assert.equal(errors.length, 1)
-  assert.match(errors[0], /expected 2 fields.*or 5 fields/)
+  assert.match(errors[0], /expected 2 fields.*5 fields.*6 fields/)
+})
+
+test('validateRows: 6-column shape captures an optional student grade', () => {
+  const { rows, errors } = validateRows([
+    ['אווה', 'דזוגייב', 'evadzugaeva1@gmail.com', '509110614', 'student', 'ז'],
+  ])
+  assert.equal(errors.length, 0)
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].grade, 'ז')
+})
+
+test('validateRows: 6-column shape allows a blank grade', () => {
+  const { rows, errors } = validateRows([
+    ['אווה', 'דזוגייב', 'evadzugaeva1@gmail.com', '509110614', 'student', ''],
+  ])
+  assert.equal(errors.length, 0)
+  assert.equal(rows[0].grade, undefined)
+})
+
+test('validateRows: 6-column shape rejects an invalid grade', () => {
+  const { errors } = validateRows([
+    ['אווה', 'דזוגייב', 'evadzugaeva1@gmail.com', '509110614', 'student', 'x'],
+  ])
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /grade must be one of/)
 })
 
 test('validateRows: 5-column row with blank name/phone is allowed', () => {

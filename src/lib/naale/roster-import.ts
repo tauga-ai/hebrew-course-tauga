@@ -2,10 +2,12 @@
  * Parsing and upsert logic for the Naale roster (email + role, optionally
  * name + phone — naale-roster-name-phone), shared by
  * scripts/import-naale-roster.ts (CLI) and /api/naale/admin/roster/import
- * (web upload). Accepts a CSV or an Excel file, in either the legacy
- * 2-column (email, role) shape or the real school-provided 5-column shape
- * (first_name, last_name, email, phone, role) — both are supported so an
- * older minimal file still imports unchanged.
+ * (web upload). Accepts a CSV or an Excel file, in the legacy 2-column
+ * (email, role) shape, the 5-column shape (first_name, last_name, email,
+ * phone, role), or the 6-column shape that adds a student grade
+ * (first_name, last_name, email, phone, role, grade — naale-grade-filtering)
+ * — all three are supported so an older minimal file still imports
+ * unchanged.
  *
  * Unlike question-import.ts's per-sheet fault tolerance, this is
  * deliberately all-or-nothing: naale_roster is the access-control list
@@ -17,12 +19,16 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type NaaleRosterRole = 'student' | 'staff'
 const VALID_ROLES: NaaleRosterRole[] = ['student', 'staff']
 
+export type NaaleGrade = 'ז' | 'ח' | 'ט'
+const VALID_GRADES: NaaleGrade[] = ['ז', 'ח', 'ט']
+
 interface ParsedRow {
   email: string
   role: NaaleRosterRole
   firstName?: string
   lastName?: string
   phone?: string
+  grade?: NaaleGrade
   line: number
 }
 
@@ -32,9 +38,9 @@ interface ParseResult {
 }
 
 /** Shared row-level validation, regardless of source format — a valid row is
- *  either [email, role] (legacy) or [first_name, last_name, email, phone,
- *  role] (the real school-provided shape, naale-roster-name-phone), nothing
- *  else. */
+ *  [email, role] (legacy), [first_name, last_name, email, phone, role] (the
+ *  real school-provided shape, naale-roster-name-phone), or that same shape
+ *  plus a trailing grade (naale-grade-filtering), nothing else. */
 export function validateRows(rawRows: string[][]): ParseResult {
   const rows: ParsedRow[] = []
   const errors: string[] = []
@@ -51,13 +57,16 @@ export function validateRows(rawRows: string[][]): ParseResult {
 
     let email: string, role: string
     let firstName: string | undefined, lastName: string | undefined, phone: string | undefined
+    let gradeRaw: string | undefined
 
     if (trimmed.length === 2) {
       ;[email, role] = trimmed
     } else if (trimmed.length === 5) {
       ;[firstName, lastName, email, phone, role] = trimmed
+    } else if (trimmed.length === 6) {
+      ;[firstName, lastName, email, phone, role, gradeRaw] = trimmed
     } else {
-      errors.push(`line ${line}: expected 2 fields (email,role) or 5 fields (first_name,last_name,email,phone,role), got ${trimmed.length}: ${JSON.stringify(trimmed)}`)
+      errors.push(`line ${line}: expected 2 fields (email,role), 5 fields (first_name,last_name,email,phone,role), or 6 fields (…,grade), got ${trimmed.length}: ${JSON.stringify(trimmed)}`)
       return
     }
 
@@ -70,6 +79,14 @@ export function validateRows(rawRows: string[][]): ParseResult {
     if (!VALID_ROLES.includes(role as NaaleRosterRole)) {
       errors.push(`line ${line}: role must be one of ${VALID_ROLES.join('/')}, got ${JSON.stringify(role)}`)
       return
+    }
+    let grade: NaaleGrade | undefined
+    if (gradeRaw && gradeRaw.trim() !== '') {
+      if (!VALID_GRADES.includes(gradeRaw as NaaleGrade)) {
+        errors.push(`line ${line}: grade must be one of ${VALID_GRADES.join('/')}, got ${JSON.stringify(gradeRaw)}`)
+        return
+      }
+      grade = gradeRaw as NaaleGrade
     }
     const previous = seen.get(normalizedEmail)
     if (previous !== undefined) {
@@ -84,6 +101,7 @@ export function validateRows(rawRows: string[][]): ParseResult {
       firstName: firstName || undefined,
       lastName: lastName || undefined,
       phone: phone || undefined,
+      grade,
       line,
     })
   })
@@ -153,12 +171,13 @@ export async function importRosterFile(
     const { error } = await db
       .from('naale_roster')
       .upsert(
-        rows.map(({ email, role, firstName, lastName, phone }) => ({
+        rows.map(({ email, role, firstName, lastName, phone, grade }) => ({
           email,
           role,
           first_name: firstName ?? null,
           last_name: lastName ?? null,
           phone: phone ?? null,
+          grade: grade ?? null,
         })),
         { onConflict: 'email' }
       )

@@ -6,9 +6,12 @@
  * Run with:
  *   npx tsx --env-file=.env.local scripts/import-naale-roster.ts <path-to-file> [--dry-run]
  *
- * Accepts a .csv or .xlsx file, in either shape:
+ * Accepts a .csv or .xlsx file, in any of these shapes:
  *   - legacy: 2 columns — email, role (student|staff)
  *   - full:   5 columns — first_name, last_name, email, phone, role (student|staff)
+ *   - graded: 6 columns — first_name, last_name, email, phone, role, grade (ז|ח|ט)
+ *             grade is optional (blank is fine) and only meaningful for students —
+ *             see naale-grade-filtering.
  */
 import { readFileSync } from 'fs'
 import { createServiceClient } from '../src/lib/supabase/service'

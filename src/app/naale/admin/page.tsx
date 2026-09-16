@@ -295,6 +295,10 @@ export default function NaaleAdminPage() {
   const [rosterSearch, setRosterSearch] = useState('')
   const [rosterError, setRosterError] = useState('')
 
+  const [staffList, setStaffList] = useState<{ staffId: string; fullName: string }[] | null>(null)
+  const [staffGrades, setStaffGrades] = useState<Record<string, string[]>>({})
+  const [staffGradesSaving, setStaffGradesSaving] = useState<string | null>(null)
+
   const [customFirstName, setCustomFirstName] = useState('')
   const [customLastName, setCustomLastName] = useState('')
   const [customEmail, setCustomEmail] = useState('')
@@ -334,6 +338,7 @@ export default function NaaleAdminPage() {
       setReady(true)
       loadAdmins()
       loadRoster()
+      loadStaffGrades()
       loadTopics()
     }
     load()
@@ -401,6 +406,27 @@ export default function NaaleAdminPage() {
   async function loadRoster() {
     const res = await fetch('/api/naale/admin/roster')
     if (res.ok) setRoster((await res.json()).roster)
+  }
+
+  async function loadStaffGrades() {
+    const res = await fetch('/api/naale/admin/roster/staff-grades')
+    if (!res.ok) return
+    const data = await res.json()
+    setStaffList(data.staff)
+    setStaffGrades(data.staffGrades ?? {})
+  }
+
+  async function toggleStaffGrade(staffId: string, grade: string) {
+    const current = staffGrades[staffId] ?? []
+    const next = current.includes(grade) ? current.filter(g => g !== grade) : [...current, grade]
+    setStaffGrades(prev => ({ ...prev, [staffId]: next }))
+    setStaffGradesSaving(staffId)
+    await fetch('/api/naale/admin/roster/staff-grades', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId, grades: next }),
+    })
+    setStaffGradesSaving(null)
   }
 
   async function createCustomAccount(e: React.FormEvent) {
@@ -832,6 +858,43 @@ export default function NaaleAdminPage() {
             </>
           )}
           {rosterError && <p className="text-red-500 dark:text-red-400 text-sm mb-3">{rosterError}</p>}
+
+          <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">
+            {t('שיוך כיתות לצוות')}
+          </h3>
+          {staffList === null ? (
+            <p className="text-fg/40 text-sm mb-3">{t('טוען...')}</p>
+          ) : staffList.length === 0 ? (
+            <p className="text-fg/50 text-sm mb-3">{t('אין עדיין אנשי צוות שהתחברו')}</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-card-border mb-3">
+              {staffList.map(s => (
+                <li key={s.staffId} className="flex items-center gap-3 py-2.5">
+                  <span className="flex-1 min-w-0 text-sm text-fg truncate">{s.fullName}</span>
+                  <div className="shrink-0 flex gap-1.5">
+                    {(['ז', 'ח', 'ט'] as const).map(g => (
+                      <button
+                        key={g}
+                        type="button"
+                        disabled={staffGradesSaving === s.staffId}
+                        onClick={() => toggleStaffGrade(s.staffId, g)}
+                        className={`px-2.5 py-1 rounded-full text-xs border transition disabled:opacity-50 ${
+                          (staffGrades[s.staffId] ?? []).includes(g)
+                            ? 'bg-primary-600 text-white border-primary-600'
+                            : 'border-card-border text-fg/60 hover:border-primary-400'
+                        }`}
+                      >
+                        {t(`כיתה ${g}`)}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-xs text-fg/40 mb-3">
+            {t('ללא בחירה = גישה לכל הכיתות (למשל מנהל שמפקח על הפעילות הכללית).')}
+          </p>
 
           <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">
             {t('הוספת משתמש בודד')}
