@@ -210,6 +210,22 @@ test('groupSessionsByDay: no sessions yields no rows', () => {
   assert.deepEqual(groupSessionsByDay([]), [])
 })
 
+test('groupSessionsByDay: carries topic per session (naale-session-topic-breakdown)', () => {
+  const days = groupSessionsByDay([
+    { id: 's1', started_at: '2026-08-25T09:00:00.000Z', topic: 'דקדוק' },
+    { id: 's2', started_at: '2026-08-25T14:00:00.000Z', topic: 'אוצר מילים' },
+  ])
+  assert.equal(days[0].sessions.length, 2)
+  const byId = Object.fromEntries(days[0].sessions.map(s => [s.id, s.topic]))
+  assert.equal(byId.s1, 'דקדוק')
+  assert.equal(byId.s2, 'אוצר מילים')
+})
+
+test('groupSessionsByDay: a session with no topic (Full Sessions) carries topic: null', () => {
+  const days = groupSessionsByDay([{ id: 's1', started_at: '2026-08-25T09:00:00.000Z' }])
+  assert.equal(days[0].sessions[0].topic, null)
+})
+
 test('buildAttendanceMonth: one cell per day of the month, plus leading blanks', () => {
   const now = new Date('2026-08-27T10:00:00')
   const days = buildAttendanceMonth([], 2026, 7, now) // August 2026
@@ -249,6 +265,25 @@ test('buildAttendanceMonth: sessions land on their day and same-day sessions add
   assert.equal(byDay(26).count, 2, 'two sessions on the 26th')
   assert.equal(byDay(24).count, 1, 'one session on the 24th')
   assert.equal(days.reduce((n, d) => n + d.count, 0), 3, 'every session counted exactly once')
+})
+
+test('buildAttendanceMonth: topic is carried through to each day cell (naale-session-topic-breakdown)', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const days = buildAttendanceMonth(
+    [{ id: 'a', started_at: '2026-08-26T07:00:00.000Z', topic: 'דקדוק' }],
+    2026,
+    7,
+    now
+  )
+  const day26 = days.find(d => d.dayOfMonth === 26)!
+  assert.equal(day26.sessions.length, 1)
+  assert.equal(day26.sessions[0].topic, 'דקדוק')
+})
+
+test('buildAttendanceMonth: a day with no sessions has an empty sessions array, not undefined', () => {
+  const now = new Date('2026-08-27T10:00:00')
+  const days = buildAttendanceMonth([], 2026, 7, now)
+  assert.ok(days.filter(d => d.label !== null).every(d => Array.isArray(d.sessions) && d.sessions.length === 0))
 })
 
 test('buildAttendanceMonth: sessions from another month are not folded in', () => {

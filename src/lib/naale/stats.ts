@@ -186,6 +186,11 @@ export interface SessionDay {
   latest: string
   count: number
   session_ids: string[]
+  /** Each session on this day, topic included — naale-session-topic-breakdown.
+   *  Additive alongside session_ids/count, which stay as they were for
+   *  existing callers. `topic` is null for anything but a `kind: 'topic'`
+   *  session, same nullability as the DB column itself. */
+  sessions: { id: string; started_at: string; topic: string | null }[]
 }
 
 /**
@@ -201,18 +206,22 @@ export interface SessionDay {
  * back/forward navigation) so staff and student screens shape this the same
  * way, for the same reason buildStudentProgress() is shared.
  */
-export function groupSessionsByDay(sessions: { id: string; started_at: string }[]): SessionDay[] {
+export function groupSessionsByDay(
+  sessions: { id: string; started_at: string; topic?: string | null }[]
+): SessionDay[] {
   const byLabel = new Map<string, SessionDay>()
 
   for (const s of sessions) {
     const label = new Date(s.started_at).toLocaleDateString('he-IL')
+    const entry = { id: s.id, started_at: s.started_at, topic: s.topic ?? null }
     const existing = byLabel.get(label)
     if (existing) {
       existing.count += 1
       existing.session_ids.push(s.id)
+      existing.sessions.push(entry)
       if (s.started_at > existing.latest) existing.latest = s.started_at
     } else {
-      byLabel.set(label, { label, latest: s.started_at, count: 1, session_ids: [s.id] })
+      byLabel.set(label, { label, latest: s.started_at, count: 1, session_ids: [s.id], sessions: [entry] })
     }
   }
 
@@ -232,6 +241,9 @@ export interface AttendanceMonthDay {
   count: number
   dayOfMonth: number | null
   isToday: boolean
+  /** Empty for a blank leading cell or a day with no sessions — same shape as
+   *  SessionDay.sessions (naale-session-topic-breakdown). */
+  sessions: { id: string; started_at: string; topic: string | null }[]
 }
 
 /**
@@ -255,13 +267,13 @@ export interface AttendanceMonthDay {
  * `now` is a parameter so this is testable; callers pass new Date().
  */
 export function buildAttendanceMonth(
-  sessions: { id: string; started_at: string }[],
+  sessions: { id: string; started_at: string; topic?: string | null }[],
   year: number,
   month: number,
   now: Date
 ): AttendanceMonthDay[] {
-  const countByLabel = new Map<string, number>()
-  for (const day of groupSessionsByDay(sessions)) countByLabel.set(day.label, day.count)
+  const dayByLabel = new Map<string, SessionDay>()
+  for (const day of groupSessionsByDay(sessions)) dayByLabel.set(day.label, day)
 
   const todayLabel = now.toLocaleDateString('he-IL')
   const first = new Date(year, month, 1)
@@ -276,17 +288,20 @@ export function buildAttendanceMonth(
     count: 0,
     dayOfMonth: null,
     isToday: false,
+    sessions: [],
   }))
 
   const days: AttendanceMonthDay[] = Array.from({ length: daysInMonth }, (_, i) => {
     const d = new Date(year, month, 1)
     d.setDate(1 + i)
     const label = d.toLocaleDateString('he-IL')
+    const grouped = dayByLabel.get(label)
     return {
       label,
-      count: countByLabel.get(label) ?? 0,
+      count: grouped?.count ?? 0,
       dayOfMonth: d.getDate(),
       isToday: label === todayLabel,
+      sessions: grouped?.sessions ?? [],
     }
   })
 
