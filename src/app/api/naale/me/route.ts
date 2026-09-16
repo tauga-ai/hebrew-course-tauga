@@ -32,11 +32,22 @@ export async function GET() {
   // free for the common student/staff case and only costs an extra lookup
   // for a caller who's also a Naale admin (see requireNaaleAdmin(), which
   // handles the admin-only, non-roster-member case separately).
-  const { data: adminRow } = await createServiceClient()
+  const db = createServiceClient()
+  const { data: adminRow } = await db
     .from('naale_admins')
     .select('email')
     .ilike('email', session.user.email ?? '')
     .maybeSingle()
+
+  // The caller's own grade(s) — used by the staff roster page to default its
+  // filter buttons (naale-grade-filtering). Students have exactly one grade
+  // (or none, if not yet synced); staff have their own 0-to-many assignment.
+  const grades =
+    session.role === 'staff'
+      ? ((await db.from('naale_staff_grades').select('grade').eq('staff_id', session.student.id)).data ?? []).map(r => r.grade)
+      : session.student.grade
+        ? [session.student.grade]
+        : []
 
   return NextResponse.json({
     role: session.role,
@@ -50,5 +61,6 @@ export async function GET() {
     avatar_url: avatarUrl,
     is_admin: !!adminRow,
     has_password: hasPasswordIdentity(session.user) || session.passwordIssuedByAdmin,
+    grades,
   })
 }

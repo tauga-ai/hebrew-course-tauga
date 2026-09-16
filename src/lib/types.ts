@@ -70,6 +70,7 @@ export interface NaaleStudentProfile {
   full_name: string
   role: NaaleRole
   translation_lang: 'ru' | 'ar'
+  grade: string | null
   created_at: string
   updated_at: string
 }

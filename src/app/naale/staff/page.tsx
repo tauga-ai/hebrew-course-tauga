@@ -70,7 +70,14 @@ function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean })
         <div className="flex items-center gap-2 sm:gap-3">
           <Avatar name={s.full_name} avatarUrl={s.avatar_url} />
           <div className="min-w-0">
-            <div className="font-medium text-fg truncate">{s.full_name}</div>
+            <div className="flex items-center gap-1.5">
+              <div className="font-medium text-fg truncate">{s.full_name}</div>
+              {s.grade && (
+                <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-fg/50">
+                  {t(`כיתה ${s.grade}`)}
+                </span>
+              )}
+            </div>
             <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
           </div>
         </div>
@@ -136,6 +143,18 @@ export default function NaaleStaffPage() {
   // same cached profile instead of firing its own /api/naale/me.
   const { profile: me, refresh: refreshProfile } = useNaaleProfile('staff')
   const [search, setSearch] = useState('')
+  const [gradeFilter, setGradeFilter] = useState<string | null>(null)
+  // Tracks which profile the default filter was already derived from, so it
+  // applies exactly once per profile load and never fights a filter the user
+  // has since clicked themselves. Adjusted during render (not an effect) per
+  // React's "storing information from previous renders" pattern — this is
+  // the sanctioned way to derive state from a prop/value change without an
+  // extra commit-then-effect render.
+  const [gradeFilterDefaultedFor, setGradeFilterDefaultedFor] = useState<typeof me>(null)
+  if (me && me !== gradeFilterDefaultedFor) {
+    setGradeFilterDefaultedFor(me)
+    if (me.grades?.length === 1) setGradeFilter(me.grades[0])
+  }
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -174,9 +193,10 @@ export default function NaaleStaffPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return students
-    return students.filter(s => s.full_name.toLowerCase().includes(q))
-  }, [students, search])
+    const byGrade = gradeFilter ? students.filter(s => s.grade === gradeFilter) : students
+    if (!q) return byGrade
+    return byGrade.filter(s => s.full_name.toLowerCase().includes(q))
+  }, [students, search, gradeFilter])
 
   /**
    * Staff get the same pre-session sheet students do. They are exercising the
@@ -262,6 +282,32 @@ export default function NaaleStaffPage() {
               </div>
             </div>
           )}
+
+          <div className="flex flex-wrap gap-2 mb-3">
+            {(['ז', 'ח', 'ט'] as const).map(g => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGradeFilter(gradeFilter === g ? null : g)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                  gradeFilter === g
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'border-card-border text-fg/70 hover:border-primary-400'
+                }`}
+              >
+                {t(`כיתה ${g}`)}
+              </button>
+            ))}
+            {gradeFilter && (
+              <button
+                type="button"
+                onClick={() => setGradeFilter(null)}
+                className="px-3 py-1.5 rounded-full text-sm text-fg/50 underline"
+              >
+                {t('הצג הכל')}
+              </button>
+            )}
+          </div>
 
           <input
             type="text"

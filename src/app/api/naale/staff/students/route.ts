@@ -57,7 +57,7 @@ export async function GET() {
 
   const { data: students } = await db
     .from('naale_students')
-    .select('id, full_name, created_at, auth_user_id')
+    .select('id, full_name, created_at, auth_user_id, grade')
     .eq('role', 'student')
 
   const studentIds = (students ?? []).map(s => s.id)
@@ -102,6 +102,7 @@ export async function GET() {
       student_id: s.id,
       full_name: s.full_name,
       avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
+      grade: s.grade,
       totals,
     }
   })

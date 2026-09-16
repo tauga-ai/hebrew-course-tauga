@@ -31,7 +31,7 @@ export type NaaleSessionResult =
       passwordIssuedByAdmin: boolean
     }
 
-const NAALE_STUDENT_COLUMNS = 'id, full_name, role, translation_lang, created_at, updated_at'
+const NAALE_STUDENT_COLUMNS = 'id, full_name, role, translation_lang, grade, created_at, updated_at'
 
 /**
  * A Google identity's own name always wins (naale-profile-name-phone) — the
@@ -91,7 +91,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
   // meaningfully) behaves as a case-insensitive exact match.
   const { data: rosterRow } = await db
     .from('naale_roster')
-    .select('email, role, first_name, last_name, phone, password_issued_by_admin')
+    .select('email, role, first_name, last_name, phone, grade, password_issued_by_admin')
     .ilike('email', user.email)
     .maybeSingle()
 
@@ -116,6 +116,8 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
     // during Ticket 16's QA pass.
     const updates: Partial<NaaleStudentProfile> = {}
     if (existing.role !== role) updates.role = role
+    // Same "always read fresh" reasoning as role above — naale-grade-filtering.
+    if (existing.grade !== (rosterRow.grade ?? null)) updates.grade = rosterRow.grade ?? null
 
     // full_name: only touch it if the CURRENT value is exactly the
     // email-fallback this function itself would have written (i.e. nothing
@@ -148,7 +150,7 @@ export async function getNaaleSession(): Promise<NaaleSessionResult> {
 
   const { data: created, error } = await db
     .from('naale_students')
-    .insert({ auth_user_id: user.id, full_name: fullName, role })
+    .insert({ auth_user_id: user.id, full_name: fullName, role, grade: rosterRow.grade ?? null })
     .select(NAALE_STUDENT_COLUMNS)
     .single()
 
