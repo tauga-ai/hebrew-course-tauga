@@ -67,8 +67,8 @@ export async function GET(
     // student's staff-facing progress silently excluded every debate answer.
     selectAll<{ topic: string; score: number; is_review: boolean; session_id: string }>('naale_debate_answers', (from, to) =>
       db.from('naale_debate_answers').select('topic, score, is_review, session_id').eq('student_id', student.id).range(from, to)),
-    selectAll<{ id: string; kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
-      db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', student.id).range(from, to)),
+    selectAll<{ id: string; kind: string; completed: boolean; started_at: string; topic: string | null }>('naale_sessions', (from, to) =>
+      db.from('naale_sessions').select('id, kind, completed, started_at, topic').eq('student_id', student.id).range(from, to)),
   ])
 
   const progress = buildStudentProgress({ allTopics, levels, answers, openAnswers: [...openAnswers, ...debateAnswers], sessions })
@@ -92,7 +92,7 @@ export async function GET(
   const sessionDates = sessions
     .filter(x => x.completed && (x.kind === 'practice' || x.kind === 'topic'))
     .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
-    .map(x => ({ id: x.id, started_at: x.started_at, kind: x.kind }))
+    .map(x => ({ id: x.id, started_at: x.started_at, kind: x.kind, topic: x.topic }))
 
   return NextResponse.json({
     student: {

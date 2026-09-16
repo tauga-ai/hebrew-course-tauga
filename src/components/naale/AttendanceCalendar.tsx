@@ -46,7 +46,7 @@ export function AttendanceCalendar({
   sessions,
   now,
 }: {
-  sessions: { id: string; started_at: string; kind: string }[]
+  sessions: { id: string; started_at: string; kind: string; topic?: string | null }[]
   now: Date
 }) {
   const [kind, setKind] = useState<SessionKind>('practice')
@@ -226,6 +226,28 @@ export function AttendanceCalendar({
           <span className="text-fg/30">{t('בחר יום לפרטים')}</span>
         )}
       </p>
+
+      {/* Breakdown of which topic each 5-min session covered, added below the
+          existing count readout rather than replacing it (naale-session-topic-
+          breakdown). Full Sessions (kind: 'practice') is intentionally
+          mixed-topic and unaffected — this only ever renders under the "topic"
+          toggle, where naale_sessions.topic is always set. */}
+      {kind === 'topic' && activeDay && activeDay.sessions.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-1">
+          {activeDay.sessions
+            .slice()
+            .sort((a, b) => (a.started_at < b.started_at ? 1 : -1))
+            .map(s => (
+              <li
+                key={s.id}
+                className="flex items-center justify-between gap-2 text-xs text-fg/70 bg-fg/5 rounded-lg px-2.5 py-1.5"
+              >
+                <span className="truncate">{s.topic ?? t('לא ידוע')}</span>
+                <LtrIsolate>{formatSessionTime(s.started_at)}</LtrIsolate>
+              </li>
+            ))}
+        </ul>
+      )}
     </section>
   )
 }
@@ -260,6 +282,13 @@ function ringClass(isSelected: boolean, isHovered: boolean, isToday: boolean): s
  *  about what it represents. */
 function dayLabel(label: string, count: number): string {
   return count === 0 ? `${label} — ${t('אין תרגול ביום זה')}` : `${label} — ${count} ${t('תרגולים')}`
+}
+
+/** he-IL 24h clock, matching the rest of the component's he-IL date
+ *  formatting — naale-session-topic-breakdown's per-session breakdown needs
+ *  a time, which nothing here has shown before now. */
+function formatSessionTime(startedAt: string): string {
+  return new Date(startedAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
 }
 
 /** One hue, three steps — carried over from AttendanceStrip along with its
