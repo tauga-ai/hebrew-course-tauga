@@ -1,6 +1,7 @@
 import 'server-only'
 import { GoogleGenerativeAI, SchemaType, type ObjectSchema } from '@google/generative-ai'
 import { isRetryableGeminiError } from './gemini-retry'
+import { looksTruncated } from './debate-grading-validate'
 
 const TURN_RESULT_SCHEMA: ObjectSchema = {
   type: SchemaType.OBJECT,
@@ -16,6 +17,11 @@ const REQUEST_TIMEOUT_MS = 15_000
 const MAX_ATTEMPTS = 2
 const RETRY_DELAY_MS = 500
 const FALLBACK_MESSAGE = 'אירעה שגיאה בבדיקת התשובה. הנתונים נשמרו, אנא המשך לשאלה הבאה.'
+// Distinct from FALLBACK_MESSAGE: this covers a narrower case (naale-debate-
+// module QA, 2026-09-16) where the score itself is valid and schema-checked,
+// only the prose feedback text came back truncated mid-sentence — so the
+// score is kept as-is rather than treated as unreliable too.
+const TRUNCATED_FEEDBACK_MESSAGE = 'משוב מפורט לא זמין הפעם, אך הציון נשמר כראוי.'
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -124,6 +130,10 @@ export async function runDebateTurn(args: {
     if (args.isFinalTurn) {
       if (typeof parsed.score !== 'number' || parsed.score < 1 || parsed.score > 5 || typeof parsed.feedback !== 'string') {
         throw new Error('final turn: missing/invalid score or feedback')
+      }
+      if (looksTruncated(parsed.feedback)) {
+        console.error(`[debate-grading] feedback looks truncated, using fallback text (score kept as-is):`, parsed.feedback)
+        return { ai_response: null, score: parsed.score, feedback: TRUNCATED_FEEDBACK_MESSAGE }
       }
       return { ai_response: null, score: parsed.score, feedback: parsed.feedback }
     }
