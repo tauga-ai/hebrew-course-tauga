@@ -25,6 +25,17 @@ test('validateRows: 5-column shape captures name/phone', () => {
   assert.equal(rows[0].phone, '509110614')
 })
 
+test('validateRows: English header row (revised roster workbook) is tolerated', () => {
+  const { rows, errors } = validateRows([
+    ['First name', 'Last name', 'Email Address', 'Phone Number', 'Role', 'Class'],
+    ['אווה', 'דזוגייב', 'evadzugaeva1@gmail.com', '509110614', 'student', 'ז'],
+  ])
+  assert.equal(errors.length, 0)
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].email, 'evadzugaeva1@gmail.com')
+  assert.equal(rows[0].grade, 'ז')
+})
+
 test('validateRows: wrong field count still errors', () => {
   const { errors } = validateRows([['a@b.com', 'student', 'extra']])
   assert.equal(errors.length, 1)

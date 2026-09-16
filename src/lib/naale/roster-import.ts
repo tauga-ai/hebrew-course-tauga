@@ -52,8 +52,19 @@ export function validateRows(rawRows: string[][]): ParseResult {
     if (trimmed.every(f => f === '')) return // blank row, skip silently
 
     // Header tolerance for both shapes — only at row 1, only an exact match
-    // on the column that would be "email" in each shape.
-    if (idx === 0 && (trimmed[0]?.toLowerCase() === 'email' || trimmed[2] === 'כתובת מייל')) return
+    // on the column that would be "email" in each shape. Recognizes both the
+    // original Hebrew header and the English header the roster spreadsheet
+    // was later translated to (naale-grade-filtering) — "Email Address", not
+    // just "Email", since that's the exact wording Noam's revised workbook
+    // uses.
+    const emailHeaderCandidate = trimmed[2]?.toLowerCase()
+    if (
+      idx === 0 &&
+      (trimmed[0]?.toLowerCase() === 'email' ||
+        trimmed[2] === 'כתובת מייל' ||
+        emailHeaderCandidate === 'email' ||
+        emailHeaderCandidate === 'email address')
+    ) return
 
     let email: string, role: string
     let firstName: string | undefined, lastName: string | undefined, phone: string | undefined
