@@ -22,6 +22,7 @@ type BankRow = {
 }
 type OpenBankRow = { id: string; topic: string; difficulty: number; prompt: string; fields: unknown }
 type DebateBankRow = { question_id: string; topic: string; difficulty: number; subject: string; initial_ai_argument: string; required_connectors: string }
+type RoleplayBankRow = { question_id: string; topic: string; difficulty: number; scenario_description: string; ai_persona: string; initial_ai_line: string }
 // session_id is only used by topic-session recycling below, to avoid
 // re-picking a question already recycled earlier in THIS session (which
 // would violate naale_answers/naale_open_answers' one-row-per-session-question
@@ -33,10 +34,10 @@ type PublicQuestion = {
   topic: string
   difficulty: number
   // Which content table this came from — naale_questions (mcq),
-  // naale_open_questions (open, AI-graded free text), or
-  // naale_debate_questions (conversation, multi-turn AI-graded). A topic name
-  // only ever exists in one of these, so this never conflicts within one
-  // topic's own question pool.
+  // naale_open_questions (open, AI-graded free text), or naale_debate_
+  // questions / naale_roleplay_questions (both 'conversation', multi-turn
+  // AI-graded — discriminated by q.topic, not by a separate kind, since a
+  // topic name only ever exists in one of these tables).
   kind: 'mcq' | 'open' | 'conversation'
   prompt: string
   // 'mcq' only:
@@ -52,13 +53,19 @@ type PublicQuestion = {
   // to the client (see the `served` assignment below), same concern as
   // correct_answer above.
   fields?: Record<string, string>
-  // 'conversation' only (debate). expected_answer_rubric/max_turns are
+  // 'conversation', debate topic only. expected_answer_rubric/max_turns are
   // deliberately never selected into DebateBankRow in the first place (see
   // below), so unlike correct_answer/fields there's nothing to strip here —
   // they can't leak because they're never fetched for the client response.
   subject?: string
   initial_ai_argument?: string
   required_connectors?: string
+  // 'conversation', role-play topic only. Same never-selected-so-can't-leak
+  // reasoning as debate's fields above — expected_goal_and_register/max_turns
+  // are never selected into RoleplayBankRow.
+  scenario_description?: string
+  ai_persona?: string
+  initial_ai_line?: string
 }
 
 /**
@@ -80,9 +87,10 @@ function forClient(q: PublicQuestion): PublicQuestion {
   if (debugMode) return q
   if (q.kind === 'mcq') return { ...q, correct_answer: undefined }
   if (q.kind === 'open') return { ...q, fields: publicFields(q.topic, q.fields!) }
-  // 'conversation' (debate): nothing to strip — expected_answer_rubric/
-  // max_turns were never selected into DebateBankRow, so they were never
-  // fetched for the client in the first place.
+  // 'conversation' (debate or role-play): nothing to strip — the
+  // grading-only fields (expected_answer_rubric/expected_goal_and_register,
+  // max_turns) were never selected into DebateBankRow/RoleplayBankRow, so
+  // they were never fetched for the client in the first place.
   return q
 }
 
@@ -162,7 +170,7 @@ export async function GET(req: NextRequest) {
   // Null for practice/placement, which genuinely rotate across every topic.
   const bankTopic = owned.session.kind === 'topic' ? owned.session.topic : null
 
-  const [{ data: levels }, mcqBank, openBank, debateBank, answered, openAnswered, debateAnswered, placementSessions, disabledTopics] = await Promise.all([
+  const [{ data: levels }, mcqBank, openBank, debateBank, roleplayBank, answered, openAnswered, debateAnswered, roleplayAnswered, placementSessions, disabledTopics] = await Promise.all([
     db.from('naale_topic_levels').select('topic, level').eq('student_id', studentId),
     selectAll<BankRow>('naale_questions', (from, to) => {
       const q = db.from('naale_questions').select('id, topic, difficulty, prompt, answer_kind, options, correct_answer, audio_file_name')
@@ -176,17 +184,23 @@ export async function GET(req: NextRequest) {
       const q = db.from('naale_debate_questions').select('question_id, topic, difficulty, subject, initial_ai_argument, required_connectors')
       return (bankTopic ? q.eq('topic', bankTopic) : q).range(from, to)
     }),
+    selectAll<RoleplayBankRow>('naale_roleplay_questions', (from, to) => {
+      const q = db.from('naale_roleplay_questions').select('question_id, topic, difficulty, scenario_description, ai_persona, initial_ai_line')
+      return (bankTopic ? q.eq('topic', bankTopic) : q).range(from, to)
+    }),
     // Every question this student has ever answered, in any session —
     // "unseen" is lifetime-scoped, not session-scoped.
     selectAll<AnsweredRow>('naale_answers', (from, to) =>
       db.from('naale_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
     selectAll<AnsweredRow>('naale_open_answers', (from, to) =>
       db.from('naale_open_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
-    // Debate answers are keyed by a text question_id (naale_debate_questions'
-    // own PK, not a uuid) — same AnsweredRow shape works regardless, this
+    // Debate/role-play answers are keyed by a text question_id (their own
+    // table's PK, not a uuid) — same AnsweredRow shape works regardless, this
     // route never assumes question_id is a uuid.
     selectAll<AnsweredRow>('naale_debate_answers', (from, to) =>
       db.from('naale_debate_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
+    selectAll<AnsweredRow>('naale_roleplay_answers', (from, to) =>
+      db.from('naale_roleplay_answers').select('question_id, topic, answered_at, session_id').eq('student_id', studentId).order('answered_at', { ascending: false }).range(from, to)),
     // Which of this student's sessions were the placement quiz — the answer
     // rows above carry a session_id but not its kind, and placement answers
     // are the ones this route now treats as reclaimable rather than spent
@@ -221,6 +235,14 @@ export async function GET(req: NextRequest) {
       required_connectors: row.required_connectors,
     })
   }
+  for (const row of roleplayBank) {
+    if (!bankByTopic.has(row.topic)) bankByTopic.set(row.topic, [])
+    bankByTopic.get(row.topic)!.push({
+      id: row.question_id, topic: row.topic, difficulty: row.difficulty, kind: 'conversation',
+      prompt: row.initial_ai_line, scenario_description: row.scenario_description,
+      ai_persona: row.ai_persona, initial_ai_line: row.initial_ai_line,
+    })
+  }
   // A disabled topic (naale-topic-toggle) is excluded from the multi-topic
   // rotation, but a single-topic (bankTopic) session is left untouched — it
   // was already validated at session/start, and a student mid-session when a
@@ -252,7 +274,7 @@ export async function GET(req: NextRequest) {
   const seenIds = new Set<string>()
   const placementFirstSeen = new Map<string, string>()
 
-  for (const a of [...answered, ...openAnswered, ...debateAnswered]) {
+  for (const a of [...answered, ...openAnswered, ...debateAnswered, ...roleplayAnswered]) {
     if (placementSessionIds.has(a.session_id)) {
       // Keep the EARLIEST placement answer: the tier below is ordered
       // oldest-first, matching the topic session's existing recycling order so
@@ -275,7 +297,7 @@ export async function GET(req: NextRequest) {
   // Whichever answer (mcq or open) is most recent overall decides prevTopic
   // — rotation shouldn't repeat the same topic regardless of which kind the
   // student's last answer happened to be.
-  const allAnswered = [...answered, ...openAnswered, ...debateAnswered].sort(
+  const allAnswered = [...answered, ...openAnswered, ...debateAnswered, ...roleplayAnswered].sort(
     (a, b) => new Date(b.answered_at).getTime() - new Date(a.answered_at).getTime()
   )
   const prevTopic = allAnswered[0]?.topic ?? null
@@ -368,7 +390,7 @@ export async function GET(req: NextRequest) {
   // is the fallback instead of ending after a handful of questions.
   if (owned.session.kind === 'topic' && owned.session.topic) {
     const topic = owned.session.topic
-    const topicAnswers = [...answered, ...openAnswered, ...debateAnswered].filter(a => a.topic === topic)
+    const topicAnswers = [...answered, ...openAnswered, ...debateAnswered, ...roleplayAnswered].filter(a => a.topic === topic)
     const recycledId = pickRecycledQuestionId(topicAnswers, sessionId)
     const recycled = recycledId ? bankByTopic.get(topic)?.find(q => q.id === recycledId) : null
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleAdmin } from '@/lib/naale/auth'
 import { selectAll } from '@/lib/naale/paginate'
-import { buildQuestionBankWorkbook, type ExportQuestionRow, type ExportOpenQuestionRow, type ExportDebateRow } from '@/lib/naale/question-export'
+import { buildQuestionBankWorkbook, type ExportQuestionRow, type ExportOpenQuestionRow, type ExportDebateRow, type ExportRoleplayRow } from '@/lib/naale/question-export'
 
 /**
  * Downloads the current question bank as an .xlsx workbook in the exact
@@ -16,16 +16,18 @@ export async function GET() {
   if (admin.status === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const db = createServiceClient()
-  const [mcqRows, openRows, debateRows] = await Promise.all([
+  const [mcqRows, openRows, debateRows, roleplayRows] = await Promise.all([
     selectAll<ExportQuestionRow>('naale_questions', (from, to) =>
       db.from('naale_questions').select('topic, question_id, difficulty, prompt, options, correct_answer, explanation').range(from, to)),
     selectAll<ExportOpenQuestionRow>('naale_open_questions', (from, to) =>
       db.from('naale_open_questions').select('topic, question_id, difficulty, prompt, fields').range(from, to)),
     selectAll<ExportDebateRow>('naale_debate_questions', (from, to) =>
       db.from('naale_debate_questions').select('question_id, difficulty, subject, initial_ai_argument, required_connectors, expected_answer_rubric, max_turns').range(from, to)),
+    selectAll<ExportRoleplayRow>('naale_roleplay_questions', (from, to) =>
+      db.from('naale_roleplay_questions').select('question_id, difficulty, scenario_description, ai_persona, initial_ai_line, expected_goal_and_register, max_turns').range(from, to)),
   ])
 
-  const wb = buildQuestionBankWorkbook(mcqRows, openRows, debateRows)
+  const wb = buildQuestionBankWorkbook(mcqRows, openRows, debateRows, roleplayRows)
   const buffer = await wb.xlsx.writeBuffer()
 
   return new NextResponse(new Uint8Array(buffer), {

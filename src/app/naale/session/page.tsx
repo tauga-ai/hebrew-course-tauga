@@ -26,6 +26,7 @@ import type { SessionSummary } from '@/lib/naale/session-summary'
 import { OpenAnswerInput } from '@/components/naale/OpenAnswerInput'
 import { SpeechToTextToggle } from '@/components/naale/SpeechToTextToggle'
 import { DebateExchange } from '@/components/naale/DebateExchange'
+import { RoleplayExchange } from '@/components/naale/RoleplayExchange'
 import { PictureDescriptionImage } from '@/components/naale/PictureDescriptionImage'
 import { ListeningAudioPlayer } from '@/components/naale/ListeningAudioPlayer'
 import { SessionFeedbackForm } from '@/components/naale/SessionFeedbackForm'
@@ -57,12 +58,17 @@ interface ServedQuestion {
   // 'open' only — already stripped of grading-only keys by the server (see
   // open-grading.ts's publicFields()).
   fields?: Record<string, string>
-  // 'conversation' only (debate). subject/initial_ai_argument/prompt are the
-  // same value — the server ships initial_ai_argument as prompt too, for
+  // 'conversation', debate topic only. subject/initial_ai_argument/prompt are
+  // the same value — the server ships initial_ai_argument as prompt too, for
   // consistency with every other kind's "the main text is q.prompt" shape.
   subject?: string
   initial_ai_argument?: string
   required_connectors?: string
+  // 'conversation', role-play topic only. Same "prompt mirrors the opening
+  // line" convention as debate's fields above.
+  scenario_description?: string
+  ai_persona?: string
+  initial_ai_line?: string
   // Ticket 15: true when this question came from /review-next rather than
   // /next — 2-3 hard exercises from the student's previous practice session,
   // re-served before new material. Purely a UI hint; the server independently
@@ -90,13 +96,18 @@ interface OpenAnswerResult {
   milestone: number | null
   /** See AnswerResult.is_review — same rule for graded answers. */
   is_review: boolean
-  // debate-answer/route.ts only (q.kind === 'conversation') — the exchange
-  // that got this score, so the already-answered view can show it instead of
-  // just the number. Absent (undefined) for every other 'open' topic, which
-  // is a single untracked turn with nothing to show back.
+  // debate-answer/route.ts and roleplay-answer/route.ts only
+  // (q.kind === 'conversation') — the exchange that got this score, so the
+  // already-answered view can show it instead of just the number. Absent
+  // (undefined) for every other 'open' topic, which is a single untracked
+  // turn with nothing to show back. turn_1_text/turn_2_text are shared field
+  // names across both conversation topics; ai_counter_argument (debate) and
+  // ai_in_character_reply (role-play) are each only ever set by their own
+  // route — at most one of the two is ever present on a given result.
   turn_1_text?: string
   turn_2_text?: string | null
   ai_counter_argument?: string | null
+  ai_in_character_reply?: string | null
 }
 
 interface EndSummary {
@@ -1097,6 +1108,43 @@ function SessionRunner() {
     }
   }
 
+  // Parallel to submitDebateAnswer() above, for the role-play topic's
+  // multi-turn exchange — identical shape, posting to /roleplay-answer
+  // instead.
+  async function submitRoleplayAnswer(userText: string): Promise<{ awaiting_final: true; ai_response: string } | null> {
+    if (!question || submitting || !userText.trim()) return null
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/naale/session/roleplay-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, question_id: question.id, user_text: userText }),
+      })
+      const data = await res.json()
+      if (res.status === 409) {
+        if (data.code === 'expired') {
+          qaLog('/roleplay-answer: 409 expired, ending session')
+          finishSession('time_up')
+          return null
+        }
+        qaLog('/roleplay-answer: 409 duplicate_answer, continuing to next question')
+        loadNext()
+        return null
+      }
+      if (!res.ok) throw new Error(data.error || t('שגיאה'))
+      qaLog('/roleplay-answer: result', data)
+      if (data.awaiting_final) return { awaiting_final: true, ai_response: data.ai_response }
+      setOpenResult(data)
+      setAnsweredCount(c => c + 1)
+      return null
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : t('שגיאה בשליחת התשובה'))
+      return null
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // Auto-submits an MCQ option the instant it's clicked — no separate submit
   // button for multiple-choice, matching Quizlet's Learn-mode "tap an answer,
   // it's graded immediately" flow.
@@ -1552,7 +1600,17 @@ function SessionRunner() {
             {q.kind === 'open' || q.kind === 'conversation' ? (
               <>
                 {!openResult ? (
-                  q.kind === 'conversation' ? (
+                  q.kind === 'conversation' && q.topic === 'משחק תפקידים' ? (
+                    <RoleplayExchange
+                      key={q.id}
+                      scenarioDescription={q.scenario_description ?? ''}
+                      aiPersona={q.ai_persona ?? ''}
+                      initialAiLine={q.initial_ai_line ?? q.prompt}
+                      submitting={submitting}
+                      submitLabel={kind === 'topic' && remaining === 0 ? t('סיום התרגול') : undefined}
+                      onSubmit={submitRoleplayAnswer}
+                    />
+                  ) : q.kind === 'conversation' ? (
                     <DebateExchange
                       key={q.id}
                       initialAiLine={q.initial_ai_argument ?? q.prompt}
@@ -1688,12 +1746,15 @@ function SessionRunner() {
                         for what was even argued. */}
                     {q.kind === 'conversation' && (
                       <div className="mb-4 space-y-2 text-right">
-                        <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {q.initial_ai_argument ?? q.prompt}</p>
+                        <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {q.initial_ai_argument ?? q.initial_ai_line ?? q.prompt}</p>
                         {openResult.turn_1_text && (
                           <p className="text-sm text-fg/80"><span className="font-semibold">{t('אני')}:</span> {openResult.turn_1_text}</p>
                         )}
-                        {openResult.ai_counter_argument && (
-                          <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {openResult.ai_counter_argument}</p>
+                        {/* At most one of these is ever set on a given result
+                            — ai_counter_argument only from debate-answer,
+                            ai_in_character_reply only from roleplay-answer. */}
+                        {(openResult.ai_counter_argument || openResult.ai_in_character_reply) && (
+                          <p className="text-sm text-fg/80"><span className="font-semibold">AI:</span> {openResult.ai_counter_argument ?? openResult.ai_in_character_reply}</p>
                         )}
                         {openResult.turn_2_text && (
                           <p className="text-sm text-fg/80"><span className="font-semibold">{t('אני')}:</span> {openResult.turn_2_text}</p>
