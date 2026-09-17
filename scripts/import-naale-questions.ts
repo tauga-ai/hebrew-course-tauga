@@ -16,6 +16,7 @@ import { createServiceClient } from '../src/lib/supabase/service'
 import { runQuestionImport, type QuestionImportReport } from '../src/lib/naale/question-import'
 import { runOpenQuestionImport, type OpenQuestionImportReport } from '../src/lib/naale/open-question-import'
 import { runDebateQuestionImport, type DebateImportReport } from '../src/lib/naale/debate-question-import'
+import { runRoleplayQuestionImport, type RoleplayImportReport } from '../src/lib/naale/roleplay-question-import'
 
 function printReport(label: string, tableName: string, report: QuestionImportReport | OpenQuestionImportReport, dryRun: boolean) {
   console.log(`\n=== ${label} ===`)
@@ -57,10 +58,11 @@ function printReport(label: string, tableName: string, report: QuestionImportRep
   return true
 }
 
-/** Simpler printer for debate's single-topic report shape (no per-sheet loop,
- *  no skippedSheets — there's only ever one sheet). */
-function printDebateReport(report: DebateImportReport, dryRun: boolean) {
-  console.log('\n=== Debate & Opinion Expression ===')
+/** Simpler printer for a single-topic, single-sheet report shape (no
+ *  per-sheet loop, no skippedSheets — there's only ever one sheet). Shared by
+ *  debate and role-play, whose reports have the identical shape. */
+function printSingleTopicReport(label: string, tableName: string, report: DebateImportReport | RoleplayImportReport, dryRun: boolean) {
+  console.log(`\n=== ${label} ===`)
   if (report.skippedSheet) {
     console.log(report.anomalies[0])
     return true
@@ -72,11 +74,11 @@ function printDebateReport(report: DebateImportReport, dryRun: boolean) {
   if (dryRun) {
     console.log('--dry-run: nothing written.')
   } else if (report.written) {
-    console.log(`${newCount} new question(s) inserted into naale_debate_questions.`)
+    console.log(`${newCount} new question(s) inserted into ${tableName}.`)
   }
 
   if (report.alreadyExists.length > 0) {
-    console.log(`${report.alreadyExists.length} row(s) already exist in naale_debate_questions — left untouched:`)
+    console.log(`${report.alreadyExists.length} row(s) already exist in ${tableName} — left untouched:`)
     for (const a of report.alreadyExists.slice(0, 20)) console.log(`  - ${a.question_id}`)
     if (report.alreadyExists.length > 20) console.log(`  ... and ${report.alreadyExists.length - 20} more`)
   }
@@ -107,17 +109,19 @@ async function main() {
   const wb = XLSX.readFile(xlsxPath)
   const db = createServiceClient()
 
-  const [mcqReport, openReport, debateReport] = await Promise.all([
+  const [mcqReport, openReport, debateReport, roleplayReport] = await Promise.all([
     runQuestionImport(wb, db, { dryRun }),
     runOpenQuestionImport(wb, db, { dryRun }),
     runDebateQuestionImport(wb, db, { dryRun }),
+    runRoleplayQuestionImport(wb, db, { dryRun }),
   ])
 
   const mcqClean = printReport('Multiple-choice sheets', 'naale_questions', mcqReport, dryRun)
   const openClean = printReport('Free-text (AI-graded) sheets', 'naale_open_questions', openReport, dryRun)
-  const debateClean = printDebateReport(debateReport, dryRun)
+  const debateClean = printSingleTopicReport('Debate & Opinion Expression', 'naale_debate_questions', debateReport, dryRun)
+  const roleplayClean = printSingleTopicReport('Role-play in Everyday Situations', 'naale_roleplay_questions', roleplayReport, dryRun)
 
-  if (!mcqClean || !openClean || !debateClean) process.exitCode = 1
+  if (!mcqClean || !openClean || !debateClean || !roleplayClean) process.exitCode = 1
 }
 
 main()

@@ -11,16 +11,18 @@
  * re-importing an unmodified export regenerates byte-identical prompts.
  *
  * Also mirrors the rest of Noam's real workbook structure as closely as
- * possible (sheet order, exact title text, the "Summary" sheet, and the 6
- * not-yet-built topic sheets) via static content where nothing in the DB
- * backs it — see the *_SHEET_AOA consts below. English guide sheet is one
+ * possible (sheet order, exact title text, the "Summary" sheet, and the
+ * remaining not-yet-built topic sheets — 4 as of naale-roleplay-module: voice
+ * chat x3 and listening comprehension; role-play and debate both graduated to
+ * real, DB-derived sheets) via static content where nothing in the DB backs
+ * it — see the *_SHEET_AOA consts below. English guide sheet is one
  * deliberate omission; the "Summary" sheet (Hebrew "סיכום" in the real
- * workbook) is translated to English, per the user's own request — the 6
- * placeholder topic sheets are NOT translated (byte-for-byte Hebrew copies),
- * a deliberate, narrower scoping the user gave after first asking for both
- * to be translated, then reverting both, then asking for just this one.
- * Summary's complexity-level column is colored to match the real workbook's
- * own badge colors (see COMPLEXITY_FILL).
+ * workbook) is translated to English, per the user's own request — the
+ * remaining placeholder topic sheets are NOT translated (byte-for-byte Hebrew
+ * copies), a deliberate, narrower scoping the user gave after first asking
+ * for both to be translated, then reverting both, then asking for just this
+ * one. Summary's complexity-level column is colored to match the real
+ * workbook's own badge colors (see COMPLEXITY_FILL).
  *
  * Writes via `exceljs`, not `xlsx` — deliberately a different library from
  * the read/import side (question-import.ts / open-question-import.ts stay on
@@ -39,6 +41,7 @@ import {
 } from './question-import'
 import { STORY_CONTINUATION_COL, WHATSAPP_COL, TEXT_SUMMARY_COL, PICTURE_DESCRIPTION_COL } from './open-question-import'
 import { DEBATE_COL, numberFromDebateId } from './debate-question-import'
+import { ROLEPLAY_COL, numberFromRoleplayId } from './roleplay-question-import'
 
 export interface ExportQuestionRow {
   topic: string
@@ -65,6 +68,16 @@ export interface ExportDebateRow {
   initial_ai_argument: string
   required_connectors: string
   expected_answer_rubric: string
+  max_turns: number
+}
+
+export interface ExportRoleplayRow {
+  question_id: string
+  difficulty: number
+  scenario_description: string
+  ai_persona: string
+  initial_ai_line: string
+  expected_goal_and_register: string
   max_turns: number
 }
 
@@ -111,7 +124,7 @@ const COLUMN_WIDTHS: Record<string, number[]> = {
   'סיפור בהמשכים': [4, 47, 47, 21, 13],
   'ווטסאפ והודעות': [4, 21, 54, 49, 13],
   'סיכום טקסט קצר': [4, 47, 37, 47, 15],
-  'משחק תפקידים': [4, 25, 25, 41, 15],
+  'משחק תפקידים': [10, 10, 40, 25, 30, 45, 12],
   'דיבייט הבעת דעה': [4, 25, 41, 15],
   'תיאור תמונה בקול': [4, 44, 44, 13, 29, 29],
 }
@@ -380,17 +393,7 @@ const LISTENING_COMPREHENSION_SHEET_AOA: (string | number)[][] = [
   [3, "פודקאסט מדעי קל", "הדולפינים אינם דגים אלא יונקים, והם נושמים אוויר דרך חור בחלק העליון של ראשם.", "כיצד נושמים הדולפינים?", "דרך חור בחלק העליון של ראשם.", ""],
 ]
 
-const ROLE_PLAY_SHEET_AOA: (string | number)[][] = [
-  ["13. משחק תפקידים במצבי יומיום", "", "", "", ""],
-  ["", "", "", "", ""],
-  ["#", "סיטואציה", "שורת פתיחה (AI)", "משימה לתלמיד", "רמת קושי (1-5)"],
-  [1, "החלפת מוצר בחנות", "שלום, איך אפשר לעזור לך? (AI בתפקיד מוכר)", "לבקש להחליף חולצה ללא קבלה.", ""],
-  [2, "איחור לשיעור", "שלום, למה איחרת ב-10 דקות לשיעור? (AI בתפקיד מורה)", "להסביר שהאוטובוס לא הגיע.", ""],
-  [3, "בקשת עזרה מחבר", "מה נשמע? מה אתה עושה? (AI בתפקיד חבר)", "לבקש עזרה בשיעורי הבית.", ""],
-]
-
-// Real content now (naale-debate-module) — unlike ROLE_PLAY_SHEET_AOA above,
-// which is still a static placeholder. Not built via sheetAOA()/
+// Real content now (naale-debate-module) — not built via sheetAOA()/
 // nextFreeNumber(): both assume a bare numeric "#" in column A derived via
 // numberFromQuestionId(), but this sheet's column A is the question_id
 // string itself ("debate_1", not "1") — see debate-question-import.ts's
@@ -405,6 +408,20 @@ function debateSheet(rows: ExportDebateRow[]): string[][] {
   const nextFree = rows.length === 0 ? 1 : Math.max(...rows.map(r => numberFromDebateId(r.question_id))) + 1
   const note = noteRow(header.length, `Next free #: ${nextFree}`)
   return [['14. דיבייט / הבעת דעה'], [], header, ...dataRows, note]
+}
+
+// Real content now (naale-roleplay-module) — same non-reuse-of-sheetAOA()
+// reasoning as debateSheet() above: column A is the question_id string
+// itself ("roleplay_1", not "1").
+function roleplaySheet(rows: ExportRoleplayRow[]): string[][] {
+  const header = Object.values(ROLEPLAY_COL)
+  const dataRows = rows.map(r => [
+    r.question_id, String(r.difficulty), r.scenario_description, r.ai_persona,
+    r.initial_ai_line, r.expected_goal_and_register, String(r.max_turns),
+  ])
+  const nextFree = rows.length === 0 ? 1 : Math.max(...rows.map(r => numberFromRoleplayId(r.question_id))) + 1
+  const note = noteRow(header.length, `Next free #: ${nextFree}`)
+  return [['13. משחק תפקידים במצבי יומיום'], [], header, ...dataRows, note]
 }
 
 
@@ -424,7 +441,8 @@ const DATA_ROW_HEIGHT = 40
 export function buildQuestionBankWorkbook(
   mcqRows: ExportQuestionRow[],
   openRows: ExportOpenQuestionRow[],
-  debateRows: ExportDebateRow[]
+  debateRows: ExportDebateRow[],
+  roleplayRows: ExportRoleplayRow[] = []
 ): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook()
   // All content is Hebrew — confirmed against Noam's real workbook
@@ -516,7 +534,9 @@ export function buildQuestionBankWorkbook(
   // The real workbook's own tab order runs 11, 13, 14, 12 here (not
   // sequential) — deliberately not copied; reordered to 11, 12, 13, 14.
   append('תיאור תמונה בקול', pictureDescriptionSheet(byTopic(openRows, 'תיאור תמונה בקול')))
-  append('משחק תפקידים', ROLE_PLAY_SHEET_AOA)
+  append('משחק תפקידים', roleplaySheet(
+    [...roleplayRows].sort((a, b) => numberFromRoleplayId(a.question_id) - numberFromRoleplayId(b.question_id))
+  ))
   append('דיבייט הבעת דעה', debateSheet(
     [...debateRows].sort((a, b) => numberFromDebateId(a.question_id) - numberFromDebateId(b.question_id))
   ))
