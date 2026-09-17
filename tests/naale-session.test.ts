@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isSessionCompleted, isExpired, isSessionExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion, canPause, isPaused, isPauseExpired, PAUSE_EXPIRY_MS, isTopicMismatch, remainingToBank, resumedDeadline, remainingMs } from '../src/lib/naale/session-rules'
+import { isSessionCompleted, isExpired, isSessionExpired, secondsRemaining, MIN_ANSWERS_FOR_COMPLETION, isPendingQuestion, canPause, isPaused, isPauseExpired, PAUSE_EXPIRY_MS, isTopicMismatch, isPracticeConflict, remainingToBank, resumedDeadline, remainingMs } from '../src/lib/naale/session-rules'
 
 const NOW = 1_700_000_000_000
 const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString()
@@ -161,6 +161,19 @@ test('isTopicMismatch: true only for a live pausable session, a different named 
   assert.equal(isTopicMismatch(topicSession, 'השלמת משפטים', 'start_over'), false, 'a resume/start-over follow-up, never a fresh tap')
   assert.equal(isTopicMismatch({ kind: 'practice', topic: null }, 'השלמת משפטים', undefined), false, 'not pausable in the first place')
   assert.equal(isTopicMismatch(undefined, 'השלמת משפטים', undefined), false, 'no live session at all')
+})
+
+// --- naale-topic-session-practice-conflict -----------------------------------
+
+test('isPracticeConflict: true only for a live PRACTICE session, a topic requested, no action', () => {
+  const practiceSession = { kind: 'practice' }
+
+  assert.equal(isPracticeConflict(practiceSession, 'השלמת משפטים', undefined), true, 'topic tapped while a practice session is live')
+  assert.equal(isPracticeConflict(practiceSession, null, undefined), false, 'plain Practice tile tap, no topic requested')
+  assert.equal(isPracticeConflict(practiceSession, 'השלמת משפטים', 'start_over'), false, 'a resume/start-over follow-up, never a fresh tap')
+  assert.equal(isPracticeConflict({ kind: 'topic' }, 'השלמת משפטים', undefined), false, 'topicMismatch\'s case, not this one')
+  assert.equal(isPracticeConflict({ kind: 'placement' }, 'השלמת משפטים', undefined), false, 'placement sessions are a different concern entirely')
+  assert.equal(isPracticeConflict(undefined, 'השלמת משפטים', undefined), false, 'no live session at all')
 })
 
 test('isPaused: zero remaining still counts as paused', () => {

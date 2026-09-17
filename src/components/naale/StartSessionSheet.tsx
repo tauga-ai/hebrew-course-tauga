@@ -35,6 +35,7 @@ export function StartSessionSheet({
   kind,
   topicName,
   conflictingPausedTopic,
+  endsLivePractice,
   lang,
   starting,
   error,
@@ -54,6 +55,13 @@ export function StartSessionSheet({
    *  it before the student commits. Undefined/null renders the sheet exactly
    *  as before this ticket. */
   conflictingPausedTopic?: string | null
+  /** Set when a live 30-minute practice session would be ended by starting
+   *  this topic session (naale-topic-session-practice-conflict) — decided
+   *  2026-09-17: warn before switching, mirroring conflictingPausedTopic's
+   *  pattern above but for the practice-vs-topic case, which canPause()
+   *  deliberately never treats as a paused-topic mismatch. Undefined/false
+   *  renders the sheet exactly as before this ticket. */
+  endsLivePractice?: boolean
   lang: TranslationLang
   starting: boolean
   error: string
@@ -173,6 +181,16 @@ export function StartSessionSheet({
         {conflictingPausedTopic && (
           <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">
             {t('התרגול שהשהית בנושא')} &quot;{t(conflictingPausedTopic)}&quot; {t('יסתיים אם תתחיל/י כאן. התשובות שכבר ענית עליהן שם נשמרות.')}
+          </p>
+        )}
+
+        {/* Live 30-minute practice session, not a paused topic session —
+            separate warning, since ending it also forfeits the completion XP
+            bonus a paused topic session was never eligible for in the first
+            place (naale-topic-session-practice-conflict). */}
+        {endsLivePractice && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">
+            {t('התרגול של 30 הדקות שפתחת יסתיים אם תתחיל/י כאן. השאלות שכבר ענית עליהן נשמרות, אך בונוס ההשלמה של 50 XP לא יינתן עבורו.')}
           </p>
         )}
 

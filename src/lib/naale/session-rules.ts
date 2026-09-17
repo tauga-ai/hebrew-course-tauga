@@ -175,6 +175,35 @@ export function isTopicMismatch(
 }
 
 /**
+ * Whether a topic request should end an already-live 30-minute PRACTICE
+ * session rather than silently handing it back
+ * (naale-topic-session-practice-conflict).
+ *
+ * canPause()/isTopicMismatch() are both topic-kind-only by design — a live
+ * practice session was never eligible for either, so a topic tap while one
+ * was running fell through to session/start's plain "hand back the existing
+ * session" branch, and the student got the old 30-minute session (with its
+ * real remaining time and mixed-topic rotation) under the topic sheet's "5
+ * minutes · questions from this topic only" label. Decided 2026-09-17:
+ * warn the student BEFORE this fires (StartSessionSheet's
+ * `endsLivePractice`) rather than silently switching — this function is
+ * what the CONFIRMED tap acts on, once the client has already shown that
+ * warning and the student tapped Start anyway.
+ *
+ * `action === undefined` mirrors isTopicMismatch()'s own guard: a resume/
+ * start-over follow-up is never for a practice session in the first place
+ * (only topic-kind sessions ever produce a `resumable` offer), but kept
+ * explicit rather than assumed, same reasoning as that function.
+ */
+export function isPracticeConflict(
+  existing: { kind: string } | undefined,
+  requestedTopic: string | null,
+  action: 'resume' | 'start_over' | undefined
+): boolean {
+  return !!existing && existing.kind === 'practice' && requestedTopic !== null && action === undefined
+}
+
+/**
  * Whether a session's clock is currently stopped (naale-topic-session-resume).
  *
  * MUST be checked before any use of deadline_at on a session that could be

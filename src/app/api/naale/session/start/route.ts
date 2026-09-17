@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getNaaleSession } from '@/lib/naale/auth'
-import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride, canPause, isPauseExpired, isTopicMismatch, remainingMs, resumedDeadline } from '@/lib/naale/session'
+import { SESSION_MINUTES, TOPIC_SESSION_MINUTES, isExpired, isSessionCompleted, secondsRemaining, readDevSessionMinutesOverride, canPause, isPauseExpired, isTopicMismatch, isPracticeConflict, remainingMs, resumedDeadline } from '@/lib/naale/session'
 import { selectAll } from '@/lib/naale/paginate'
 
 /**
@@ -156,10 +156,16 @@ export async function POST(req: NextRequest) {
   // exclusion a student could still be handed back a session just closed a
   // few lines above.
   const topicMismatch = isTopicMismatch(existing, topic, action)
+  // See isPracticeConflict()'s own comment — the sibling case topicMismatch
+  // doesn't cover, now that it's been decided (warn-before-switching,
+  // naale-topic-session-practice-conflict).
+  const practiceConflict = isPracticeConflict(existing, topic, action)
 
-  if (topicMismatch && existing) {
+  if ((topicMismatch || practiceConflict) && existing) {
     // Same close-out the explicit start_over branch below uses — this IS an
-    // implicit start-over, just one nobody had to choose.
+    // implicit start-over, just one nobody had to choose (either because a
+    // different topic mismatched, or because a live practice session was
+    // confirmed-ended by the topic sheet's warning).
     const { error } = await db
       .from('naale_sessions')
       .update({
@@ -259,7 +265,7 @@ export async function POST(req: NextRequest) {
   }
   // --------------------------------------------------------------------------
 
-  if (existing && !isExpired(existing.deadline_at) && !(canPause(existing) && (action === 'start_over' || topicMismatch))) {
+  if (existing && !isExpired(existing.deadline_at) && !(canPause(existing) && (action === 'start_over' || topicMismatch)) && !practiceConflict) {
     // Dev-only: if the QA override changed since this session was created
     // (or was set for the first time after it), make the resumed session
     // reflect it instead of always keeping whatever deadline was computed at
