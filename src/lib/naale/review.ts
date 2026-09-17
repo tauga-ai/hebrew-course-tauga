@@ -96,7 +96,12 @@ export function pickReviewQueue(previous: ReviewCandidate[], count: number): Rev
 export function toReviewCandidates(
   mcq: { question_id: string; difficulty: number; is_correct: boolean }[],
   open: { question_id: string; difficulty: number; score: number }[],
-  debate: { question_id: string; difficulty: number; score: number }[]
+  debate: { question_id: string; difficulty: number; score: number }[],
+  // Defaulted to [] (naale-roleplay-debate-parity), same trick question-
+  // export.ts's buildQuestionBankWorkbook() uses for its own optional
+  // roleplayRows param — keeps every existing 3-argument call site (this
+  // file's own tests included) compiling and passing unchanged.
+  roleplay: { question_id: string; difficulty: number; score: number }[] = []
 ): ReviewCandidate[] {
   return [
     ...mcq.map(a => ({
@@ -114,6 +119,15 @@ export function toReviewCandidates(
     // Same "4-5 counts as correct" threshold as open — debate is also a 1-5
     // graded score, just via a multi-turn exchange instead of one shot.
     ...debate.map(a => ({
+      question_id: a.question_id,
+      difficulty: a.difficulty,
+      is_correct: a.score >= GRADED_CORRECT_SCORE,
+      kind: 'conversation' as const,
+    })),
+    // Role-play shares debate's 'conversation' kind — the two are
+    // discriminated by which table a question_id resolves against
+    // (review-next/route.ts checks both), not by a separate kind value.
+    ...roleplay.map(a => ({
       question_id: a.question_id,
       difficulty: a.difficulty,
       is_correct: a.score >= GRADED_CORRECT_SCORE,

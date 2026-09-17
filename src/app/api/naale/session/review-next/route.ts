@@ -46,17 +46,19 @@ export async function GET(req: NextRequest) {
   // All answer tables: the queue spans all banks, so "already reviewed this
   // session" has to as well — otherwise a graded review question would be
   // re-served on every call until the session ended.
-  const [reviewQueue, { data: answeredMcq }, { data: answeredOpen }, { data: answeredDebate }] = await Promise.all([
+  const [reviewQueue, { data: answeredMcq }, { data: answeredOpen }, { data: answeredDebate }, { data: answeredRoleplay }] = await Promise.all([
     getSessionReviewQueue(session.student.id, sessionId),
     db.from('naale_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
     db.from('naale_open_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
     db.from('naale_debate_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
+    db.from('naale_roleplay_answers').select('question_id').eq('session_id', sessionId).eq('is_review', true),
   ])
 
   const answeredIds = new Set([
     ...(answeredMcq ?? []).map(a => a.question_id),
     ...(answeredOpen ?? []).map(a => a.question_id),
     ...(answeredDebate ?? []).map(a => a.question_id),
+    ...(answeredRoleplay ?? []).map(a => a.question_id),
   ])
   const remaining = reviewQueue.filter(entry => !answeredIds.has(entry.question_id))
 
@@ -66,35 +68,67 @@ export async function GET(req: NextRequest) {
 
   const next = remaining[0]
 
-  // naale_debate_questions has no uuid `id` column — question_id (text, e.g.
-  // "debate_1") is its own primary key, unlike the 'mcq'/'open' branches
-  // below — so the lookup column differs, not just the table.
+  // naale_debate_questions/naale_roleplay_questions have no uuid `id` column
+  // — question_id (text, e.g. "debate_1"/"roleplay_1") is each one's own
+  // primary key, unlike the 'mcq'/'open' branches below — so the lookup
+  // column differs, not just the table.
+  //
+  // 'conversation' no longer means debate specifically (naale-roleplay-
+  // debate-parity) — toReviewCandidates() tags both debate and role-play
+  // answers with this same kind, discriminated by topic rather than a second
+  // kind value, matching session/next/route.ts's own convention. Both tables
+  // are checked and whichever one actually has this id wins — question_ids
+  // are globally unique per topic, so at most one ever matches, same
+  // resolution approach report-question/route.ts already uses.
   if (next.kind === 'conversation') {
-    const { data: question } = await db
-      .from('naale_debate_questions')
-      .select('question_id, topic, difficulty, subject, initial_ai_argument, required_connectors')
-      .eq('question_id', next.question_id)
-      .maybeSingle()
-
-    // Same missing-question handling as the other branches.
-    if (!question) return NextResponse.json({ done: true })
+    const [{ data: debateQuestion }, { data: roleplayQuestion }] = await Promise.all([
+      db.from('naale_debate_questions')
+        .select('question_id, topic, difficulty, subject, initial_ai_argument, required_connectors')
+        .eq('question_id', next.question_id)
+        .maybeSingle(),
+      db.from('naale_roleplay_questions')
+        .select('question_id, topic, difficulty, scenario_description, ai_persona, initial_ai_line')
+        .eq('question_id', next.question_id)
+        .maybeSingle(),
+    ])
 
     // Same 'conversation' shape session/next/route.ts already serves for the
-    // normal flow — expected_answer_rubric/max_turns never selected above, so
-    // they can't leak here either.
-    return NextResponse.json({
-      question: {
-        id: question.question_id,
-        topic: question.topic,
-        difficulty: question.difficulty,
-        kind: 'conversation',
-        prompt: question.initial_ai_argument,
-        subject: question.subject,
-        initial_ai_argument: question.initial_ai_argument,
-        required_connectors: question.required_connectors,
-        is_review: true,
-      },
-    })
+    // normal flow — expected_answer_rubric/expected_goal_and_register/
+    // max_turns never selected above, so they can't leak here either.
+    if (debateQuestion) {
+      return NextResponse.json({
+        question: {
+          id: debateQuestion.question_id,
+          topic: debateQuestion.topic,
+          difficulty: debateQuestion.difficulty,
+          kind: 'conversation',
+          prompt: debateQuestion.initial_ai_argument,
+          subject: debateQuestion.subject,
+          initial_ai_argument: debateQuestion.initial_ai_argument,
+          required_connectors: debateQuestion.required_connectors,
+          is_review: true,
+        },
+      })
+    }
+    if (roleplayQuestion) {
+      return NextResponse.json({
+        question: {
+          id: roleplayQuestion.question_id,
+          topic: roleplayQuestion.topic,
+          difficulty: roleplayQuestion.difficulty,
+          kind: 'conversation',
+          prompt: roleplayQuestion.initial_ai_line,
+          scenario_description: roleplayQuestion.scenario_description,
+          ai_persona: roleplayQuestion.ai_persona,
+          initial_ai_line: roleplayQuestion.initial_ai_line,
+          is_review: true,
+        },
+      })
+    }
+
+    // Neither table has it — removed from the bank since last session. Same
+    // missing-question handling as the other branches.
+    return NextResponse.json({ done: true })
   }
 
   if (next.kind === 'open') {

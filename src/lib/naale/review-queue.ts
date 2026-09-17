@@ -7,8 +7,9 @@ import { pickReviewQueue, toReviewCandidates, REVIEW_QUESTION_COUNT, type Review
  * there's nothing to review yet (no prior practice session, or that session
  * has no non-review answers).
  *
- * Reads ALL banks (mcq, open, and — naale-debate-review-support — debate). It
- * used to read only naale_answers, which meant the three AI-graded topics —
+ * Reads ALL banks (mcq, open, debate — naale-debate-review-support — and
+ * role-play — naale-roleplay-debate-parity). It used to read only
+ * naale_answers, which meant the three AI-graded topics —
  * Story Continuation, WhatsApp, Text Summary — could never resurface in the
  * session opener no matter how badly a student did on them. A separate
  * getOpenReviewQuestionIds() had been written for them and was never wired to
@@ -51,7 +52,7 @@ export async function getSessionReviewQueue(
   // is_review excluded from both: a review question shouldn't itself become a
   // candidate for the NEXT session's review — only fresh material from last
   // time is eligible.
-  const [{ data: mcqAnswers }, { data: openAnswers }, { data: debateAnswers }] = await Promise.all([
+  const [{ data: mcqAnswers }, { data: openAnswers }, { data: debateAnswers }, { data: roleplayAnswers }] = await Promise.all([
     db
       .from('naale_answers')
       .select('question_id, difficulty, is_correct')
@@ -67,11 +68,16 @@ export async function getSessionReviewQueue(
       .select('question_id, difficulty, score')
       .eq('session_id', previousSessionId)
       .eq('is_review', false),
+    db
+      .from('naale_roleplay_answers')
+      .select('question_id, difficulty, score')
+      .eq('session_id', previousSessionId)
+      .eq('is_review', false),
   ])
 
   // Correct/wrong mapping (including the graded threshold, finding L3) lives
   // in toReviewCandidates() so it can be tested without a database.
-  const candidates = toReviewCandidates(mcqAnswers ?? [], openAnswers ?? [], debateAnswers ?? [])
+  const candidates = toReviewCandidates(mcqAnswers ?? [], openAnswers ?? [], debateAnswers ?? [], roleplayAnswers ?? [])
 
   if (candidates.length === 0) return []
 

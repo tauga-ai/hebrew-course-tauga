@@ -18,9 +18,13 @@ export interface MistakeAttempt {
   /** Open/conversation only — the grader's response, which stands in for a
    *  correct answer. */
   feedback?: string
-  /** Conversation only — the AI's mid-exchange counter-argument, so the
-   *  client can render the full transcript, not just the student's turns. */
+  /** Conversation, debate only — the AI's mid-exchange counter-argument, so
+   *  the client can render the full transcript, not just the student's turns. */
   ai_counter_argument?: string | null
+  /** Conversation, role-play only — the AI's mid-exchange in-character reply.
+   *  Same "at most one of these two is ever set" rule session/page.tsx's
+   *  already-answered view already follows for the live session flow. */
+  ai_in_character_reply?: string | null
   is_review: boolean
 }
 

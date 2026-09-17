@@ -27,7 +27,7 @@ export async function GET() {
   // course: ~25 answers a session, several sessions a week, passes 1000 well
   // inside a school year. Levels stay at one row per topic, so they don't.
   const studentId = session.student.id
-  const [allTopics, allTopicsUnfiltered, { data: levels }, answers, openAnswers, debateAnswers, sessions] = await Promise.all([
+  const [allTopics, allTopicsUnfiltered, { data: levels }, answers, openAnswers, debateAnswers, roleplayAnswers, sessions] = await Promise.all([
     loadEnabledTopics(db),
     // Unfiltered by naale_topic_flags — the page's own LOCKED_TOPICS overlay
     // (real content never imported yet) needs to tell "never imported" apart
@@ -42,9 +42,12 @@ export async function GET() {
       db.from('naale_open_answers').select('topic, score, session_id, is_review').eq('student_id', studentId).range(from, to)),
     // Same gap /session/end had (naale-debate-module missed this route) — a
     // student's all-time XP/level/accuracy silently excluded every debate
-    // answer until now.
+    // answer until it was fixed here. Role-play (naale-roleplay-debate-parity)
+    // was closed proactively rather than repeating the same gap a second time.
     selectAll<{ topic: string; score: number; session_id: string; is_review: boolean }>('naale_debate_answers', (from, to) =>
       db.from('naale_debate_answers').select('topic, score, session_id, is_review').eq('student_id', studentId).range(from, to)),
+    selectAll<{ topic: string; score: number; session_id: string; is_review: boolean }>('naale_roleplay_answers', (from, to) =>
+      db.from('naale_roleplay_answers').select('topic, score, session_id, is_review').eq('student_id', studentId).range(from, to)),
     selectAll<{ id: string; kind: string; completed: boolean; started_at: string }>('naale_sessions', (from, to) =>
       db.from('naale_sessions').select('id, kind, completed, started_at').eq('student_id', studentId).range(from, to)),
   ])
@@ -58,7 +61,7 @@ export async function GET() {
     allTopics,
     levels: levels ?? [],
     answers,
-    openAnswers: [...openAnswers, ...debateAnswers],
+    openAnswers: [...openAnswers, ...debateAnswers, ...roleplayAnswers],
     sessions,
   })
 

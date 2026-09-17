@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // route: placement is calibration, not practice. `completed` is already
   // always false for placement (excluding the +50 bonus), but the
   // per-correct-answer XP needs this explicit kind check too.
-  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: sessionDebateAnswers }, allSessions, { data: existingFeedback }] = await Promise.all([
+  const [{ data: sessionAnswers }, { data: sessionOpenAnswers }, { data: sessionDebateAnswers }, { data: sessionRoleplayAnswers }, allSessions, { data: existingFeedback }] = await Promise.all([
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { is_correct: boolean; topic: string; level_at_answer: number }[] })
       // Review answers (ticket 15) excluded too — same working decision as
@@ -91,6 +91,12 @@ export async function POST(req: NextRequest) {
     s.kind === 'placement'
       ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
       : db.from('naale_debate_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
+    // Same gap, closed proactively for role-play (naale-roleplay-debate-parity)
+    // instead of waiting for a live report the way debate's version of this
+    // fix needed.
+    s.kind === 'placement'
+      ? Promise.resolve({ data: [] as { score: number; topic: string; level_at_answer: number }[] })
+      : db.from('naale_roleplay_answers').select('score, topic, level_at_answer').eq('session_id', s.id).eq('is_review', false),
     // Every session this account has ever had, for the weekly streak — one a
     // day crosses the row cap inside three years. Also doubles as the input
     // to isFeedbackDue() below (naale-session-feedback-popup).
@@ -106,7 +112,7 @@ export async function POST(req: NextRequest) {
   // same countsAsTrackedSession gate on the completion bonus or a topic
   // session's own recap would show +50 XP while the all-time view (which IS
   // gated) disagrees about the very same session.
-  const allGradedAnswers = [...(sessionOpenAnswers ?? []), ...(sessionDebateAnswers ?? [])]
+  const allGradedAnswers = [...(sessionOpenAnswers ?? []), ...(sessionDebateAnswers ?? []), ...(sessionRoleplayAnswers ?? [])]
   const { xp: mcqXp, coins: mcqCoins } = computeRewards(
     sessionAnswers ?? [],
     countsAsTrackedSession(s) ? [{ completed }] : []
