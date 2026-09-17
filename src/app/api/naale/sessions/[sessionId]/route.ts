@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
   const s = owned.session
 
   const db = createServiceClient()
-  const [{ data: answers }, { data: openAnswers }, { data: debateAnswers }, { data: stored }] = await Promise.all([
+  const [{ data: answers }, { data: openAnswers }, { data: debateAnswers }, { data: roleplayAnswers }, { data: stored }] = await Promise.all([
     db.from('naale_answers')
       .select('is_correct, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
@@ -42,6 +42,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
     // Same gap /session/end had (naale-debate-module missed this route) — a
     // past debate session's detail view showed 0 XP/correct otherwise.
     db.from('naale_debate_answers')
+      .select('score, topic, level_at_answer')
+      .eq('session_id', s.id).eq('is_review', false),
+    // Same gap, closed proactively for role-play (naale-roleplay-debate-parity).
+    db.from('naale_roleplay_answers')
       .select('score, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
     // The AI note this session originally got. Read here rather than through
@@ -54,7 +58,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
       .maybeSingle<{ summary_text: string | null; summary_icon: string | null }>(),
   ])
 
-  const progress = buildSessionProgress(s.id, s.kind, s.completed, answers ?? [], [...(openAnswers ?? []), ...(debateAnswers ?? [])])
+  const progress = buildSessionProgress(s.id, s.kind, s.completed, answers ?? [], [...(openAnswers ?? []), ...(debateAnswers ?? []), ...(roleplayAnswers ?? [])])
 
   return NextResponse.json({
     id: s.id,

@@ -56,7 +56,7 @@ export async function GET(
 
   const allTopics = await loadAllTopics(db)
 
-  const [levels, answers, openAnswers, debateAnswers, sessions] = await Promise.all([
+  const [levels, answers, openAnswers, debateAnswers, roleplayAnswers, sessions] = await Promise.all([
     selectAll<{ topic: string; level: number }>('naale_topic_levels', (from, to) =>
       db.from('naale_topic_levels').select('topic, level').eq('student_id', student.id).range(from, to)),
     selectAll<{ topic: string; is_correct: boolean; is_review: boolean; session_id: string }>('naale_answers', (from, to) =>
@@ -64,14 +64,19 @@ export async function GET(
     selectAll<{ topic: string; score: number; is_review: boolean; session_id: string }>('naale_open_answers', (from, to) =>
       db.from('naale_open_answers').select('topic, score, is_review, session_id').eq('student_id', student.id).range(from, to)),
     // Same gap /session/end had (naale-debate-module missed this route) — a
-    // student's staff-facing progress silently excluded every debate answer.
+    // student's staff-facing progress silently excluded every debate answer
+    // until it was fixed here. Role-play (naale-roleplay-debate-parity) was
+    // closed proactively, in lockstep with my-stats/route.ts, so the two
+    // views can't drift apart the way they once did for debate.
     selectAll<{ topic: string; score: number; is_review: boolean; session_id: string }>('naale_debate_answers', (from, to) =>
       db.from('naale_debate_answers').select('topic, score, is_review, session_id').eq('student_id', student.id).range(from, to)),
+    selectAll<{ topic: string; score: number; is_review: boolean; session_id: string }>('naale_roleplay_answers', (from, to) =>
+      db.from('naale_roleplay_answers').select('topic, score, is_review, session_id').eq('student_id', student.id).range(from, to)),
     selectAll<{ id: string; kind: string; completed: boolean; started_at: string; topic: string | null }>('naale_sessions', (from, to) =>
       db.from('naale_sessions').select('id, kind, completed, started_at, topic').eq('student_id', student.id).range(from, to)),
   ])
 
-  const progress = buildStudentProgress({ allTopics, levels, answers, openAnswers: [...openAnswers, ...debateAnswers], sessions })
+  const progress = buildStudentProgress({ allTopics, levels, answers, openAnswers: [...openAnswers, ...debateAnswers, ...roleplayAnswers], sessions })
 
   // Display-only relay of Google's profile photo, same as /api/naale/me and the
   // list route — never stored, falls back to an initials badge client-side.

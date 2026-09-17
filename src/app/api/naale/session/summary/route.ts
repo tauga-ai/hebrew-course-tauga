@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       ui_icon: stored.summary_icon ?? SESSION_SUMMARY_FALLBACK_ICON,
     })
   }
-  const [{ data: answers }, { data: openAnswers }, { data: debateAnswers }] = await Promise.all([
+  const [{ data: answers }, { data: openAnswers }, { data: debateAnswers }, { data: roleplayAnswers }] = await Promise.all([
     db.from('naale_answers')
       .select('is_correct, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
@@ -101,8 +101,12 @@ export async function POST(req: NextRequest) {
     db.from('naale_debate_answers')
       .select('score, topic, level_at_answer')
       .eq('session_id', s.id).eq('is_review', false),
+    // Same gap, closed proactively for role-play (naale-roleplay-debate-parity).
+    db.from('naale_roleplay_answers')
+      .select('score, topic, level_at_answer')
+      .eq('session_id', s.id).eq('is_review', false),
   ])
-  const allGradedAnswers = [...(openAnswers ?? []), ...(debateAnswers ?? [])]
+  const allGradedAnswers = [...(openAnswers ?? []), ...(debateAnswers ?? []), ...(roleplayAnswers ?? [])]
 
   // A session with no answers has nothing to say something personal about.
   if (!answers?.length && !allGradedAnswers.length) return NextResponse.json(fallback)
