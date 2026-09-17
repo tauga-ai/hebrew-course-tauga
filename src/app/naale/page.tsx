@@ -99,6 +99,12 @@ export default function NaaleHome() {
   const [pausedTopic, setPausedTopic] = useState<
     { topic: string; seconds_remaining: number; total_seconds: number } | null
   >(null)
+  // Whether a live 30-minute practice session exists right now, for
+  // StartSessionSheet's endsLivePractice warning
+  // (naale-topic-session-practice-conflict). Same best-effort fetch as
+  // pausedTopic above — a failed/empty read just means no warning shows,
+  // never a blocked dashboard.
+  const [practiceLive, setPracticeLive] = useState<{ seconds_remaining: number } | null>(null)
   // The element that opened the sheet, so keyboard focus returns to it —
   // whichever one that was, the main tile or a specific topic card.
   const startTileRef = useRef<HTMLButtonElement>(null)
@@ -161,7 +167,10 @@ export default function NaaleHome() {
 
       if (!cancelled && pausedRes.ok) {
         const pausedData = await pausedRes.json()
-        if (!cancelled) setPausedTopic(pausedData.topic ? pausedData : null)
+        if (!cancelled) {
+          setPausedTopic(pausedData.topic ? pausedData : null)
+          setPracticeLive(pausedData.practice_live ?? null)
+        }
       }
     }
     load()
@@ -543,6 +552,7 @@ export default function NaaleHome() {
           conflictingPausedTopic={
             sheetTopic && pausedTopic?.topic && pausedTopic.topic !== sheetTopic ? pausedTopic.topic : null
           }
+          endsLivePractice={!!(sheetTopic && practiceLive)}
           lang={me.student.translation_lang ?? 'ru'}
           starting={starting}
           error={error}
