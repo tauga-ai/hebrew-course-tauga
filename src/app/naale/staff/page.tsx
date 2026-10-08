@@ -15,7 +15,6 @@ import { scoreColor } from '@/lib/score-color'
 import {
   NEEDS_ATTENTION_THRESHOLD,
   overallAccuracy,
-  statusLabel,
   type StaffStudentRow,
 } from '@/lib/naale/staff-view'
 import { t } from '@/lib/dev-i18n'
@@ -24,6 +23,15 @@ import { GRADES } from '@/lib/naale/grades'
 interface StaffStudents {
   students: StaffStudentRow[]
 }
+
+function isNeedsAttention(s: StaffStudentRow) {
+  const acc = overallAccuracy(s.totals)
+  return acc !== null && acc < NEEDS_ATTENTION_THRESHOLD
+}
+
+// Rows revealed per "Show more" click. The roster is fetched and filtered whole,
+// so this only bounds what's rendered — the roster can grow to hundreds.
+const PAGE_SIZE = 50
 
 const BAR_PALETTE = { good: 'bg-green-500', ok: 'bg-yellow-400', bad: 'bg-red-400' }
 
@@ -54,34 +62,29 @@ function AccuracyBar({ totals }: { totals: StaffStudentRow['totals'] }) {
  * semantics, costing a screen reader the table structure, and a focusable row
  * wrapping a focusable link is nested interactive content.
  */
-function StudentRow({ s, critical }: { s: StaffStudentRow; critical?: boolean }) {
+function StudentRow({ s }: { s: StaffStudentRow }) {
   const router = useRouter()
-  const acc = overallAccuracy(s.totals)
   const href = `/naale/staff/students/${s.student_id}`
+  const critical = isNeedsAttention(s)
 
   return (
     <tr
       onClick={() => router.push(href)}
-      className={`cursor-pointer transition ${critical
-          ? 'bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20'
-          : 'hover:bg-black/5 dark:hover:bg-white/5'
+      className={`cursor-pointer transition [&>td:first-child]:border-s-4 ${critical
+          ? 'bg-red-50/60 dark:bg-red-500/5 hover:bg-red-100 dark:hover:bg-red-500/10 [&>td:first-child]:border-s-red-400'
+          : 'hover:bg-black/5 dark:hover:bg-white/5 [&>td:first-child]:border-s-transparent'
         }`}
     >
       <td className="p-2 sm:p-3 border-b border-card-border">
         <div className="flex items-center gap-2 sm:gap-3">
           <Avatar name={s.full_name} avatarUrl={s.avatar_url} />
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <div className="font-medium text-fg truncate">{s.full_name}</div>
-              {s.grade && (
-                <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-fg/50">
-                  {t(`כיתה ${s.grade}`)}
-                </span>
-              )}
-            </div>
-            <div className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>{t(statusLabel(acc))}</div>
+            <div className="font-medium text-fg truncate">{s.full_name}</div>
           </div>
         </div>
+      </td>
+      <td className="hidden sm:table-cell p-3 border-b border-card-border text-fg/60 whitespace-nowrap">
+        {s.grade ? t(`כיתה ${s.grade}`) : '—'}
       </td>
       <td className="p-2 sm:p-3 border-b border-card-border">
         <AccuracyBar totals={s.totals} />
@@ -145,6 +148,7 @@ export default function NaaleStaffPage() {
   const { profile: me, refresh: refreshProfile } = useNaaleProfile('staff')
   const [search, setSearch] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string | null>(null)
+  const [attentionOnly, setAttentionOnly] = useState(false)
   // Tracks which profile the default filter was already derived from, so it
   // applies exactly once per profile load and never fights a filter the user
   // has since clicked themselves. Adjusted during render (not an effect) per
@@ -183,21 +187,23 @@ export default function NaaleStaffPage() {
 
   const students = useMemo(() => data?.students ?? [], [data])
 
-  const needsAttention = useMemo(
-    () =>
-      students.filter(s => {
-        const acc = overallAccuracy(s.totals)
-        return acc !== null && acc < NEEDS_ATTENTION_THRESHOLD
-      }),
-    [students]
-  )
+  const attentionCount = useMemo(() => students.filter(isNeedsAttention).length, [students])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const byGrade = gradeFilter ? students.filter(s => s.grade === gradeFilter) : students
-    if (!q) return byGrade
-    return byGrade.filter(s => s.full_name.toLowerCase().includes(q))
-  }, [students, search, gradeFilter])
+    return students.filter(
+      s =>
+        (!gradeFilter || s.grade === gradeFilter) &&
+        (!attentionOnly || isNeedsAttention(s)) &&
+        (!q || s.full_name.toLowerCase().includes(q))
+    )
+  }, [students, search, gradeFilter, attentionOnly])
+
+  // Reset to the first page whenever the filtered list changes shape —
+  // adjusted during render, same pattern as gradeFilterDefaultedFor above.
+  const filterKey = `${search}|${gradeFilter}|${attentionOnly}`
+  const [shown, setShown] = useState({ key: filterKey, n: PAGE_SIZE })
+  if (shown.key !== filterKey) setShown({ key: filterKey, n: PAGE_SIZE })
 
   /**
    * Staff get the same pre-session sheet students do. They are exercising the
@@ -267,29 +273,23 @@ export default function NaaleStaffPage() {
 
       {data && (
         <>
-          {needsAttention.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
-                {t('דורש תשומת לב')} ({needsAttention.length})
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full bg-surface rounded-xl border border-red-200 dark:border-red-500/30 text-sm">
-                  <tbody>
-                    {needsAttention.map(s => (
-                      <StudentRow key={s.student_id} s={s} critical />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setGradeFilter(null)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                gradeFilter === null
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'border-card-border text-fg/70 hover:border-primary-400'
+              }`}
+            >
+              {t('הצג הכל')}
+            </button>
             {GRADES.map(g => (
               <button
                 key={g}
                 type="button"
-                onClick={() => setGradeFilter(gradeFilter === g ? null : g)}
+                onClick={() => setGradeFilter(g)}
                 className={`px-3 py-1.5 rounded-full text-sm border transition ${
                   gradeFilter === g
                     ? 'bg-primary-600 text-white border-primary-600'
@@ -299,13 +299,17 @@ export default function NaaleStaffPage() {
                 {t(`כיתה ${g}`)}
               </button>
             ))}
-            {gradeFilter && (
+            {attentionCount > 0 && (
               <button
                 type="button"
-                onClick={() => setGradeFilter(null)}
-                className="px-3 py-1.5 rounded-full text-sm text-fg/50 underline"
+                onClick={() => setAttentionOnly(v => !v)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition ms-auto ${
+                  attentionOnly
+                    ? 'bg-red-500 text-white border-red-500'
+                    : 'border-red-300 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+                }`}
               >
-                {t('הצג הכל')}
+                {t('דורש תשומת לב')} ({attentionCount})
               </button>
             )}
           </div>
@@ -327,18 +331,28 @@ export default function NaaleStaffPage() {
               <table className="w-full bg-surface rounded-xl border border-card-border text-sm">
                 <thead>
                   <tr className="bg-black/5 dark:bg-white/5 border-b border-card-border">
-                    <th className="text-right p-2 sm:p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
-                    <th className="text-right p-2 sm:p-3 font-semibold text-fg/80">{t('דיוק כולל')}</th>
+                    <th className="text-start p-2 sm:p-3 font-semibold text-fg/80">{t('תלמיד')}</th>
+                    <th className="hidden sm:table-cell text-start p-3 font-semibold text-fg/80">{t('שכבה')}</th>
+                    <th className="text-start p-2 sm:p-3 font-semibold text-fg/80">{t('דיוק כולל')}</th>
                     <th className="hidden sm:table-cell p-3 font-semibold text-fg/80 text-center">{t('תרגולים שהושלמו')}</th>
                     <th className="p-2 sm:p-3 w-16" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(s => (
+                  {filtered.slice(0, shown.n).map(s => (
                     <StudentRow key={s.student_id} s={s} />
                   ))}
                 </tbody>
               </table>
+              {filtered.length > shown.n && (
+                <button
+                  type="button"
+                  onClick={() => setShown(v => ({ ...v, n: v.n + PAGE_SIZE }))}
+                  className="w-full mt-3 px-3 py-2 rounded-lg text-sm border border-card-border text-fg/70 hover:border-primary-400 transition"
+                >
+                  {t('הצג עוד')} ({filtered.length - shown.n})
+                </button>
+              )}
             </div>
           )}
         </>
