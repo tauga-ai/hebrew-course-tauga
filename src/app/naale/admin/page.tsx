@@ -9,6 +9,7 @@ import type { QuestionImportReport } from '@/lib/naale/question-import'
 import type { OpenQuestionImportReport } from '@/lib/naale/open-question-import'
 import type { RosterImportReport } from '@/lib/naale/roster-import'
 import { t } from '@/lib/dev-i18n'
+import { GRADES } from '@/lib/naale/grades'
 
 interface AdminRow {
   email: string
@@ -872,7 +873,7 @@ export default function NaaleAdminPage() {
                 <li key={s.staffId} className="flex items-center gap-3 py-2.5">
                   <span className="flex-1 min-w-0 text-sm text-fg truncate">{s.fullName}</span>
                   <div className="shrink-0 flex gap-1.5">
-                    {(['ז', 'ח', 'ט'] as const).map(g => (
+                    {GRADES.map(g => (
                       <button
                         key={g}
                         type="button"

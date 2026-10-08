@@ -19,8 +19,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type NaaleRosterRole = 'student' | 'staff'
 const VALID_ROLES: NaaleRosterRole[] = ['student', 'staff']
 
-export type NaaleGrade = 'ז' | 'ח' | 'ט'
-const VALID_GRADES: NaaleGrade[] = ['ז', 'ח', 'ט']
+import { GRADES, type NaaleGrade } from './grades'
+export type { NaaleGrade }
+const VALID_GRADES: readonly NaaleGrade[] = GRADES
 
 interface ParsedRow {
   email: string

@@ -19,6 +19,7 @@ import {
   type StaffStudentRow,
 } from '@/lib/naale/staff-view'
 import { t } from '@/lib/dev-i18n'
+import { GRADES } from '@/lib/naale/grades'
 
 interface StaffStudents {
   students: StaffStudentRow[]
@@ -284,7 +285,7 @@ export default function NaaleStaffPage() {
           )}
 
           <div className="flex flex-wrap gap-2 mb-3">
-            {(['ז', 'ח', 'ט'] as const).map(g => (
+            {GRADES.map(g => (
               <button
                 key={g}
                 type="button"
