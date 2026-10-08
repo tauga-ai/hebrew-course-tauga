@@ -67,6 +67,16 @@ test('validateRows: 6-column shape rejects an invalid grade', () => {
   assert.match(errors[0], /grade must be one of/)
 })
 
+test('validateRows: accepts 10th–12th grades (י / יא / יב)', () => {
+  for (const g of ['י', 'יא', 'יב']) {
+    const { rows, errors } = validateRows([
+      ['אווה', 'דזוגייב', `s${g}@example.com`, '509110614', 'student', g],
+    ])
+    assert.equal(errors.length, 0)
+    assert.equal(rows[0].grade, g)
+  }
+})
+
 test('validateRows: 5-column row with blank name/phone is allowed', () => {
   const { rows, errors } = validateRows([['', '', 'a@b.com', '', 'student']])
   assert.equal(errors.length, 0)
