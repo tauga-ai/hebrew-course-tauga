@@ -88,9 +88,12 @@ function WeeklyTrend({ weeks }: { weeks: DashboardData['weekly_trend'] }) {
 
 export default function NaaleAdminSessionFeedbackPage() {
   const { data, loading, error } = useResource<DashboardData>('/api/naale/admin/session-feedback')
+  // Same source admin/page.tsx uses: without the roster role the sidebar
+  // drops the Students/Reports (or student) items and shows only admin ones.
+  const { data: me } = useResource<{ roster_role: 'student' | 'staff' | null }>('/api/naale/admin/me')
 
   return (
-    <NaaleShell role="admin" contentClassName="max-w-4xl">
+    <NaaleShell role="admin" alsoRole={me?.roster_role ?? undefined} contentClassName="max-w-4xl">
       <h1 className="font-bold text-primary-700 dark:text-primary-400 text-xl mt-4 mb-6">
         {/* "Practice feedback" */}
         {t('משוב על תרגול')}
