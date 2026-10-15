@@ -18,16 +18,7 @@ import {
   type StaffStudentRow,
 } from '@/lib/naale/staff-view'
 import { t } from '@/lib/dev-i18n'
-import { GRADES } from '@/lib/naale/grades'
-
-// Naale / Tzabarim group buttons for 10th-11th grade (naale-cohort-grade-buttons).
-// A filter value is a grade (`י`) or a grade+group (`י|naale`), labels as Yonatan wrote them.
-const GROUP_FILTERS = [
-  { value: 'י|naale', label: "י' נעלה" },
-  { value: 'י|tzabarim', label: "י' צברים" },
-  { value: 'יא|naale', label: 'י"א נעלה' },
-  { value: 'יא|tzabarim', label: 'י"א צברים' },
-]
+import { GRADES, GROUP_FILTERS } from '@/lib/naale/grades'
 
 interface StaffStudents {
   students: StaffStudentRow[]

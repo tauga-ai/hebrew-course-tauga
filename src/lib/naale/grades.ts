@@ -11,6 +11,15 @@ export function normalizeGrade(raw: string): string {
   return (GRADES as readonly string[]).includes(token) ? token : raw
 }
 
+/** Group buttons/options for 10th-11th grade, labels as Yonatan wrote them.
+ *  `value` is `<grade>|<cohort>`. */
+export const GROUP_FILTERS = [
+  { value: 'י|naale', label: "י' נעלה" },
+  { value: 'י|tzabarim', label: "י' צברים" },
+  { value: 'יא|naale', label: 'י"א נעלה' },
+  { value: 'יא|tzabarim', label: 'י"א צברים' },
+]
+
 /** Group within a grade (10th-11th only): נעלה = naale, צברים = tzabarim. */
 export const COHORTS = ['naale', 'tzabarim'] as const
 export type NaaleCohort = (typeof COHORTS)[number]
