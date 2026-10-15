@@ -20,6 +20,15 @@ import {
 import { t } from '@/lib/dev-i18n'
 import { GRADES } from '@/lib/naale/grades'
 
+// Naale / Tzabarim group buttons for 10th-11th grade (naale-cohort-grade-buttons).
+// A filter value is a grade (`י`) or a grade+group (`י|naale`), labels as Yonatan wrote them.
+const GROUP_FILTERS = [
+  { value: 'י|naale', label: "י' נעלה" },
+  { value: 'י|tzabarim', label: "י' צברים" },
+  { value: 'יא|naale', label: 'י"א נעלה' },
+  { value: 'יא|tzabarim', label: 'י"א צברים' },
+]
+
 interface StaffStudents {
   students: StaffStudentRow[]
 }
@@ -193,7 +202,7 @@ export default function NaaleStaffPage() {
     const q = search.trim().toLowerCase()
     return students.filter(
       s =>
-        (!gradeFilter || s.grade === gradeFilter) &&
+        (!gradeFilter || gradeFilter === s.grade || gradeFilter === `${s.grade}|${s.cohort}`) &&
         (!attentionOnly || isNeedsAttention(s)) &&
         (!q || s.full_name.toLowerCase().includes(q))
     )
@@ -297,6 +306,20 @@ export default function NaaleStaffPage() {
                 }`}
               >
                 {t(`כיתה ${g}`)}
+              </button>
+            ))}
+            {GROUP_FILTERS.map(g => (
+              <button
+                key={g.value}
+                type="button"
+                onClick={() => setGradeFilter(g.value)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                  gradeFilter === g.value
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'border-card-border text-fg/70 hover:border-primary-400'
+                }`}
+              >
+                {t(g.label)}
               </button>
             ))}
             {attentionCount > 0 && (

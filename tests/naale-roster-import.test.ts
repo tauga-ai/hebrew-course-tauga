@@ -77,6 +77,24 @@ test('validateRows: accepts 10th–12th grades (י / יא / יב)', () => {
   }
 })
 
+test('validateRows: normalizes sheet class labels (י׳ נעלה, י״א צברים, י׳א נעלה)', () => {
+  const labels: [string, string][] = [['י׳ נעלה', 'י'], ['י״א צברים', 'יא'], ['י׳א נעלה', 'יא'], ['ח', 'ח']]
+  labels.forEach(([label, expected], i) => {
+    const { rows, errors } = validateRows([['א', 'ב', `c${i}@example.com`, '', 'student', label]])
+    assert.equal(errors.length, 0)
+    assert.equal(rows[0].grade, expected)
+  })
+})
+
+test('validateRows: keeps the group word from the class label as cohort', () => {
+  const cases: [string, string | undefined][] = [['י׳ נעלה', 'naale'], ['י״א צברים', 'tzabarim'], ['י׳א נעלה', 'naale'], ['ח', undefined], ['י', undefined]]
+  cases.forEach(([label, expected], i) => {
+    const { rows, errors } = validateRows([['א', 'ב', `k${i}@example.com`, '', 'student', label]])
+    assert.equal(errors.length, 0)
+    assert.equal(rows[0].cohort, expected)
+  })
+})
+
 test('validateRows: 5-column row with blank name/phone is allowed', () => {
   const { rows, errors } = validateRows([['', '', 'a@b.com', '', 'student']])
   assert.equal(errors.length, 0)

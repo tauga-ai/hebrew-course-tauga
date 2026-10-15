@@ -71,6 +71,7 @@ export interface NaaleStudentProfile {
   role: NaaleRole
   translation_lang: 'ru' | 'ar'
   grade: string | null
+  cohort: 'naale' | 'tzabarim' | null
   created_at: string
   updated_at: string
 }
