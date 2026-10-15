@@ -19,7 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type NaaleRosterRole = 'student' | 'staff'
 const VALID_ROLES: NaaleRosterRole[] = ['student', 'staff']
 
-import { GRADES, type NaaleGrade } from './grades'
+import { GRADES, normalizeGrade, parseCohort, type NaaleCohort, type NaaleGrade } from './grades'
 export type { NaaleGrade }
 const VALID_GRADES: readonly NaaleGrade[] = GRADES
 
@@ -30,6 +30,7 @@ interface ParsedRow {
   lastName?: string
   phone?: string
   grade?: NaaleGrade
+  cohort?: NaaleCohort
   line: number
 }
 
@@ -93,12 +94,15 @@ export function validateRows(rawRows: string[][]): ParseResult {
       return
     }
     let grade: NaaleGrade | undefined
+    let cohort: NaaleCohort | undefined
     if (gradeRaw && gradeRaw.trim() !== '') {
-      if (!VALID_GRADES.includes(gradeRaw as NaaleGrade)) {
+      const normalized = normalizeGrade(gradeRaw)
+      if (!VALID_GRADES.includes(normalized as NaaleGrade)) {
         errors.push(`line ${line}: grade must be one of ${VALID_GRADES.join('/')}, got ${JSON.stringify(gradeRaw)}`)
         return
       }
-      grade = gradeRaw as NaaleGrade
+      grade = normalized as NaaleGrade
+      cohort = parseCohort(gradeRaw) ?? undefined
     }
     const previous = seen.get(normalizedEmail)
     if (previous !== undefined) {
@@ -114,6 +118,7 @@ export function validateRows(rawRows: string[][]): ParseResult {
       lastName: lastName || undefined,
       phone: phone || undefined,
       grade,
+      cohort,
       line,
     })
   })
@@ -183,13 +188,14 @@ export async function importRosterFile(
     const { error } = await db
       .from('naale_roster')
       .upsert(
-        rows.map(({ email, role, firstName, lastName, phone, grade }) => ({
+        rows.map(({ email, role, firstName, lastName, phone, grade, cohort }) => ({
           email,
           role,
           first_name: firstName ?? null,
           last_name: lastName ?? null,
           phone: phone ?? null,
           grade: grade ?? null,
+          cohort: cohort ?? null,
         })),
         { onConflict: 'email' }
       )

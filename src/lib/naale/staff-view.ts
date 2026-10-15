@@ -27,6 +27,7 @@ export interface StaffStudentRow {
   full_name: string
   avatar_url: string | null
   grade: string | null
+  cohort: string | null
   totals: StaffTotals
 }
 

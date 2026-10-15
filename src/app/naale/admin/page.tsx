@@ -9,7 +9,14 @@ import type { QuestionImportReport } from '@/lib/naale/question-import'
 import type { OpenQuestionImportReport } from '@/lib/naale/open-question-import'
 import type { RosterImportReport } from '@/lib/naale/roster-import'
 import { t } from '@/lib/dev-i18n'
-import { GRADES } from '@/lib/naale/grades'
+import { GRADES, GROUP_FILTERS } from '@/lib/naale/grades'
+
+// Class choices for a new student: each grade, with 10th/11th split into Naale / Tzabarim.
+const CLASS_OPTIONS = GRADES.flatMap(g =>
+  g === 'י' || g === 'יא'
+    ? GROUP_FILTERS.filter(o => o.value.startsWith(`${g}|`))
+    : [{ value: g, label: `כיתה ${g}` }]
+)
 
 interface AdminRow {
   email: string
@@ -129,14 +136,15 @@ function PasswordDialog({
  *  enough for resolveFullName() (naale-profile-name-phone) to pick the
  *  typed name up on the student's own profile with no other change needed. */
 function AddStudentDialog({
-  firstName, lastName, email, phone, role,
-  onFirstNameChange, onLastNameChange, onEmailChange, onPhoneChange, onRoleChange,
+  firstName, lastName, email, phone, role, classValue, staffGrades,
+  onFirstNameChange, onLastNameChange, onEmailChange, onPhoneChange, onClassChange, onToggleStaffGrade,
   onSubmit, submitting, error, onClose,
 }: {
   firstName: string; lastName: string; email: string; phone: string; role: 'student' | 'staff'
+  classValue: string; staffGrades: string[]
   onFirstNameChange: (v: string) => void; onLastNameChange: (v: string) => void
   onEmailChange: (v: string) => void; onPhoneChange: (v: string) => void
-  onRoleChange: (v: 'student' | 'staff') => void
+  onClassChange: (v: string) => void; onToggleStaffGrade: (g: string) => void
   onSubmit: (e: React.FormEvent) => void; submitting: boolean; error: string; onClose: () => void
 }) {
   const inputClass =
@@ -147,7 +155,7 @@ function AddStudentDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/90" onClick={onClose} />
       <form onSubmit={onSubmit} className="relative w-full max-w-sm bg-surface rounded-2xl shadow-xl p-6">
-        <h3 className="text-base font-semibold text-fg mb-5">{t('הוספת תלמיד')}</h3>
+        <h3 className="text-base font-semibold text-fg mb-5">{t(role === 'staff' ? 'הוספת איש צוות' : 'הוספת תלמיד')}</h3>
         <div className="space-y-4 mb-5">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -191,18 +199,28 @@ function AddStudentDialog({
               className={inputClass}
             />
           </div>
-          <div>
-            <label htmlFor="addStudentRole" className={labelClass}>{t('תפקיד')}</label>
-            <select
-              id="addStudentRole"
-              value={role}
-              onChange={e => onRoleChange(e.target.value as 'student' | 'staff')}
-              className={inputClass}
-            >
-              <option value="student">{t('תלמיד')}</option>
-              <option value="staff">{t('צוות')}</option>
-            </select>
-          </div>
+          {role === 'staff' ? (
+            <fieldset>
+              <legend className={labelClass}>{t('באילו כיתות איש הצוות?')}</legend>
+              <div className="flex flex-wrap gap-2">
+                {GRADES.map(g => (
+                  <label key={g} className="flex items-center gap-1.5 text-sm text-fg">
+                    <input type="checkbox" checked={staffGrades.includes(g)} onChange={() => onToggleStaffGrade(g)} />
+                    {t(`כיתה ${g}`)}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-fg/40 mt-1">{t('ללא בחירה = גישה לכל הכיתות (למשל מנהל שמפקח על הפעילות הכללית).')}</p>
+            </fieldset>
+          ) : (
+            <div>
+              <label htmlFor="addStudentClass" className={labelClass}>{t('כיתה')}</label>
+              <select id="addStudentClass" value={classValue} onChange={e => onClassChange(e.target.value)} className={inputClass}>
+                <option value="">{t('ללא כיתה')}</option>
+                {CLASS_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         {error && <p className="text-red-500 dark:text-red-400 text-sm mb-4">{error}</p>}
         <div className="flex gap-2">
@@ -306,6 +324,8 @@ export default function NaaleAdminPage() {
   const [customPhone, setCustomPhone] = useState('')
   const [customRole, setCustomRole] = useState<'student' | 'staff'>('student')
   const [showAddStudent, setShowAddStudent] = useState(false)
+  const [customClass, setCustomClass] = useState('')
+  const [customStaffGrades, setCustomStaffGrades] = useState<string[]>([])
   const [creatingCustom, setCreatingCustom] = useState(false)
   const [customError, setCustomError] = useState('')
   const [customResult, setCustomResult] = useState<
@@ -443,6 +463,9 @@ export default function NaaleAdminPage() {
         first_name: customFirstName,
         last_name: customLastName,
         phone: customPhone,
+        grade: customClass.split('|')[0] || null,
+        cohort: customClass.split('|')[1] ?? null,
+        grades: customStaffGrades,
       }),
     })
     setCreatingCustom(false)
@@ -452,6 +475,8 @@ export default function NaaleAdminPage() {
     setCustomLastName('')
     setCustomEmail('')
     setCustomPhone('')
+    setCustomClass('')
+    setCustomStaffGrades([])
     setShowAddStudent(false)
     loadRoster()
   }
@@ -902,10 +927,17 @@ export default function NaaleAdminPage() {
           </h3>
           <button
             type="button"
-            onClick={() => setShowAddStudent(true)}
+            onClick={() => { setCustomRole('student'); setShowAddStudent(true) }}
             className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition mb-3"
           >
             {t('הוסף תלמיד')}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setCustomRole('staff'); setShowAddStudent(true) }}
+            className="ms-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:opacity-90 transition mb-3"
+          >
+            {t('הוסף איש צוות')}
           </button>
 
           <h3 className="text-sm font-semibold text-fg/70 mb-3 pt-3 border-t border-card-border">{t('ייבוא רשימת נרשמים')}</h3>
@@ -1036,7 +1068,10 @@ export default function NaaleAdminPage() {
           onLastNameChange={setCustomLastName}
           onEmailChange={setCustomEmail}
           onPhoneChange={setCustomPhone}
-          onRoleChange={setCustomRole}
+          classValue={customClass}
+          staffGrades={customStaffGrades}
+          onClassChange={setCustomClass}
+          onToggleStaffGrade={g => setCustomStaffGrades(prev => (prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]))}
           onSubmit={createCustomAccount}
           submitting={creatingCustom}
           error={customError}
