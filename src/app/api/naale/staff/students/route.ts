@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleStaff } from '@/lib/naale/auth'
+import { loadRosterNames, staffDisplayName } from '@/lib/naale/roster-names'
 
 /**
  * All Naale students with their per-topic levels and counts, for staff.
@@ -73,15 +74,17 @@ export async function GET() {
 
   // Google's profile photo per student, same display-only relay as
   // /api/naale/me — never stored, a missing/failed one just falls back to
-  // an initials badge client-side. One admin lookup per student is fine at
-  // this cohort's scale (dozens, not thousands).
-  const avatarByAuthId = new Map(
+  // an initials badge client-side. The same lookup also yields the email for
+  // the roster-name match (naale-staff-roster-names). One admin lookup per
+  // student is fine at this cohort's scale (dozens, not thousands).
+  const rosterNames = await loadRosterNames(db)
+  const authInfoById = new Map(
     await Promise.all(
       (students ?? []).map(async s => {
         const { data } = await db.auth.admin.getUserById(s.auth_user_id)
         const meta = data?.user?.user_metadata
         const avatarUrl = (meta?.avatar_url as string | undefined) ?? (meta?.picture as string | undefined) ?? null
-        return [s.auth_user_id, avatarUrl] as const
+        return [s.auth_user_id, { avatarUrl, email: data?.user?.email ?? null }] as const
       })
     )
   )
@@ -98,10 +101,11 @@ export async function GET() {
       answered: 0, correct: 0, sessions: 0, completed_sessions: 0, xp: 0, coins: 0,
     }
 
+    const auth = authInfoById.get(s.auth_user_id)
     return {
       student_id: s.id,
-      full_name: s.full_name,
-      avatar_url: avatarByAuthId.get(s.auth_user_id) ?? null,
+      full_name: staffDisplayName(rosterNames, auth?.email, s.full_name),
+      avatar_url: auth?.avatarUrl ?? null,
       grade: s.grade,
       cohort: s.cohort,
       totals,
