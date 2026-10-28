@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleStaff } from '@/lib/naale/auth'
 import { selectAll } from '@/lib/naale/paginate'
+import { loadRosterNames, staffDisplayName } from '@/lib/naale/roster-names'
 
 /** One report as the staff page renders it. `note` and `prompt_snapshot` are
  *  what the reporter wrote and what the question said at the time — see the
@@ -63,9 +64,18 @@ export async function GET() {
 
   const studentIds = [...new Set(reports.map(r => r.student_id))]
   const { data: students } = studentIds.length
-    ? await db.from('naale_students').select('id, full_name').in('id', studentIds)
+    ? await db.from('naale_students').select('id, full_name, auth_user_id').in('id', studentIds)
     : { data: [] }
-  const nameById = new Map((students ?? []).map(s => [s.id, s.full_name as string]))
+  const rosterNames = await loadRosterNames(db)
+  // Roster name, not the reporter's own display name (naale-staff-roster-names).
+  const nameById = new Map(
+    await Promise.all(
+      (students ?? []).map(async s => {
+        const { data } = await db.auth.admin.getUserById(s.auth_user_id)
+        return [s.id, staffDisplayName(rosterNames, data?.user?.email, s.full_name as string)] as const
+      })
+    )
+  )
 
   return NextResponse.json({
     reports: reports.map(({ student_id, ...report }) => ({
