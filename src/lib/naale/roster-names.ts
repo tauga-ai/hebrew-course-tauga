@@ -21,6 +21,12 @@ export async function loadRosterNames(db: SupabaseClient): Promise<Map<string, s
   return names
 }
 
+/** The student's own display name, for a small secondary line — null when it
+ *  is the same as what staff already see, so the line never repeats itself. */
+export function ownNameIfDifferent(shown: string, fullName: string): string | null {
+  return shown === fullName ? null : fullName
+}
+
 /** Roster name when there is one, else the student's own display name. */
 export function staffDisplayName(
   rosterNames: Map<string, string>,

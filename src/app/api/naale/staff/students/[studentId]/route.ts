@@ -4,7 +4,7 @@ import { requireNaaleStaff } from '@/lib/naale/auth'
 import { buildStudentProgress } from '@/lib/naale/stats'
 import { loadAllTopics } from '@/lib/naale/topics'
 import { selectAll } from '@/lib/naale/paginate'
-import { loadRosterNames, staffDisplayName } from '@/lib/naale/roster-names'
+import { loadRosterNames, ownNameIfDifferent, staffDisplayName } from '@/lib/naale/roster-names'
 
 /**
  * One Naale student's full progress, for staff — the depth behind a roster row.
@@ -84,6 +84,7 @@ export async function GET(
   const { data: authUser } = await db.auth.admin.getUserById(student.auth_user_id)
   const meta = authUser?.user?.user_metadata
   const rosterNames = await loadRosterNames(db)
+  const shownName = staffDisplayName(rosterNames, authUser?.user?.email, student.full_name)
   const avatarUrl = (meta?.avatar_url as string | undefined) ?? (meta?.picture as string | undefined) ?? null
 
   // Both kinds, tagged. The attendance calendar's type toggle filters these
@@ -104,7 +105,8 @@ export async function GET(
   return NextResponse.json({
     student: {
       student_id: student.id,
-      full_name: staffDisplayName(rosterNames, authUser?.user?.email, student.full_name),
+      full_name: shownName,
+      own_name: ownNameIfDifferent(shownName, student.full_name),
       avatar_url: avatarUrl,
       topics: progress.topics,
       totals: progress.totals,
