@@ -80,6 +80,7 @@ function StudentRow({ s }: { s: StaffStudentRow }) {
           <Avatar name={s.full_name} avatarUrl={s.avatar_url} />
           <div className="min-w-0">
             <div className="font-medium text-fg truncate">{s.full_name}</div>
+            {s.own_name && <div className="text-xs text-fg/40 truncate">{s.own_name}</div>}
           </div>
         </div>
       </td>

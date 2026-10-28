@@ -71,6 +71,7 @@ export default function NaaleStaffStudentPage() {
                 <Avatar name={s.full_name} avatarUrl={s.avatar_url} sizeClass="w-11 h-11 text-sm" />
                 <div className="min-w-0">
                   <h1 className="font-bold text-fg truncate">{s.full_name}</h1>
+                  {s.own_name && <div className="text-xs text-fg/40 truncate">{s.own_name}</div>}
                   <span className={`text-xs ${scoreColor(acc, { emptyClass: 'text-fg/30' })}`}>
                     {t(statusLabel(acc))}
                   </span>

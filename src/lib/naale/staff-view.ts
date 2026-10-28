@@ -25,6 +25,8 @@ export interface StaffTotals {
 export interface StaffStudentRow {
   student_id: string
   full_name: string
+  /** The student's own name, shown small under `full_name`; null when identical. */
+  own_name: string | null
   avatar_url: string | null
   grade: string | null
   cohort: string | null

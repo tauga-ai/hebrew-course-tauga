@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { requireNaaleStaff } from '@/lib/naale/auth'
-import { loadRosterNames, staffDisplayName } from '@/lib/naale/roster-names'
+import { loadRosterNames, ownNameIfDifferent, staffDisplayName } from '@/lib/naale/roster-names'
 
 /**
  * All Naale students with their per-topic levels and counts, for staff.
@@ -102,9 +102,11 @@ export async function GET() {
     }
 
     const auth = authInfoById.get(s.auth_user_id)
+    const shownName = staffDisplayName(rosterNames, auth?.email, s.full_name)
     return {
       student_id: s.id,
-      full_name: staffDisplayName(rosterNames, auth?.email, s.full_name),
+      full_name: shownName,
+      own_name: ownNameIfDifferent(shownName, s.full_name),
       avatar_url: auth?.avatarUrl ?? null,
       grade: s.grade,
       cohort: s.cohort,

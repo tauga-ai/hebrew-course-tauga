@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { staffDisplayName } from '../src/lib/naale/roster-names'
+import { ownNameIfDifferent, staffDisplayName } from '../src/lib/naale/roster-names'
 
 const roster = new Map([['dana@school.org', 'דנה כהן']])
 
@@ -15,4 +15,9 @@ test('staffDisplayName: email case does not matter', () => {
 test('staffDisplayName: no roster name falls back to full_name', () => {
   assert.equal(staffDisplayName(roster, 'other@school.org', 'Виктория'), 'Виктория')
   assert.equal(staffDisplayName(roster, undefined, 'Виктория'), 'Виктория')
+})
+
+test('ownNameIfDifferent: only returns the student\'s own name when it differs', () => {
+  assert.equal(ownNameIfDifferent('דנה כהן', 'Dana the Great'), 'Dana the Great')
+  assert.equal(ownNameIfDifferent('דנה כהן', 'דנה כהן'), null)
 })
