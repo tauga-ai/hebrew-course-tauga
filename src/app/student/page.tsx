@@ -60,7 +60,16 @@ export default function StudentLogin() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-surface rounded-2xl shadow-md w-full max-w-sm p-8">
         <h1 className="text-2xl font-bold text-center text-primary-700 dark:text-primary-400 mb-2">{t('תרגול ניצנים')}</h1>
-        <p className="text-center text-fg/60 mb-8 text-sm">{t('הבנת הנקרא')}</p>
+        <p className="text-center text-fg/60 mb-4 text-sm">{t('הבנת הנקרא')}</p>
+
+        {/* Students open the bare URL and land here by default; give Naale
+            students a one-tap way to their own login (naale-students-land-in-hebrew-course). */}
+        <a
+          href="/naale/login"
+          className="block text-center text-sm font-medium text-primary-700 dark:text-primary-400 border border-card-border rounded-lg py-2 mb-6 hover:bg-black/5 dark:hover:bg-white/5 transition"
+        >
+          {t('תלמידי נעלה? לחצו כאן להתחברות')}
+        </a>
 
         <button
           type="button"
