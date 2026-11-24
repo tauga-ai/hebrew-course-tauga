@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getStudentFromSession } from '@/lib/auth'
+import { isNaaleRosterStudent } from '@/lib/naale/roster-guard'
 
 /**
  * Returns the authenticated user's student profile (id, full_name, class_id,
@@ -15,7 +16,10 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
   if (result.status === 'no_profile') {
-    return NextResponse.json({ error: 'no_profile' }, { status: 404 })
+    // `naale` lets /student/complete-profile send a Naale student to their own
+    // track instead of showing a class-code form they can't use.
+    const naale = await isNaaleRosterStudent(createServiceClient(), result.user.email)
+    return NextResponse.json({ error: 'no_profile', naale }, { status: 404 })
   }
 
   const db = createServiceClient()
@@ -111,6 +115,16 @@ export async function POST(req: NextRequest) {
       .eq('id', existing.class_id)
       .maybeSingle()
     return NextResponse.json({ student: existing, class_name: cls?.name || '' })
+  }
+
+  // Real gate (the page redirect is only UX): a Naale roster student must not
+  // be enrolled in a Hebrew-course class (naale-students-land-in-hebrew-course).
+  if (await isNaaleRosterStudent(db, user.email)) {
+    return NextResponse.json(
+      // "Your account is registered for Naale. Please sign in through the Naale login page."
+      { error: 'החשבון שלך רשום בנעלה. יש להתחבר דרך דף הכניסה של נעלה.', naale: true },
+      { status: 403 }
+    )
   }
 
   const body = await req.json()
