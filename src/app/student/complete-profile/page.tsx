@@ -35,6 +35,14 @@ function CompleteProfileForm() {
         return
       }
 
+      // A Naale roster student arrived through the main-course login. This
+      // form can't serve them — send them to their own track
+      // (naale-students-land-in-hebrew-course).
+      if (res.status === 404 && (await res.json().catch(() => null))?.naale) {
+        router.replace('/naale')
+        return
+      }
+
       // Pre-fill from the Google identity if available, but it stays
       // editable/required — the teacher needs the student's Hebrew name.
       const googleName = (user.user_metadata?.full_name || user.user_metadata?.name || '') as string
@@ -57,6 +65,7 @@ function CompleteProfileForm() {
         body: JSON.stringify({ full_name: fullName.trim(), class_code: classCode.trim() }),
       })
       const data = await res.json()
+      if (data.naale) { router.replace('/naale'); return }
       if (!res.ok) throw new Error(data.error || t('שגיאה'))
       router.push('/menu')
     } catch (err: unknown) {
